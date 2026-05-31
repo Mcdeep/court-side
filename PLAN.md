@@ -1,4 +1,4 @@
-# Padel Tournament App — Plan of Action
+# CourtOS — Plan of Action
 
 ## Product Summary
 

@@ -1,1 +1,11 @@
 node_modules
+dist
+.env.local
+.env*.local
+.convex
+
+# Local Netlify folder
+.netlify
+
+# Local Claude Code settings
+.claude/settings.local.json

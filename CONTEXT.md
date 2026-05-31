@@ -1,4 +1,4 @@
-# Padel Tournament App — Domain Glossary
+# CourtOS — Domain Glossary
 
 ## Core Roles
 

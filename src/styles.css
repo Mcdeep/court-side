@@ -1,17 +1,76 @@
-
 @import "tailwindcss";
 
-* {
-  box-sizing: border-box;
+/* ─── Design tokens ─────────────────────────────────────────── */
+@theme {
+  /* Typography */
+  --font-display: "Space Grotesk", ui-sans-serif, sans-serif;
+  --font-sans:    "Hanken Grotesk", ui-sans-serif, sans-serif;
+  --font-mono:    "Space Mono", ui-monospace, monospace;
+
+  /* Colour scale */
+  --color-ink:        oklch(0.19 0.012 264);
+  --color-ink-soft:   oklch(0.25 0.012 264);
+  --color-ink-line:   oklch(0.32 0.012 264);
+  --color-ink-mute:   oklch(0.55 0.015 264);
+  --color-paper:      oklch(0.985 0.004 95);
+  --color-accent:     oklch(0.87 0.21 132);
+  --color-accent-dark:oklch(0.60 0.16 140);
+  --color-accent-soft:oklch(0.95 0.07 132);
+
+  /* Shadows */
+  --shadow-card: 0 1px 2px oklch(0.2 0.02 264 / 0.04), 0 4px 16px oklch(0.2 0.02 264 / 0.05);
+  --shadow-pop:  0 12px 40px oklch(0.2 0.02 264 / 0.18);
 }
 
-html,
-body,
-#app {
-  min-height: 100%;
+/* ─── Raw CSS vars (usable outside Tailwind utilities) ──────── */
+:root {
+  --ink:         oklch(0.19 0.012 264);
+  --ink-soft:    oklch(0.25 0.012 264);
+  --ink-line:    oklch(0.32 0.012 264);
+  --ink-mute:    oklch(0.55 0.015 264);
+  --paper:       oklch(0.985 0.004 95);
+  --accent:      oklch(0.87 0.21 132);
+  --accent-dark: oklch(0.60 0.16 140);
+  --accent-soft: oklch(0.95 0.07 132);
 }
 
-body {
-  margin: 0;
+/* ─── Base ───────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body { background: var(--paper); -webkit-font-smoothing: antialiased; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: oklch(0.85 0.01 264);
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.75 0.01 264);
+  background-clip: content-box;
 }
 
+/* ─── Utilities ──────────────────────────────────────────────── */
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* ─── Animations ─────────────────────────────────────────────── */
+@keyframes liveping {
+  0%       { transform: scale(1);   opacity: 0.7; }
+  70%, 100%{ transform: scale(2.4); opacity: 0;   }
+}
+.live-ping::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 99px;
+  background: currentColor;
+  animation: liveping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes rowin {
+  from { transform: translateY(7px); opacity: 0; }
+  to   { transform: none;            opacity: 1; }
+}
+.rowin { animation: rowin 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
