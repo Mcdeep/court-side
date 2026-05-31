@@ -19,6 +19,45 @@ export const list = query({
   },
 })
 
+export const listWithStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const orgs = await ctx.db.query('organizations').order('asc').take(200)
+    return Promise.all(orgs.map(async (org) => {
+      const [venues, tournaments] = await Promise.all([
+        ctx.db.query('venues').withIndex('by_organization', q => q.eq('organizationId', org._id)).take(200),
+        ctx.db.query('tournaments').withIndex('by_organization', q => q.eq('organizationId', org._id)).take(200),
+      ])
+      return {
+        ...org,
+        venueCount: venues.length,
+        tournamentCount: tournaments.length,
+        courtCount: venues.reduce((s, v) => s + v.courtCount, 0),
+      }
+    }))
+  },
+})
+
+export const adminCreate = mutation({
+  args: {
+    name: v.string(),
+    slug: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireUser(ctx);
+    if (!args.name.trim()) throw new Error('Name required');
+    if (!args.slug.trim()) throw new Error('Slug required');
+    const existing = await ctx.db.query('organizations').withIndex('by_slug', q => q.eq('slug', args.slug.trim())).unique();
+    if (existing) throw new Error('Slug already taken');
+    return ctx.db.insert('organizations', {
+      clerkOrgId: '',
+      name: args.name.trim(),
+      slug: args.slug.trim().toLowerCase().replace(/\s+/g, '-'),
+      status: 'active',
+    })
+  },
+})
+
 export const create = mutation({
   args: {
     clerkOrgId: v.string(),
