@@ -44,3 +44,10 @@ export const getById = query({
     return ctx.db.get(args.userId);
   },
 });
+
+export const list = query({
+  args: {},
+  handler: async (ctx) => {
+    return ctx.db.query("users").take(200);
+  },
+});

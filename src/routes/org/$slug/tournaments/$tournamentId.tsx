@@ -3,7 +3,7 @@ import { useMutation, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import { useState } from 'react'
 import type { Id } from '../../../../../convex/_generated/dataModel'
-import { Avatar, Button, Icon, SegTabs, StatusChip, TeamMark, initials } from '#/components/ui'
+import { Avatar, Button, Icon, SegTabs, StatusChip, TeamMark } from '#/components/ui'
 
 export const Route = createFileRoute('/org/$slug/tournaments/$tournamentId')({
   component: TournamentDetailPage,
@@ -21,12 +21,14 @@ function TournamentDetailPage() {
   const navigate = useNavigate()
   const [tab, setTab] = useState('schedule')
   const [scoreFor, setScoreFor] = useState<any>(null)
+  const [showAddPlayer, setShowAddPlayer] = useState(false)
 
   const tournament = useQuery(api.tournaments.get, { tournamentId: tournamentId as Id<'tournaments'> })
   const participants = useQuery(api.participants.list, { tournamentId: tournamentId as Id<'tournaments'> })
   const rounds = useQuery(api.rounds.list, { tournamentId: tournamentId as Id<'tournaments'> })
   const leaderboard = useQuery(api.leaderboard.get, { tournamentId: tournamentId as Id<'tournaments'> })
   const generateRounds = useMutation(api.rounds.generate)
+  const updateState = useMutation(api.tournaments.updateState)
 
   if (!tournament || !participants || !rounds || !leaderboard) {
     return <div className="p-10 animate-pulse"><div className="h-8 w-64 bg-zinc-100 rounded-xl" /></div>
@@ -36,12 +38,24 @@ function TournamentDetailPage() {
     : tournament.state === 'completed' || tournament.state === 'archived' ? 'completed'
     : 'draft'
 
+  const tid = tournamentId as Id<'tournaments'>
+
   const handleGenerate = async () => {
-    await generateRounds({ tournamentId: tournamentId as Id<'tournaments'> })
+    await generateRounds({ tournamentId: tid })
   }
+
+  const canAddPlayer = tournament.state === 'draft' || tournament.state === 'registration_open'
 
   return (
     <div className="max-w-[1100px] mx-auto px-10 py-7">
+      {showAddPlayer && (
+        <AddPlayerModal
+          tournamentId={tid}
+          existingIds={participants.map(p => p.userId).filter(Boolean) as Id<'users'>[]}
+          onClose={() => setShowAddPlayer(false)}
+        />
+      )}
+
       {/* Back */}
       <button onClick={() => navigate({ to: `/org/${slug}/tournaments` })}
         className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-mute hover:text-ink mb-4 group">
@@ -73,8 +87,29 @@ function TournamentDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="md" icon="dots" />
-          <Button variant="ink" size="md" icon="flag">Finish tournament</Button>
+          {tournament.state === 'draft' && (
+            <Button variant="outline" size="md" icon="flag"
+              onClick={() => updateState({ tournamentId: tid, state: 'registration_open' })}>
+              Open registration
+            </Button>
+          )}
+          {tournament.state === 'registration_open' && (
+            <Button variant="ghost" size="md"
+              onClick={() => updateState({ tournamentId: tid, state: 'draft' })}>
+              Close registration
+            </Button>
+          )}
+          {tournament.state === 'in_progress' && (
+            <Button variant="ink" size="md" icon="flag"
+              onClick={() => updateState({ tournamentId: tid, state: 'completed' })}>
+              Finish tournament
+            </Button>
+          )}
+          {(tournament.state === 'completed' || tournament.state === 'archived') && (
+            <span className="text-[13px] font-semibold text-ink-mute flex items-center gap-1.5">
+              <Icon name="check" className="w-4 h-4" /> Completed
+            </span>
+          )}
         </div>
       </div>
 
@@ -99,7 +134,14 @@ function TournamentDetailPage() {
           onScore={setScoreFor}
         />
       )}
-      {tab === 'participants' && <ParticipantsTab participants={participants} tournamentId={tournamentId as Id<'tournaments'>} />}
+      {tab === 'participants' && (
+        <ParticipantsTab
+          participants={participants}
+          tournamentId={tid}
+          canAdd={canAddPlayer}
+          onAdd={() => setShowAddPlayer(true)}
+        />
+      )}
       {tab === 'standings' && <StandingsTab leaderboard={leaderboard} />}
 
       {scoreFor && (
@@ -110,7 +152,7 @@ function TournamentDetailPage() {
 }
 
 /* ─── Schedule tab ────────────────────────────────────────────── */
-function ScheduleTab({ tournament, tournamentId, rounds, onGenerate, onScore }: any) {
+function ScheduleTab({ tournament, tournamentId: _tid, rounds, onGenerate, onScore }: any) {
   if (rounds.length === 0) {
     return (
       <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-12 flex flex-col items-center text-center">
@@ -231,9 +273,7 @@ function MatchCell({ match, onClick }: any) {
 }
 
 /* ─── Participants tab ────────────────────────────────────────── */
-function ParticipantsTab({ participants, tournamentId }: any) {
-  const addParticipant = useMutation(api.participants.add)
-
+function ParticipantsTab({ participants, tournamentId: _tid, canAdd, onAdd }: any) {
   return (
     <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-100">
@@ -242,7 +282,9 @@ function ParticipantsTab({ participants, tournamentId }: any) {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" icon="filter">Sort</Button>
-          <Button variant="outline" size="sm" icon="plus">Add player</Button>
+          {canAdd && (
+            <Button variant="outline" size="sm" icon="plus" onClick={onAdd}>Add player</Button>
+          )}
         </div>
       </div>
       {participants.length === 0 ? (
@@ -274,6 +316,126 @@ function ParticipantsTab({ participants, tournamentId }: any) {
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+/* ─── Add player modal ────────────────────────────────────────── */
+const INPUT_CLS = 'w-full h-10 px-3.5 rounded-xl bg-white ring-1 ring-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent-dark/40 transition-all'
+
+function AddPlayerModal({ tournamentId, existingIds, onClose }: {
+  tournamentId: Id<'tournaments'>
+  existingIds: Id<'users'>[]
+  onClose: () => void
+}) {
+  const [mode, setMode] = useState<'walkin' | 'member'>('walkin')
+  const [walkInName, setWalkInName] = useState('')
+  const [search, setSearch] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const allUsers = useQuery(api.users.list)
+  const addParticipant = useMutation(api.participants.add)
+
+  const filtered = (allUsers ?? [])
+    .filter(u => !existingIds.includes(u._id))
+    .filter(u => !search || u.name.toLowerCase().includes(search.toLowerCase()))
+
+  async function addWalkIn() {
+    if (!walkInName.trim()) { setError('Enter a name'); return }
+    setSaving(true); setError('')
+    try {
+      await addParticipant({ tournamentId, isWalkIn: true, walkInName: walkInName.trim(), entryType: 'solo' })
+      setWalkInName('')
+      onClose()
+    } catch (e: any) { setError(e?.message ?? 'Failed'); setSaving(false) }
+  }
+
+  async function addMember(userId: Id<'users'>) {
+    setSaving(true); setError('')
+    try {
+      await addParticipant({ tournamentId, userId, isWalkIn: false, entryType: 'solo' })
+      onClose()
+    } catch (e: any) { setError(e?.message ?? 'Failed'); setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-[440px] bg-paper rounded-2xl shadow-pop ring-1 ring-ink/8">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
+          <h2 className="font-display font-bold text-[18px]">Add player</h2>
+          <button onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-ink/6 text-ink-mute hover:text-ink transition-colors">
+            <Icon name="x" className="w-4 h-4" stroke={2.5} />
+          </button>
+        </div>
+
+        {/* Mode toggle */}
+        <div className="flex gap-1 p-3 pb-0">
+          {(['walkin', 'member'] as const).map(m => (
+            <button key={m} onClick={() => setMode(m)}
+              className={`flex-1 h-8 rounded-lg text-[13px] font-semibold transition-all
+                ${mode === m ? 'bg-ink text-paper' : 'text-ink-mute hover:text-ink'}`}>
+              {m === 'walkin' ? 'Walk-in' : 'Member'}
+            </button>
+          ))}
+        </div>
+
+        <div className="p-4">
+          {mode === 'walkin' ? (
+            <div className="space-y-3">
+              <p className="text-[13px] text-ink-mute">Enter the player's name. No account needed.</p>
+              <input
+                autoFocus
+                value={walkInName}
+                onChange={e => setWalkInName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addWalkIn()}
+                placeholder="Player name"
+                className={INPUT_CLS}
+              />
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
+                <Button variant="primary" className="flex-1" onClick={addWalkIn} disabled={saving}>
+                  {saving ? 'Adding…' : 'Add walk-in'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <input
+                autoFocus
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search members…"
+                className={INPUT_CLS}
+              />
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+              <div className="max-h-60 overflow-y-auto -mx-1 space-y-0.5">
+                {allUsers === undefined ? (
+                  <div className="text-center py-6 text-ink-mute text-sm animate-pulse">Loading…</div>
+                ) : filtered.length === 0 ? (
+                  <div className="text-center py-6 text-ink-mute text-sm">
+                    {search ? 'No members match.' : 'All members already added.'}
+                  </div>
+                ) : filtered.map(u => (
+                  <button key={u._id} onClick={() => addMember(u._id)} disabled={saving}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent-soft transition-colors group text-left">
+                    <Avatar name={u.name} size={32} />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-sm">{u.name}</div>
+                      <div className="text-[12px] text-ink-mute">{u.email}</div>
+                    </div>
+                    <Icon name="plus" className="w-4 h-4 text-zinc-300 group-hover:text-accent-dark" stroke={2.5} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
