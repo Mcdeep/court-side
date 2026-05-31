@@ -18,12 +18,18 @@ export const generate = mutation({
     const venue = await ctx.db.get(tournament.venueId);
     if (!venue) throw new Error("Venue not found");
 
+    const existingRounds = await ctx.db
+      .query("rounds")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
+      .take(1);
+    if (existingRounds.length > 0) throw new Error("Rounds already generated for this tournament");
+
     const participants = await ctx.db
       .query("participants")
       .withIndex("by_tournament", (q) =>
         q.eq("tournamentId", args.tournamentId)
       )
-      .collect();
+      .take(200);
 
     if (participants.length < 4) {
       throw new Error("Need at least 4 participants to generate rounds");
@@ -76,7 +82,7 @@ export const list = query({
         q.eq("tournamentId", args.tournamentId)
       )
       .order("asc")
-      .collect();
+      .take(200);
   },
 });
 

@@ -1,5 +1,6 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { requireUser } from './lib/auth'
 
 export const getBySlug = query({
   args: { slug: v.string() },
@@ -25,6 +26,7 @@ export const create = mutation({
     slug: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireUser(ctx);
     return ctx.db.insert('organizations', {
       ...args,
       status: 'active',
@@ -35,6 +37,7 @@ export const create = mutation({
 export const suspend = mutation({
   args: { organizationId: v.id('organizations') },
   handler: async (ctx, args) => {
+    await requireUser(ctx);
     await ctx.db.patch(args.organizationId, { status: 'suspended' })
   },
 })

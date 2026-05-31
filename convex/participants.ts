@@ -38,7 +38,7 @@ export const list = query({
       .withIndex("by_tournament", (q) =>
         q.eq("tournamentId", args.tournamentId)
       )
-      .collect();
+      .take(200);
 
     return Promise.all(
       participants.map(async (p) => ({

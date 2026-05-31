@@ -8,7 +8,7 @@ export const listByRound = query({
     const matches = await ctx.db
       .query("matches")
       .withIndex("by_round", (q) => q.eq("roundId", args.roundId))
-      .collect();
+      .take(50);
 
     return Promise.all(
       matches.map(async (match) => {

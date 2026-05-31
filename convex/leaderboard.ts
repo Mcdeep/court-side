@@ -58,10 +58,9 @@ export const recalculate = internalMutation({
     for (const p of participants) {
       const existing = await ctx.db
         .query("leaderboard")
-        .withIndex("by_tournament", (q) =>
-          q.eq("tournamentId", round.tournamentId)
+        .withIndex("by_tournament_and_participant", (q) =>
+          q.eq("tournamentId", round.tournamentId).eq("participantId", p.id as Id<"participants">)
         )
-        .filter((q) => q.eq(q.field("participantId"), p.id))
         .unique();
 
       if (existing) {

@@ -187,9 +187,17 @@ function ScheduleTab({ tournament, tournamentId: _tid, rounds, onGenerate, onSco
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="md" icon="gear">Settings</Button>
-          <Button variant="primary" size="md" icon="plus" onClick={onGenerate}>
-            Generate round {rounds.length + 1}
-          </Button>
+          {tournament.format !== 'americano' && (
+            <Button variant="primary" size="md" icon="plus" onClick={onGenerate}>
+              Generate round {rounds.length + 1}
+            </Button>
+          )}
+          {tournament.format === 'americano' && (
+            <span className="text-[12.5px] text-ink-mute font-medium flex items-center gap-1.5">
+              <Icon name="check" className="w-4 h-4 text-zinc-400" stroke={2.5} />
+              All {rounds.length} rounds scheduled
+            </span>
+          )}
         </div>
       </div>
 
@@ -486,18 +494,12 @@ function StandingsTab({ leaderboard }: any) {
 function ScoreModal({ match, onClose }: { match: any; onClose: () => void }) {
   const [a, setA] = useState(0)
   const [b, setB] = useState(0)
-  const submitScore = useMutation(api.scores.submit)
+  const saveResult = useMutation(api.scores.saveResult)
 
   const complete = a === POINTS_TO_WIN || b === POINTS_TO_WIN
 
   const handleSave = async () => {
-    if (!match.pairA?.participantA?._id) return
-    await submitScore({
-      matchId: match._id,
-      submittedBy: match.pairA.participantA._id,
-      scoreA: a,
-      scoreB: b,
-    })
+    await saveResult({ matchId: match._id, scoreA: a, scoreB: b })
     onClose()
   }
 

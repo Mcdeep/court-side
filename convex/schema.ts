@@ -118,5 +118,6 @@ export default defineSchema({
     losses: v.number(),
   })
     .index("by_tournament", ["tournamentId"])
-    .index("by_tournament_points", ["tournamentId", "points"]),
+    .index("by_tournament_points", ["tournamentId", "points"])
+    .index("by_tournament_and_participant", ["tournamentId", "participantId"]),
 });

@@ -20,7 +20,7 @@ export const submit = mutation({
     const existing = await ctx.db
       .query("scores")
       .withIndex("by_match", (q) => q.eq("matchId", args.matchId))
-      .collect();
+      .take(10);
 
     if (existing.length > 0) {
       const prior = existing[0];
@@ -78,7 +78,7 @@ export const resolve = mutation({
     const scores = await ctx.db
       .query("scores")
       .withIndex("by_match", (q) => q.eq("matchId", args.matchId))
-      .collect();
+      .take(10);
 
     for (const score of scores) {
       await ctx.db.patch(score._id, { state: "approved" });
@@ -99,6 +99,26 @@ export const listByMatch = query({
     return ctx.db
       .query("scores")
       .withIndex("by_match", (q) => q.eq("matchId", args.matchId))
-      .collect();
+      .take(10);
+  },
+});
+
+export const saveResult = mutation({
+  args: {
+    matchId: v.id("matches"),
+    scoreA: v.number(),
+    scoreB: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await requireUser(ctx);
+    const match = await ctx.db.get(args.matchId);
+    if (!match) throw new Error("Match not found");
+    if (match.state === "completed") throw new Error("Match already completed");
+    await ctx.db.patch(args.matchId, { state: "completed" });
+    await ctx.scheduler.runAfter(0, internal.leaderboard.recalculate, {
+      matchId: args.matchId,
+      scoreA: args.scoreA,
+      scoreB: args.scoreB,
+    });
   },
 });

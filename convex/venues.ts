@@ -10,7 +10,7 @@ export const listByOrg = query({
       .withIndex("by_organization", (q) =>
         q.eq("organizationId", args.organizationId)
       )
-      .collect();
+      .take(100);
   },
 });
 
