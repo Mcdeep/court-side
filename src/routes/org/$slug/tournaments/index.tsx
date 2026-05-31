@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Button, Icon, SegTabs, StatusChip } from '#/components/ui'
 import type { Id } from '../../../../../convex/_generated/dataModel'
 
@@ -21,6 +21,7 @@ function TournamentsPage() {
   const { slug } = useParams({ from: '/org/$slug/tournaments/' })
   const navigate = useNavigate()
   const [filter, setFilter] = useState('all')
+  const [showNew, setShowNew] = useState(false)
 
   // Look up org by slug
   const org = useQuery(api.organizations.getBySlug, { slug })
@@ -56,6 +57,16 @@ function TournamentsPage() {
 
   return (
     <div className="max-w-[1100px] mx-auto px-10 py-8">
+      {showNew && (
+        <NewTournamentModal
+          orgId={org._id}
+          onClose={() => setShowNew(false)}
+          onCreated={(id) => {
+            setShowNew(false)
+            navigate({ to: `/org/${slug}/tournaments/${id}` })
+          }}
+        />
+      )}
       {/* Header */}
       <div className="flex items-end justify-between gap-4 mb-7">
         <div>
@@ -64,7 +75,7 @@ function TournamentsPage() {
           </div>
           <h1 className="font-display text-[34px] font-bold leading-tight tracking-tight">Tournaments</h1>
         </div>
-        <Button variant="primary" size="lg" icon="plus">New tournament</Button>
+        <Button variant="primary" size="lg" icon="plus" onClick={() => setShowNew(true)}>New tournament</Button>
       </div>
 
       {/* Stat strip */}
@@ -163,6 +174,178 @@ function Stat({ label, value, sub, icon, accent }: {
       </div>
       <div className="mt-2 font-display font-bold text-[30px] leading-none tnum">{value}</div>
       <div className={`text-[12.5px] mt-1 ${accent ? 'text-paper/55' : 'text-ink-mute'}`}>{sub}</div>
+    </div>
+  )
+}
+
+const FORMAT_OPTIONS = [
+  { value: 'americano',          label: 'Americano' },
+  { value: 'mexicano',           label: 'Mexicano' },
+  { value: 'round_robin',        label: 'Round Robin' },
+  { value: 'knockout',           label: 'Knockout' },
+  { value: 'king_of_the_court',  label: 'King of the Court' },
+  { value: 'snakes_and_ladders', label: 'Snakes & Ladders' },
+  { value: 'team_clash',         label: 'Team Clash' },
+] as const
+
+type TournamentFormat = typeof FORMAT_OPTIONS[number]['value']
+
+function toDatetimeLocal(ms: number) {
+  const d = new Date(ms)
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+  return d.toISOString().slice(0, 16)
+}
+
+function NewTournamentModal({ orgId, onClose, onCreated }: {
+  orgId: Id<'organizations'>
+  onClose: () => void
+  onCreated: (id: Id<'tournaments'>) => void
+}) {
+  const venues = useQuery(api.venues.listByOrg, { organizationId: orgId })
+  const createTournament = useMutation(api.tournaments.create)
+
+  const now = Date.now()
+  const [name, setName]       = useState('')
+  const [format, setFormat]   = useState<TournamentFormat>('americano')
+  const [venueId, setVenueId] = useState<Id<'venues'> | ''>('')
+  const [startsAt, setStartsAt] = useState(toDatetimeLocal(now + 1000 * 60 * 60))
+  const [endsAt, setEndsAt]     = useState(toDatetimeLocal(now + 1000 * 60 * 60 * 4))
+  const [saving, setSaving]   = useState(false)
+  const [error, setError]     = useState('')
+
+  // Pre-select first venue once loaded
+  const firstVenueId = venues?.[0]?._id
+  const resolvedVenue = (venueId || firstVenueId) as Id<'venues'> | undefined
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!resolvedVenue) { setError('Select a venue'); return }
+    if (!name.trim()) { setError('Name required'); return }
+    setSaving(true)
+    setError('')
+    try {
+      const id = await createTournament({
+        organizationId: orgId,
+        venueId: resolvedVenue,
+        name: name.trim(),
+        format,
+        startsAt: new Date(startsAt).getTime(),
+        endsAt: new Date(endsAt).getTime(),
+      })
+      onCreated(id)
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to create')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Panel */}
+      <div className="relative w-full max-w-[480px] bg-paper rounded-2xl shadow-pop p-6 ring-1 ring-ink/8">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <h2 className="font-display font-bold text-[22px] tracking-tight">New tournament</h2>
+            <p className="text-ink-mute text-[13px] mt-0.5">Create a draft — add players once created.</p>
+          </div>
+          <button onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-ink/6 text-ink-mute hover:text-ink transition-colors">
+            <Icon name="x" className="w-4 h-4" stroke={2.5} />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
+          {/* Name */}
+          <Field label="Name">
+            <input
+              autoFocus
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. Summer Americano"
+              className={INPUT_CLS}
+              required
+            />
+          </Field>
+
+          {/* Format */}
+          <Field label="Format">
+            <select
+              value={format}
+              onChange={e => setFormat(e.target.value as TournamentFormat)}
+              className={INPUT_CLS}>
+              {FORMAT_OPTIONS.map(f => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
+            </select>
+          </Field>
+
+          {/* Venue */}
+          <Field label="Venue">
+            {venues === undefined ? (
+              <div className={`${INPUT_CLS} text-ink-mute animate-pulse`}>Loading…</div>
+            ) : venues.length === 0 ? (
+              <div className={`${INPUT_CLS} text-red-500 text-sm`}>No venues — add one in Courts first.</div>
+            ) : (
+              <select
+                value={venueId || firstVenueId}
+                onChange={e => setVenueId(e.target.value as Id<'venues'>)}
+                className={INPUT_CLS}>
+                {venues.map(v => (
+                  <option key={v._id} value={v._id}>{v.name} ({v.courtCount} courts)</option>
+                ))}
+              </select>
+            )}
+          </Field>
+
+          {/* Date/time row */}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Starts">
+              <input
+                type="datetime-local"
+                value={startsAt}
+                onChange={e => setStartsAt(e.target.value)}
+                className={INPUT_CLS}
+                required
+              />
+            </Field>
+            <Field label="Ends">
+              <input
+                type="datetime-local"
+                value={endsAt}
+                onChange={e => setEndsAt(e.target.value)}
+                className={INPUT_CLS}
+                required
+              />
+            </Field>
+          </div>
+
+          {error && (
+            <p className="text-red-500 text-sm">{error}</p>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
+            <Button type="submit" variant="primary" className="flex-1" disabled={saving}>
+              {saving ? 'Creating…' : 'Create tournament'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+const INPUT_CLS = 'w-full h-10 px-3.5 rounded-xl bg-white ring-1 ring-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent-dark/40 transition-all'
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-[12px] font-bold uppercase tracking-wide text-ink-mute mb-1.5">{label}</label>
+      {children}
     </div>
   )
 }

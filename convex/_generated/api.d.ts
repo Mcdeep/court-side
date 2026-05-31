@@ -16,8 +16,10 @@ import type * as organizations from "../organizations.js";
 import type * as participants from "../participants.js";
 import type * as rounds from "../rounds.js";
 import type * as scores from "../scores.js";
+import type * as seed from "../seed.js";
 import type * as tournaments from "../tournaments.js";
 import type * as users from "../users.js";
+import type * as venues from "../venues.js";
 
 import type {
   ApiFromModules,
@@ -34,8 +36,10 @@ declare const fullApi: ApiFromModules<{
   participants: typeof participants;
   rounds: typeof rounds;
   scores: typeof scores;
+  seed: typeof seed;
   tournaments: typeof tournaments;
   users: typeof users;
+  venues: typeof venues;
 }>;
 
 /**
