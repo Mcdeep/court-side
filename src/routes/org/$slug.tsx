@@ -1,4 +1,6 @@
 import { createFileRoute, Link, Outlet, useParams, useRouterState } from '@tanstack/react-router'
+import { useQuery } from 'convex/react'
+import { api } from '#/../convex/_generated/api'
 import { Icon } from '#/components/ui'
 
 export const Route = createFileRoute('/org/$slug')({
@@ -17,9 +19,16 @@ function OrgShell() {
   const pathname = useRouterState({ select: s => s.location.pathname })
   const active = NAV.find(n => pathname.includes(`/${n.id}`))?.id ?? 'tournaments'
 
+  const org = useQuery(api.organizations.getBySlug, { slug })
+  const tournaments = useQuery(
+    api.tournaments.list,
+    org ? { organizationId: org._id } : 'skip'
+  )
+  const tournamentCount = tournaments?.length ?? 0
+
   return (
     <div className="flex min-h-screen bg-paper font-sans text-ink">
-      <Sidebar slug={slug} active={active} />
+      <Sidebar slug={slug} active={active} tournamentCount={tournamentCount} />
       <main className="flex-1 min-w-0 overflow-y-auto">
         <Outlet />
       </main>
@@ -27,7 +36,7 @@ function OrgShell() {
   )
 }
 
-function Sidebar({ slug, active }: { slug: string; active: string }) {
+function Sidebar({ slug, active, tournamentCount }: { slug: string; active: string; tournamentCount: number }) {
   return (
     <aside className="w-[244px] shrink-0 bg-ink text-paper flex flex-col h-screen sticky top-0">
       {/* Wordmark */}
@@ -48,8 +57,8 @@ function Sidebar({ slug, active }: { slug: string; active: string }) {
               {isActive && <span className="absolute left-0 w-1 h-5 rounded-r-full bg-accent" />}
               <Icon name={item.icon} className="w-[18px] h-[18px]" stroke={2.2} />
               {item.label}
-              {item.id === 'tournaments' && (
-                <span className="ml-auto text-[11px] tnum font-bold bg-accent text-ink px-1.5 rounded-full">2</span>
+              {item.id === 'tournaments' && tournamentCount > 0 && (
+                <span className="ml-auto text-[11px] tnum font-bold bg-accent text-ink px-1.5 rounded-full">{tournamentCount}</span>
               )}
             </Link>
           )

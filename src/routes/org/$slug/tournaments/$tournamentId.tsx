@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
-import { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { Id } from '../../../../../convex/_generated/dataModel'
 import { Avatar, Button, Icon, SegTabs, StatusChip, TeamMark } from '#/components/ui'
 
@@ -22,6 +22,9 @@ function TournamentDetailPage() {
   const [tab, setTab] = useState('schedule')
   const [scoreFor, setScoreFor] = useState<any>(null)
   const [showAddPlayer, setShowAddPlayer] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<'archive' | 'delete' | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const tournament = useQuery(api.tournaments.get, { tournamentId: tournamentId as Id<'tournaments'> })
   const participants = useQuery(api.participants.list, { tournamentId: tournamentId as Id<'tournaments'> })
@@ -29,6 +32,7 @@ function TournamentDetailPage() {
   const leaderboard = useQuery(api.leaderboard.get, { tournamentId: tournamentId as Id<'tournaments'> })
   const generateRounds = useMutation(api.rounds.generate)
   const updateState = useMutation(api.tournaments.updateState)
+  const deleteTournament = useMutation(api.tournaments.deleteTournament)
 
   if (!tournament || !participants || !rounds || !leaderboard) {
     return <div className="p-10 animate-pulse"><div className="h-8 w-64 bg-zinc-100 rounded-xl" /></div>
@@ -45,6 +49,19 @@ function TournamentDetailPage() {
   }
 
   const canAddPlayer = tournament.state === 'draft' || tournament.state === 'registration_open'
+  const canEdit = ['draft', 'published', 'registration_open'].includes(tournament.state)
+  const canDelete = tournament.state === 'draft' && rounds.length === 0
+  const canArchive = tournament.state !== 'archived'
+
+  const handleConfirm = async () => {
+    if (confirmAction === 'archive') {
+      await updateState({ tournamentId: tid, state: 'archived' })
+      setConfirmAction(null)
+    } else if (confirmAction === 'delete') {
+      await deleteTournament({ tournamentId: tid })
+      navigate({ to: `/org/${slug}/tournaments` })
+    }
+  }
 
   return (
     <div className="max-w-[1100px] mx-auto px-10 py-7">
@@ -53,6 +70,25 @@ function TournamentDetailPage() {
           tournamentId={tid}
           existingIds={participants.map(p => p.userId).filter(Boolean) as Id<'users'>[]}
           onClose={() => setShowAddPlayer(false)}
+        />
+      )}
+      {showEdit && (
+        <EditTournamentModal
+          tournament={tournament}
+          tournamentId={tid}
+          onClose={() => setShowEdit(false)}
+        />
+      )}
+      {confirmAction && (
+        <ConfirmDialog
+          title={confirmAction === 'delete' ? 'Delete tournament?' : 'Archive tournament?'}
+          body={confirmAction === 'delete'
+            ? `"${tournament.name}" will be permanently deleted. This cannot be undone.`
+            : `"${tournament.name}" will be archived and hidden from active views.`}
+          confirmLabel={confirmAction === 'delete' ? 'Delete' : 'Archive'}
+          danger={confirmAction === 'delete'}
+          onConfirm={handleConfirm}
+          onCancel={() => setConfirmAction(null)}
         />
       )}
 
@@ -87,6 +123,11 @@ function TournamentDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {canEdit && (
+            <Button variant="outline" size="md" icon="pencil" onClick={() => setShowEdit(true)}>
+              Edit
+            </Button>
+          )}
           {tournament.state === 'draft' && (
             <Button variant="outline" size="md" icon="flag"
               onClick={() => updateState({ tournamentId: tid, state: 'registration_open' })}>
@@ -110,6 +151,16 @@ function TournamentDetailPage() {
               <Icon name="check" className="w-4 h-4" /> Completed
             </span>
           )}
+          {/* Overflow menu */}
+          <OverflowMenu
+            open={menuOpen}
+            onToggle={() => setMenuOpen(o => !o)}
+            onClose={() => setMenuOpen(false)}
+            canArchive={canArchive}
+            canDelete={canDelete}
+            onArchive={() => { setMenuOpen(false); setConfirmAction('archive') }}
+            onDelete={() => { setMenuOpen(false); setConfirmAction('delete') }}
+          />
         </div>
       </div>
 
@@ -147,6 +198,160 @@ function TournamentDetailPage() {
       {scoreFor && (
         <ScoreModal match={scoreFor} onClose={() => setScoreFor(null)} />
       )}
+    </div>
+  )
+}
+
+/* ─── Overflow menu ───────────────────────────────────────────── */
+function OverflowMenu({ open, onToggle, onClose, canArchive, canDelete, onArchive, onDelete }: {
+  open: boolean; onToggle: () => void; onClose: () => void
+  canArchive: boolean; canDelete: boolean
+  onArchive: () => void; onDelete: () => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open, onClose])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={onToggle}
+        className="w-9 h-9 flex items-center justify-center rounded-xl ring-1 ring-zinc-200 hover:bg-zinc-50 transition-colors">
+        <Icon name="dots" className="w-4 h-4 text-ink-mute" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 w-44 bg-white rounded-2xl shadow-pop ring-1 ring-zinc-200/80 py-1.5 z-30">
+          {canArchive && (
+            <button onClick={onArchive}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[13.5px] font-medium text-ink hover:bg-zinc-50 transition-colors">
+              <Icon name="archive" className="w-4 h-4 text-zinc-400" />
+              Archive
+            </button>
+          )}
+          {canDelete && (
+            <button onClick={onDelete}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[13.5px] font-medium text-red-500 hover:bg-red-50 transition-colors">
+              <Icon name="trash" className="w-4 h-4" />
+              Delete
+            </button>
+          )}
+          {!canArchive && !canDelete && (
+            <div className="px-3.5 py-2 text-[13px] text-ink-mute">No actions available</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── Edit tournament modal ───────────────────────────────────── */
+function toDatetimeLocal(ms: number) {
+  const d = new Date(ms)
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+  return d.toISOString().slice(0, 16)
+}
+
+const INPUT_MODAL_CLS = 'w-full h-10 px-3.5 rounded-xl bg-white ring-1 ring-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent-dark/40 transition-all'
+
+function EditTournamentModal({ tournament, tournamentId, onClose }: {
+  tournament: any; tournamentId: Id<'tournaments'>; onClose: () => void
+}) {
+  const [name, setName] = useState(tournament.name)
+  const [startsAt, setStartsAt] = useState(toDatetimeLocal(tournament.startsAt))
+  const [endsAt, setEndsAt] = useState(toDatetimeLocal(tournament.endsAt))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const updateTournament = useMutation(api.tournaments.update)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!name.trim()) { setError('Name required'); return }
+    setSaving(true); setError('')
+    try {
+      await updateTournament({
+        tournamentId,
+        name: name.trim(),
+        startsAt: new Date(startsAt).getTime(),
+        endsAt: new Date(endsAt).getTime(),
+      })
+      onClose()
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to save')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-[440px] bg-paper rounded-2xl shadow-pop p-6 ring-1 ring-ink/8">
+        <div className="flex items-start justify-between mb-5">
+          <h2 className="font-display font-bold text-[22px] tracking-tight">Edit tournament</h2>
+          <button onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-ink/6 text-ink-mute hover:text-ink transition-colors">
+            <Icon name="x" className="w-4 h-4" stroke={2.5} />
+          </button>
+        </div>
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className="block text-[12px] font-bold uppercase tracking-wide text-ink-mute mb-1.5">Name</label>
+            <input autoFocus value={name} onChange={e => setName(e.target.value)} className={INPUT_MODAL_CLS} required />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[12px] font-bold uppercase tracking-wide text-ink-mute mb-1.5">Starts</label>
+              <input type="datetime-local" value={startsAt} onChange={e => setStartsAt(e.target.value)} className={INPUT_MODAL_CLS} required />
+            </div>
+            <div>
+              <label className="block text-[12px] font-bold uppercase tracking-wide text-ink-mute mb-1.5">Ends</label>
+              <input type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)} className={INPUT_MODAL_CLS} required />
+            </div>
+          </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <div className="flex gap-2 pt-1">
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
+            <Button type="submit" variant="primary" className="flex-1" disabled={saving}>
+              {saving ? 'Saving…' : 'Save changes'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Confirm dialog ──────────────────────────────────────────── */
+function ConfirmDialog({ title, body, confirmLabel, danger, onConfirm, onCancel }: {
+  title: string; body: string; confirmLabel: string; danger?: boolean
+  onConfirm: () => void; onCancel: () => void
+}) {
+  const [working, setWorking] = useState(false)
+  async function go() {
+    setWorking(true)
+    try { await onConfirm() } catch { setWorking(false) }
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative w-full max-w-[380px] bg-paper rounded-2xl shadow-pop p-6 ring-1 ring-ink/8">
+        <h2 className="font-display font-bold text-[20px] tracking-tight mb-2">{title}</h2>
+        <p className="text-sm text-ink-mute mb-5">{body}</p>
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1" onClick={onCancel} disabled={working}>Cancel</Button>
+          <Button
+            variant={danger ? 'ghost' : 'primary'}
+            className={`flex-1 ${danger ? '!text-red-500 !ring-red-200 hover:!bg-red-50' : ''}`}
+            onClick={go}
+            disabled={working}>
+            {working ? 'Working…' : confirmLabel}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

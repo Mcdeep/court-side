@@ -18,6 +18,8 @@ const PATHS: Record<string, string> = {
   clock:   'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
   cal:     'M4 6h16v15H4zM4 10h16M8 3v4M16 3v4',
   dots:    'M5 12h.01M12 12h.01M19 12h.01',
+  archive: 'M21 8H3M21 8v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8M21 8L18 3H6L3 8M10 11h4',
+  trash:   'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6',
   pencil:  'M4 20h4L19 9a2 2 0 0 0-3-3L5 17v3z',
   shuffle: 'M16 3h5v5M21 3l-7 7M4 20l6-6M4 4l5 5M16 21h5v-5M14 14l7 7',
   filter:  'M3 5h18l-7 8v6l-4-2v-4z',

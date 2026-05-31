@@ -26,9 +26,9 @@ function TournamentsPage() {
   // Look up org by slug
   const org = useQuery(api.organizations.getBySlug, { slug })
 
-  // Fetch tournaments once we have the org
+  // Fetch tournaments with venue + round progress
   const tournaments = useQuery(
-    api.tournaments.list,
+    api.tournaments.listWithDetails,
     org ? { organizationId: org._id } : 'skip'
   )
 
@@ -140,13 +140,28 @@ function TournamentsPage() {
               <div className="text-sm">
                 <span className="font-medium capitalize">{t.format.replace(/_/g, ' ')}</span>
               </div>
-              {/* Progress bar placeholder */}
-              <div className="text-sm tnum font-medium text-ink-mute">—</div>
+              {/* Courts */}
+              <div className="text-sm tnum font-medium text-ink-mute">
+                {t.courtCount > 0 ? t.courtCount : '—'}
+              </div>
+              {/* Progress */}
               <div className="pr-2">
-                <div className="flex items-center gap-2">
-                  <div className="h-1.5 flex-1 rounded-full bg-zinc-100" />
-                  <span className="tnum text-[12px] text-ink-mute w-9 text-right">0%</span>
-                </div>
+                {t.totalRounds > 0 ? (() => {
+                  const pct = Math.round((t.completedRounds / t.totalRounds) * 100)
+                  return (
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 flex-1 rounded-full bg-zinc-100 overflow-hidden">
+                        <div className="h-full rounded-full bg-accent-dark" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="tnum text-[12px] text-ink-mute w-9 text-right">{pct}%</span>
+                    </div>
+                  )
+                })() : (
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 flex-1 rounded-full bg-zinc-100" />
+                    <span className="tnum text-[12px] text-ink-mute w-9 text-right">—</span>
+                  </div>
+                )}
               </div>
               {/* Status */}
               <div className="w-28 flex items-center justify-end gap-1 pr-1">
