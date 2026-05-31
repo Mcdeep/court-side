@@ -86,6 +86,37 @@ export const list = query({
   },
 });
 
+export const start = mutation({
+  args: { roundId: v.id("rounds") },
+  handler: async (ctx, args) => {
+    await requireUser(ctx);
+    const round = await ctx.db.get(args.roundId);
+    if (!round) throw new Error("Round not found");
+    if (round.state !== "pending") throw new Error("Round already started");
+    await ctx.db.patch(args.roundId, { state: "in_progress" });
+    const matches = await ctx.db
+      .query("matches")
+      .withIndex("by_round", q => q.eq("roundId", args.roundId))
+      .take(50);
+    for (const match of matches) {
+      if (match.state === "scheduled") {
+        await ctx.db.patch(match._id, { state: "in_progress" });
+      }
+    }
+  },
+});
+
+export const complete = mutation({
+  args: { roundId: v.id("rounds") },
+  handler: async (ctx, args) => {
+    await requireUser(ctx);
+    const round = await ctx.db.get(args.roundId);
+    if (!round) throw new Error("Round not found");
+    if (round.state !== "in_progress") throw new Error("Round not in progress");
+    await ctx.db.patch(args.roundId, { state: "completed" });
+  },
+});
+
 export const updateState = internalMutation({
   args: {
     roundId: v.id("rounds"),

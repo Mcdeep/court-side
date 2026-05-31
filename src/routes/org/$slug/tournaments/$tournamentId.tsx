@@ -418,18 +418,64 @@ function ScheduleTab({ tournament, tournamentId: _tid, rounds, onGenerate, onSco
 
 function RoundRow({ round, onScore }: any) {
   const matches = useQuery(api.matches.listByRound, { roundId: round._id })
+  const startRound = useMutation(api.rounds.start)
+  const completeRound = useMutation(api.rounds.complete)
+  const [working, setWorking] = useState(false)
+
   if (!matches) return null
+
+  const doneCount = matches.filter((m: any) => m.state === 'completed' || m.state === 'disputed').length
+  const allDone = doneCount === matches.length && matches.length > 0
+
+  async function handleStart() {
+    setWorking(true)
+    try { await startRound({ roundId: round._id }) } finally { setWorking(false) }
+  }
+
+  async function handleComplete() {
+    setWorking(true)
+    try { await completeRound({ roundId: round._id }) } finally { setWorking(false) }
+  }
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-3">
-        <span className="font-display font-bold text-[15px]">R{round.roundNumber}</span>
-        <span className={`text-[10px] font-bold uppercase ${
-          round.state === 'in_progress' ? 'text-accent-dark' :
-          round.state === 'completed'   ? 'text-zinc-300' : 'text-zinc-300'
-        }`}>
-          {round.state === 'in_progress' ? 'Playing' : round.state === 'completed' ? 'Done' : 'Queued'}
-        </span>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2.5">
+          <span className="font-display font-bold text-[15px]">Round {round.roundNumber}</span>
+          <span className={`text-[10px] font-bold uppercase tracking-wide px-2 h-5 inline-flex items-center rounded-full
+            ${round.state === 'in_progress' ? 'bg-accent text-ink' :
+              round.state === 'completed'   ? 'bg-zinc-100 text-zinc-400' :
+                                              'bg-zinc-100 text-zinc-400'}`}>
+            {round.state === 'in_progress' ? 'Playing' : round.state === 'completed' ? 'Done' : 'Queued'}
+          </span>
+          {round.state !== 'pending' && (
+            <span className="text-[12px] text-ink-mute tnum">
+              {doneCount}/{matches.length} scored
+            </span>
+          )}
+        </div>
+        <div>
+          {round.state === 'pending' && (
+            <Button variant="outline" size="sm" icon="bolt" onClick={handleStart} disabled={working}>
+              Start round
+            </Button>
+          )}
+          {round.state === 'in_progress' && (
+            <Button
+              variant={allDone ? 'ink' : 'ghost'}
+              size="sm"
+              icon="check"
+              onClick={handleComplete}
+              disabled={working}>
+              {allDone ? 'End round' : `End round (${matches.length - doneCount} pending)`}
+            </Button>
+          )}
+          {round.state === 'completed' && (
+            <span className="text-[12px] font-semibold text-zinc-300 flex items-center gap-1">
+              <Icon name="check" className="w-3.5 h-3.5" stroke={2.5} /> Complete
+            </span>
+          )}
+        </div>
       </div>
       <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.max(matches.length, 1)}, minmax(0,1fr))` }}>
         {matches.map((match: any) => (
