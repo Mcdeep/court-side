@@ -12,7 +12,9 @@ export async function getUser(ctx: QueryCtx | MutationCtx) {
 }
 
 export async function requireUser(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
   const user = await getUser(ctx);
-  if (!user) throw new Error("Not authenticated");
+  if (!user) throw new Error("User profile not found — please reload");
   return user;
 }

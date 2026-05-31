@@ -8,7 +8,9 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import { ClerkProvider, useAuth } from '@clerk/tanstack-start'
 import { ConvexProviderWithClerk } from 'convex/react-clerk'
-import { ConvexReactClient } from 'convex/react'
+import { ConvexReactClient, useMutation } from 'convex/react'
+import { useEffect } from 'react'
+import { api } from '#/../convex/_generated/api'
 
 import appCss from '../styles.css?url'
 
@@ -36,10 +38,20 @@ function RootProviders() {
   return (
     <ClerkProvider>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+        <UserSync />
         <Outlet />
       </ConvexProviderWithClerk>
     </ClerkProvider>
   )
+}
+
+function UserSync() {
+  const { isSignedIn } = useAuth()
+  const upsert = useMutation(api.users.upsert)
+  useEffect(() => {
+    if (isSignedIn) upsert()
+  }, [isSignedIn])
+  return null
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
