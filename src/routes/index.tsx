@@ -10,7 +10,7 @@ function Home() {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Courtside</h1>
+        <h1 className="text-3xl font-bold">CourtOS</h1>
         <div>
           <SignedOut>
             <SignInButton mode="modal">

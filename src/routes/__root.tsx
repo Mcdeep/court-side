@@ -19,7 +19,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'Padel Tournament App' },
+      { title: 'CourtOS' },
     ],
     links: [{ rel: 'stylesheet', href: appCss }],
   }),
