@@ -43,6 +43,9 @@ export const recalculate = internalMutation({
     const round = await ctx.db.get(match.roundId);
     if (!round) return;
 
+    const tournament = await ctx.db.get(round.tournamentId);
+    if (tournament?.format === "snakes_and_ladders" && match.courtNumber !== 1) return;
+
     const pairA = await ctx.db.get(match.pairAId);
     const pairB = await ctx.db.get(match.pairBId);
     if (!pairA || !pairB) return;

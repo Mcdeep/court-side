@@ -6,6 +6,7 @@ import { generateRoundRobinRounds } from "./formats/round_robin";
 import { generateMexicanoRound } from "./formats/mexicano";
 import { generateKnockoutFirstRound, generateKnockoutNextRound } from "./formats/knockout";
 import { generateKingFirstRound, generateKingNextRound } from "./formats/king_of_the_court";
+import { generateSnakesFirstRound, generateSnakesNextRound } from "./formats/snakes_and_ladders";
 import { Id } from "./_generated/dataModel";
 
 export const generate = mutation({
@@ -16,7 +17,7 @@ export const generate = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
 
-    const supported = ["americano", "round_robin", "mexicano", "knockout", "king_of_the_court"];
+    const supported = ["americano", "round_robin", "mexicano", "knockout", "king_of_the_court", "snakes_and_ladders"];
     if (!supported.includes(tournament.format)) {
       throw new Error(`Format "${tournament.format}" not yet supported`);
     }
@@ -34,7 +35,7 @@ export const generate = mutation({
     if (PRE_GENERATED.includes(tournament.format) && existingRounds.length > 0) {
       throw new Error("Rounds already generated for this tournament");
     }
-    if (["mexicano", "knockout", "king_of_the_court"].includes(tournament.format) && existingRounds.length > 0) {
+    if (["mexicano", "knockout", "king_of_the_court", "snakes_and_ladders"].includes(tournament.format) && existingRounds.length > 0) {
       const last = existingRounds[existingRounds.length - 1];
       if (last.state !== "completed") {
         throw new Error("Complete the current round before generating the next");
@@ -147,6 +148,65 @@ export const generate = mutation({
         }
 
         roundPlans = [generateKingNextRound(currentKings, challengers, venue.courtCount)];
+      }
+    } else if (tournament.format === "snakes_and_ladders") {
+      if (existingRounds.length === 0) {
+        roundPlans = [generateSnakesFirstRound(participantIds, venue.courtCount)];
+      } else {
+        type PK = string;
+        const pKey = (a: string, b: string): PK => a < b ? `${a}:${b}` : `${b}:${a}`;
+        const courtLevels = new Map<PK, number>();
+        const pairById = new Map<PK, [string, string]>();
+
+        for (const round of existingRounds) {
+          const matches = await ctx.db
+            .query("matches")
+            .withIndex("by_round", (q) => q.eq("roundId", round._id))
+            .take(50);
+
+          const matchData = await Promise.all(matches.map(async (match) => {
+            const [pA, pB] = await Promise.all([ctx.db.get(match.pairAId), ctx.db.get(match.pairBId)]);
+            return { match, pA, pB };
+          }));
+
+          // Set initial court level from first appearance
+          for (const { match, pA, pB } of matchData) {
+            if (!pA || !pB) continue;
+            const keyA = pKey(pA.participantAId as string, pA.participantBId as string);
+            const keyB = pKey(pB.participantAId as string, pB.participantBId as string);
+            if (!courtLevels.has(keyA)) {
+              courtLevels.set(keyA, match.courtNumber);
+              pairById.set(keyA, [pA.participantAId as string, pA.participantBId as string]);
+            }
+            if (!courtLevels.has(keyB)) {
+              courtLevels.set(keyB, match.courtNumber);
+              pairById.set(keyB, [pB.participantAId as string, pB.participantBId as string]);
+            }
+          }
+
+          // Update levels: winner moves up, loser moves down
+          for (const { match, pA, pB } of matchData) {
+            if (!pA || !pB || match.scoreA === undefined || match.scoreB === undefined) continue;
+            const keyA = pKey(pA.participantAId as string, pA.participantBId as string);
+            const keyB = pKey(pB.participantAId as string, pB.participantBId as string);
+            const lA = courtLevels.get(keyA) ?? 1;
+            const lB = courtLevels.get(keyB) ?? 1;
+            const max = venue.courtCount;
+            if (match.scoreA >= match.scoreB) {
+              courtLevels.set(keyA, Math.max(1, lA - 1));
+              courtLevels.set(keyB, Math.min(max, lB + 1));
+            } else {
+              courtLevels.set(keyA, Math.min(max, lA + 1));
+              courtLevels.set(keyB, Math.max(1, lB - 1));
+            }
+          }
+        }
+
+        const pairsWithLevel = [...courtLevels.entries()].map(([key, level]) => ({
+          level,
+          pair: pairById.get(key)!,
+        }));
+        roundPlans = [generateSnakesNextRound(pairsWithLevel, venue.courtCount)];
       }
     } else {
       roundPlans = generateAmericanoRounds(participantIds, venue.courtCount);
