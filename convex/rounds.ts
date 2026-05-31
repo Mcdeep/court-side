@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { requireUser } from "./lib/auth";
 import { generateAmericanoRounds } from "./formats/americano";
 import { generateRoundRobinRounds } from "./formats/round_robin";
+import { generateMexicanoRound } from "./formats/mexicano";
 import { Id } from "./_generated/dataModel";
 
 export const generate = mutation({
@@ -13,7 +14,7 @@ export const generate = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
 
-    const supported = ["americano", "round_robin"];
+    const supported = ["americano", "round_robin", "mexicano"];
     if (!supported.includes(tournament.format)) {
       throw new Error(`Format "${tournament.format}" not yet supported`);
     }
@@ -21,11 +22,22 @@ export const generate = mutation({
     const venue = await ctx.db.get(tournament.venueId);
     if (!venue) throw new Error("Venue not found");
 
+    const PRE_GENERATED = ["americano", "round_robin"];
     const existingRounds = await ctx.db
       .query("rounds")
       .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
-      .take(1);
-    if (existingRounds.length > 0) throw new Error("Rounds already generated for this tournament");
+      .order("asc")
+      .take(200);
+
+    if (PRE_GENERATED.includes(tournament.format) && existingRounds.length > 0) {
+      throw new Error("Rounds already generated for this tournament");
+    }
+    if (tournament.format === "mexicano" && existingRounds.length > 0) {
+      const last = existingRounds[existingRounds.length - 1];
+      if (last.state !== "completed") {
+        throw new Error("Complete the current round before generating the next");
+      }
+    }
 
     const participants = await ctx.db
       .query("participants")
@@ -39,14 +51,29 @@ export const generate = mutation({
     }
 
     const participantIds = participants.map((p) => p._id as string);
-    const roundPlans = tournament.format === "round_robin"
-      ? generateRoundRobinRounds(participantIds, venue.courtCount)
-      : generateAmericanoRounds(participantIds, venue.courtCount);
 
+    let roundPlans;
+    if (tournament.format === "round_robin") {
+      roundPlans = generateRoundRobinRounds(participantIds, venue.courtCount);
+    } else if (tournament.format === "mexicano") {
+      const leaderboard = await ctx.db
+        .query("leaderboard")
+        .withIndex("by_tournament_points", (q) => q.eq("tournamentId", args.tournamentId))
+        .order("desc")
+        .take(200);
+      const rankedIds = leaderboard.map((e) => e.participantId as string);
+      const rankedSet = new Set(rankedIds);
+      const unranked = participantIds.filter((id) => !rankedSet.has(id));
+      roundPlans = [generateMexicanoRound([...rankedIds, ...unranked], venue.courtCount)];
+    } else {
+      roundPlans = generateAmericanoRounds(participantIds, venue.courtCount);
+    }
+
+    const baseRoundNumber = existingRounds.length;
     for (let r = 0; r < roundPlans.length; r++) {
       const roundId = await ctx.db.insert("rounds", {
         tournamentId: args.tournamentId,
-        roundNumber: r + 1,
+        roundNumber: baseRoundNumber + r + 1,
         state: "pending",
       });
 
@@ -73,7 +100,9 @@ export const generate = mutation({
       }
     }
 
-    await ctx.db.patch(args.tournamentId, { state: "in_progress" });
+    if (existingRounds.length === 0) {
+      await ctx.db.patch(args.tournamentId, { state: "in_progress" });
+    }
     return roundPlans.length;
   },
 });
