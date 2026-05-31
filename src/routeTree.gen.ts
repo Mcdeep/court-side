@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrgSlugRouteImport } from './routes/org/$slug'
+import { Route as KioskTournamentIdRouteImport } from './routes/kiosk/$tournamentId'
 import { Route as OrgSlugSettingsRouteImport } from './routes/org/$slug/settings'
 import { Route as OrgSlugPlayersRouteImport } from './routes/org/$slug/players'
 import { Route as OrgSlugCourtsRouteImport } from './routes/org/$slug/courts'
@@ -31,6 +32,11 @@ const IndexRoute = IndexRouteImport.update({
 const OrgSlugRoute = OrgSlugRouteImport.update({
   id: '/org/$slug',
   path: '/org/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KioskTournamentIdRoute = KioskTournamentIdRouteImport.update({
+  id: '/kiosk/$tournamentId',
+  path: '/kiosk/$tournamentId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrgSlugSettingsRoute = OrgSlugSettingsRouteImport.update({
@@ -63,6 +69,7 @@ const OrgSlugTournamentsTournamentIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
   '/org/$slug': typeof OrgSlugRouteWithChildren
   '/org/$slug/courts': typeof OrgSlugCourtsRoute
   '/org/$slug/players': typeof OrgSlugPlayersRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
   '/org/$slug': typeof OrgSlugRouteWithChildren
   '/org/$slug/courts': typeof OrgSlugCourtsRoute
   '/org/$slug/players': typeof OrgSlugPlayersRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
   '/org/$slug': typeof OrgSlugRouteWithChildren
   '/org/$slug/courts': typeof OrgSlugCourtsRoute
   '/org/$slug/players': typeof OrgSlugPlayersRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/kiosk/$tournamentId'
     | '/org/$slug'
     | '/org/$slug/courts'
     | '/org/$slug/players'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/kiosk/$tournamentId'
     | '/org/$slug'
     | '/org/$slug/courts'
     | '/org/$slug/players'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/kiosk/$tournamentId'
     | '/org/$slug'
     | '/org/$slug/courts'
     | '/org/$slug/players'
@@ -127,6 +139,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  KioskTournamentIdRoute: typeof KioskTournamentIdRoute
   OrgSlugRoute: typeof OrgSlugRouteWithChildren
 }
 
@@ -151,6 +164,13 @@ declare module '@tanstack/react-router' {
       path: '/org/$slug'
       fullPath: '/org/$slug'
       preLoaderRoute: typeof OrgSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kiosk/$tournamentId': {
+      id: '/kiosk/$tournamentId'
+      path: '/kiosk/$tournamentId'
+      fullPath: '/kiosk/$tournamentId'
+      preLoaderRoute: typeof KioskTournamentIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/org/$slug/settings': {
@@ -213,6 +233,7 @@ const OrgSlugRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  KioskTournamentIdRoute: KioskTournamentIdRoute,
   OrgSlugRoute: OrgSlugRouteWithChildren,
 }
 export const routeTree = rootRouteImport
