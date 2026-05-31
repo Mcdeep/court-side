@@ -10,6 +10,7 @@ export const Route = createFileRoute('/org/$slug/tournaments/$tournamentId')({
 })
 
 const POINTS_TO_WIN = 24
+const PRE_GENERATED_FORMATS = ['americano', 'round_robin']
 
 function lastName(name: string) {
   return name.split(' ').slice(-1)[0]
@@ -392,12 +393,12 @@ function ScheduleTab({ tournament, tournamentId: _tid, rounds, onGenerate, onSco
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="md" icon="gear">Settings</Button>
-          {tournament.format !== 'americano' && (
+          {!PRE_GENERATED_FORMATS.includes(tournament.format) && (
             <Button variant="primary" size="md" icon="plus" onClick={onGenerate}>
               Generate round {rounds.length + 1}
             </Button>
           )}
-          {tournament.format === 'americano' && (
+          {PRE_GENERATED_FORMATS.includes(tournament.format) && (
             <span className="text-[12.5px] text-ink-mute font-medium flex items-center gap-1.5">
               <Icon name="check" className="w-4 h-4 text-zinc-400" stroke={2.5} />
               All {rounds.length} rounds scheduled

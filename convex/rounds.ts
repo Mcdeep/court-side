@@ -2,6 +2,7 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireUser } from "./lib/auth";
 import { generateAmericanoRounds } from "./formats/americano";
+import { generateRoundRobinRounds } from "./formats/round_robin";
 import { Id } from "./_generated/dataModel";
 
 export const generate = mutation({
@@ -11,8 +12,10 @@ export const generate = mutation({
 
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
-    if (tournament.format !== "americano") {
-      throw new Error("Only Americano format supported in Phase 2");
+
+    const supported = ["americano", "round_robin"];
+    if (!supported.includes(tournament.format)) {
+      throw new Error(`Format "${tournament.format}" not yet supported`);
     }
 
     const venue = await ctx.db.get(tournament.venueId);
@@ -36,7 +39,9 @@ export const generate = mutation({
     }
 
     const participantIds = participants.map((p) => p._id as string);
-    const roundPlans = generateAmericanoRounds(participantIds, venue.courtCount);
+    const roundPlans = tournament.format === "round_robin"
+      ? generateRoundRobinRounds(participantIds, venue.courtCount)
+      : generateAmericanoRounds(participantIds, venue.courtCount);
 
     for (let r = 0; r < roundPlans.length; r++) {
       const roundId = await ctx.db.insert("rounds", {
