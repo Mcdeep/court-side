@@ -8,13 +8,33 @@
  * @module
  */
 
+import type * as formats_americano from "../formats/americano.js";
+import type * as leaderboard from "../leaderboard.js";
+import type * as lib_auth from "../lib/auth.js";
+import type * as matches from "../matches.js";
+import type * as participants from "../participants.js";
+import type * as rounds from "../rounds.js";
+import type * as scores from "../scores.js";
+import type * as tournaments from "../tournaments.js";
+import type * as users from "../users.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  "formats/americano": typeof formats_americano;
+  leaderboard: typeof leaderboard;
+  "lib/auth": typeof lib_auth;
+  matches: typeof matches;
+  participants: typeof participants;
+  rounds: typeof rounds;
+  scores: typeof scores;
+  tournaments: typeof tournaments;
+  users: typeof users;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.
