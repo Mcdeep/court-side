@@ -4,6 +4,7 @@ import { requireUser } from "./lib/auth";
 import { generateAmericanoRounds } from "./formats/americano";
 import { generateRoundRobinRounds } from "./formats/round_robin";
 import { generateMexicanoRound } from "./formats/mexicano";
+import { generateKnockoutFirstRound, generateKnockoutNextRound } from "./formats/knockout";
 import { Id } from "./_generated/dataModel";
 
 export const generate = mutation({
@@ -14,7 +15,7 @@ export const generate = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
 
-    const supported = ["americano", "round_robin", "mexicano"];
+    const supported = ["americano", "round_robin", "mexicano", "knockout"];
     if (!supported.includes(tournament.format)) {
       throw new Error(`Format "${tournament.format}" not yet supported`);
     }
@@ -32,7 +33,7 @@ export const generate = mutation({
     if (PRE_GENERATED.includes(tournament.format) && existingRounds.length > 0) {
       throw new Error("Rounds already generated for this tournament");
     }
-    if (tournament.format === "mexicano" && existingRounds.length > 0) {
+    if ((tournament.format === "mexicano" || tournament.format === "knockout") && existingRounds.length > 0) {
       const last = existingRounds[existingRounds.length - 1];
       if (last.state !== "completed") {
         throw new Error("Complete the current round before generating the next");
@@ -65,6 +66,29 @@ export const generate = mutation({
       const rankedSet = new Set(rankedIds);
       const unranked = participantIds.filter((id) => !rankedSet.has(id));
       roundPlans = [generateMexicanoRound([...rankedIds, ...unranked], venue.courtCount)];
+    } else if (tournament.format === "knockout") {
+      if (existingRounds.length === 0) {
+        roundPlans = [generateKnockoutFirstRound(participantIds, venue.courtCount)];
+      } else {
+        const lastRound = existingRounds[existingRounds.length - 1];
+        const lastMatches = await ctx.db
+          .query("matches")
+          .withIndex("by_round", (q) => q.eq("roundId", lastRound._id))
+          .take(50);
+        lastMatches.sort((a, b) => a.courtNumber - b.courtNumber);
+
+        const winnerPairs: [string, string][] = [];
+        for (const match of lastMatches) {
+          if (match.scoreA === undefined || match.scoreB === undefined) {
+            throw new Error("Not all matches in the previous round have scores");
+          }
+          const winnerPairId = match.scoreA >= match.scoreB ? match.pairAId : match.pairBId;
+          const pair = await ctx.db.get(winnerPairId);
+          if (!pair) throw new Error("Pair not found");
+          winnerPairs.push([pair.participantAId as string, pair.participantBId as string]);
+        }
+        roundPlans = [generateKnockoutNextRound(winnerPairs, venue.courtCount)];
+      }
     } else {
       roundPlans = generateAmericanoRounds(participantIds, venue.courtCount);
     }

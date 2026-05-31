@@ -96,6 +96,8 @@ export default defineSchema({
       v.literal("completed"),
       v.literal("disputed"),
     ),
+    scoreA: v.optional(v.number()),
+    scoreB: v.optional(v.number()),
   }).index("by_round", ["roundId"]),
 
   scores: defineTable({

@@ -114,7 +114,7 @@ export const saveResult = mutation({
     const match = await ctx.db.get(args.matchId);
     if (!match) throw new Error("Match not found");
     if (match.state === "completed") throw new Error("Match already completed");
-    await ctx.db.patch(args.matchId, { state: "completed" });
+    await ctx.db.patch(args.matchId, { state: "completed", scoreA: args.scoreA, scoreB: args.scoreB });
     await ctx.scheduler.runAfter(0, internal.leaderboard.recalculate, {
       matchId: args.matchId,
       scoreA: args.scoreA,
