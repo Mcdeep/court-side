@@ -5,6 +5,7 @@ import { generateAmericanoRounds } from "./formats/americano";
 import { generateRoundRobinRounds } from "./formats/round_robin";
 import { generateMexicanoRound } from "./formats/mexicano";
 import { generateKnockoutFirstRound, generateKnockoutNextRound } from "./formats/knockout";
+import { generateKingFirstRound, generateKingNextRound } from "./formats/king_of_the_court";
 import { Id } from "./_generated/dataModel";
 
 export const generate = mutation({
@@ -15,7 +16,7 @@ export const generate = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
 
-    const supported = ["americano", "round_robin", "mexicano", "knockout"];
+    const supported = ["americano", "round_robin", "mexicano", "knockout", "king_of_the_court"];
     if (!supported.includes(tournament.format)) {
       throw new Error(`Format "${tournament.format}" not yet supported`);
     }
@@ -33,7 +34,7 @@ export const generate = mutation({
     if (PRE_GENERATED.includes(tournament.format) && existingRounds.length > 0) {
       throw new Error("Rounds already generated for this tournament");
     }
-    if ((tournament.format === "mexicano" || tournament.format === "knockout") && existingRounds.length > 0) {
+    if (["mexicano", "knockout", "king_of_the_court"].includes(tournament.format) && existingRounds.length > 0) {
       const last = existingRounds[existingRounds.length - 1];
       if (last.state !== "completed") {
         throw new Error("Complete the current round before generating the next");
@@ -88,6 +89,64 @@ export const generate = mutation({
           winnerPairs.push([pair.participantAId as string, pair.participantBId as string]);
         }
         roundPlans = [generateKnockoutNextRound(winnerPairs, venue.courtCount)];
+      }
+    } else if (tournament.format === "king_of_the_court") {
+      if (existingRounds.length === 0) {
+        roundPlans = [generateKingFirstRound(participantIds, venue.courtCount)];
+      } else {
+        // Track the last round each participant appeared in (for queue ordering).
+        const lastRoundPlayed = new Map<string, number>();
+        for (const round of existingRounds) {
+          const matches = await ctx.db
+            .query("matches")
+            .withIndex("by_round", (q) => q.eq("roundId", round._id))
+            .take(50);
+          await Promise.all(matches.map(async (match) => {
+            const [pA, pB] = await Promise.all([ctx.db.get(match.pairAId), ctx.db.get(match.pairBId)]);
+            for (const p of [pA, pB]) {
+              if (!p) return;
+              for (const pid of [p.participantAId as string, p.participantBId as string]) {
+                if ((lastRoundPlayed.get(pid) ?? 0) < round.roundNumber) {
+                  lastRoundPlayed.set(pid, round.roundNumber);
+                }
+              }
+            }
+          }));
+        }
+
+        // Current kings = winners of last round (sorted by courtNumber).
+        const lastRound = existingRounds[existingRounds.length - 1];
+        const lastMatches = await ctx.db
+          .query("matches")
+          .withIndex("by_round", (q) => q.eq("roundId", lastRound._id))
+          .take(50);
+        lastMatches.sort((a, b) => a.courtNumber - b.courtNumber);
+
+        const currentKings: [string, string][] = [];
+        for (const match of lastMatches) {
+          if (match.scoreA === undefined || match.scoreB === undefined) {
+            throw new Error("Not all matches in the previous round have scores");
+          }
+          const [pA, pB] = await Promise.all([ctx.db.get(match.pairAId), ctx.db.get(match.pairBId)]);
+          if (!pA || !pB) throw new Error("Pair not found");
+          const winner = match.scoreA >= match.scoreB
+            ? [pA.participantAId as string, pA.participantBId as string]
+            : [pB.participantAId as string, pB.participantBId as string];
+          currentKings.push([winner[0], winner[1]]);
+        }
+
+        // Queue = non-kings, sorted by lastRoundPlayed ascending (longest waiting first).
+        const kingIds = new Set(currentKings.flat());
+        const queueIds = participantIds
+          .filter((id) => !kingIds.has(id))
+          .sort((a, b) => (lastRoundPlayed.get(a) ?? 0) - (lastRoundPlayed.get(b) ?? 0));
+
+        const challengers: [string, string][] = [];
+        for (let i = 0; i + 1 < queueIds.length && challengers.length < currentKings.length; i += 2) {
+          challengers.push([queueIds[i], queueIds[i + 1]]);
+        }
+
+        roundPlans = [generateKingNextRound(currentKings, challengers, venue.courtCount)];
       }
     } else {
       roundPlans = generateAmericanoRounds(participantIds, venue.courtCount);
