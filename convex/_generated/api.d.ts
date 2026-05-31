@@ -9,6 +9,11 @@
  */
 
 import type * as formats_americano from "../formats/americano.js";
+import type * as formats_king_of_the_court from "../formats/king_of_the_court.js";
+import type * as formats_knockout from "../formats/knockout.js";
+import type * as formats_mexicano from "../formats/mexicano.js";
+import type * as formats_round_robin from "../formats/round_robin.js";
+import type * as formats_snakes_and_ladders from "../formats/snakes_and_ladders.js";
 import type * as leaderboard from "../leaderboard.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as matches from "../matches.js";
@@ -29,6 +34,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "formats/americano": typeof formats_americano;
+  "formats/king_of_the_court": typeof formats_king_of_the_court;
+  "formats/knockout": typeof formats_knockout;
+  "formats/mexicano": typeof formats_mexicano;
+  "formats/round_robin": typeof formats_round_robin;
+  "formats/snakes_and_ladders": typeof formats_snakes_and_ladders;
   leaderboard: typeof leaderboard;
   "lib/auth": typeof lib_auth;
   matches: typeof matches;

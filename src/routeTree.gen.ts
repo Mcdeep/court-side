@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrgSlugRouteImport } from './routes/org/$slug'
 import { Route as OrgSlugSettingsRouteImport } from './routes/org/$slug/settings'
 import { Route as OrgSlugPlayersRouteImport } from './routes/org/$slug/players'
+import { Route as OrgSlugCourtsRouteImport } from './routes/org/$slug/courts'
 import { Route as OrgSlugTournamentsIndexRouteImport } from './routes/org/$slug/tournaments/index'
 import { Route as OrgSlugTournamentsTournamentIdRouteImport } from './routes/org/$slug/tournaments/$tournamentId'
 
@@ -36,6 +37,11 @@ const OrgSlugPlayersRoute = OrgSlugPlayersRouteImport.update({
   path: '/players',
   getParentRoute: () => OrgSlugRoute,
 } as any)
+const OrgSlugCourtsRoute = OrgSlugCourtsRouteImport.update({
+  id: '/courts',
+  path: '/courts',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
 const OrgSlugTournamentsIndexRoute = OrgSlugTournamentsIndexRouteImport.update({
   id: '/tournaments/',
   path: '/tournaments/',
@@ -51,6 +57,7 @@ const OrgSlugTournamentsTournamentIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/org/$slug': typeof OrgSlugRouteWithChildren
+  '/org/$slug/courts': typeof OrgSlugCourtsRoute
   '/org/$slug/players': typeof OrgSlugPlayersRoute
   '/org/$slug/settings': typeof OrgSlugSettingsRoute
   '/org/$slug/tournaments/$tournamentId': typeof OrgSlugTournamentsTournamentIdRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/org/$slug': typeof OrgSlugRouteWithChildren
+  '/org/$slug/courts': typeof OrgSlugCourtsRoute
   '/org/$slug/players': typeof OrgSlugPlayersRoute
   '/org/$slug/settings': typeof OrgSlugSettingsRoute
   '/org/$slug/tournaments/$tournamentId': typeof OrgSlugTournamentsTournamentIdRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/org/$slug': typeof OrgSlugRouteWithChildren
+  '/org/$slug/courts': typeof OrgSlugCourtsRoute
   '/org/$slug/players': typeof OrgSlugPlayersRoute
   '/org/$slug/settings': typeof OrgSlugSettingsRoute
   '/org/$slug/tournaments/$tournamentId': typeof OrgSlugTournamentsTournamentIdRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/org/$slug'
+    | '/org/$slug/courts'
     | '/org/$slug/players'
     | '/org/$slug/settings'
     | '/org/$slug/tournaments/$tournamentId'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/org/$slug'
+    | '/org/$slug/courts'
     | '/org/$slug/players'
     | '/org/$slug/settings'
     | '/org/$slug/tournaments/$tournamentId'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/org/$slug'
+    | '/org/$slug/courts'
     | '/org/$slug/players'
     | '/org/$slug/settings'
     | '/org/$slug/tournaments/$tournamentId'
@@ -135,6 +147,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgSlugPlayersRouteImport
       parentRoute: typeof OrgSlugRoute
     }
+    '/org/$slug/courts': {
+      id: '/org/$slug/courts'
+      path: '/courts'
+      fullPath: '/org/$slug/courts'
+      preLoaderRoute: typeof OrgSlugCourtsRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
     '/org/$slug/tournaments/': {
       id: '/org/$slug/tournaments/'
       path: '/tournaments'
@@ -153,6 +172,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface OrgSlugRouteChildren {
+  OrgSlugCourtsRoute: typeof OrgSlugCourtsRoute
   OrgSlugPlayersRoute: typeof OrgSlugPlayersRoute
   OrgSlugSettingsRoute: typeof OrgSlugSettingsRoute
   OrgSlugTournamentsTournamentIdRoute: typeof OrgSlugTournamentsTournamentIdRoute
@@ -160,6 +180,7 @@ interface OrgSlugRouteChildren {
 }
 
 const OrgSlugRouteChildren: OrgSlugRouteChildren = {
+  OrgSlugCourtsRoute: OrgSlugCourtsRoute,
   OrgSlugPlayersRoute: OrgSlugPlayersRoute,
   OrgSlugSettingsRoute: OrgSlugSettingsRoute,
   OrgSlugTournamentsTournamentIdRoute: OrgSlugTournamentsTournamentIdRoute,
