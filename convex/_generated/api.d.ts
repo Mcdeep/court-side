@@ -12,6 +12,7 @@ import type * as formats_americano from "../formats/americano.js";
 import type * as leaderboard from "../leaderboard.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as matches from "../matches.js";
+import type * as organizations from "../organizations.js";
 import type * as participants from "../participants.js";
 import type * as rounds from "../rounds.js";
 import type * as scores from "../scores.js";
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   leaderboard: typeof leaderboard;
   "lib/auth": typeof lib_auth;
   matches: typeof matches;
+  organizations: typeof organizations;
   participants: typeof participants;
   rounds: typeof rounds;
   scores: typeof scores;

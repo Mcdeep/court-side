@@ -10,33 +10,75 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OrgSlugRouteImport } from './routes/org/$slug'
+import { Route as OrgSlugTournamentsIndexRouteImport } from './routes/org/$slug/tournaments/index'
+import { Route as OrgSlugTournamentsTournamentIdRouteImport } from './routes/org/$slug/tournaments/$tournamentId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrgSlugRoute = OrgSlugRouteImport.update({
+  id: '/org/$slug',
+  path: '/org/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrgSlugTournamentsIndexRoute = OrgSlugTournamentsIndexRouteImport.update({
+  id: '/tournaments/',
+  path: '/tournaments/',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
+const OrgSlugTournamentsTournamentIdRoute =
+  OrgSlugTournamentsTournamentIdRouteImport.update({
+    id: '/tournaments/$tournamentId',
+    path: '/tournaments/$tournamentId',
+    getParentRoute: () => OrgSlugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/org/$slug': typeof OrgSlugRouteWithChildren
+  '/org/$slug/tournaments/$tournamentId': typeof OrgSlugTournamentsTournamentIdRoute
+  '/org/$slug/tournaments/': typeof OrgSlugTournamentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/org/$slug': typeof OrgSlugRouteWithChildren
+  '/org/$slug/tournaments/$tournamentId': typeof OrgSlugTournamentsTournamentIdRoute
+  '/org/$slug/tournaments': typeof OrgSlugTournamentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/org/$slug': typeof OrgSlugRouteWithChildren
+  '/org/$slug/tournaments/$tournamentId': typeof OrgSlugTournamentsTournamentIdRoute
+  '/org/$slug/tournaments/': typeof OrgSlugTournamentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/org/$slug'
+    | '/org/$slug/tournaments/$tournamentId'
+    | '/org/$slug/tournaments/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/org/$slug'
+    | '/org/$slug/tournaments/$tournamentId'
+    | '/org/$slug/tournaments'
+  id:
+    | '__root__'
+    | '/'
+    | '/org/$slug'
+    | '/org/$slug/tournaments/$tournamentId'
+    | '/org/$slug/tournaments/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  OrgSlugRoute: typeof OrgSlugRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +90,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/org/$slug': {
+      id: '/org/$slug'
+      path: '/org/$slug'
+      fullPath: '/org/$slug'
+      preLoaderRoute: typeof OrgSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/org/$slug/tournaments/': {
+      id: '/org/$slug/tournaments/'
+      path: '/tournaments'
+      fullPath: '/org/$slug/tournaments/'
+      preLoaderRoute: typeof OrgSlugTournamentsIndexRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
+    '/org/$slug/tournaments/$tournamentId': {
+      id: '/org/$slug/tournaments/$tournamentId'
+      path: '/tournaments/$tournamentId'
+      fullPath: '/org/$slug/tournaments/$tournamentId'
+      preLoaderRoute: typeof OrgSlugTournamentsTournamentIdRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
   }
 }
 
+interface OrgSlugRouteChildren {
+  OrgSlugTournamentsTournamentIdRoute: typeof OrgSlugTournamentsTournamentIdRoute
+  OrgSlugTournamentsIndexRoute: typeof OrgSlugTournamentsIndexRoute
+}
+
+const OrgSlugRouteChildren: OrgSlugRouteChildren = {
+  OrgSlugTournamentsTournamentIdRoute: OrgSlugTournamentsTournamentIdRoute,
+  OrgSlugTournamentsIndexRoute: OrgSlugTournamentsIndexRoute,
+}
+
+const OrgSlugRouteWithChildren =
+  OrgSlugRoute._addFileChildren(OrgSlugRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  OrgSlugRoute: OrgSlugRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

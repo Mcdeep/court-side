@@ -1,0 +1,414 @@
+import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
+import { useMutation, useQuery } from 'convex/react'
+import { api } from '#/../convex/_generated/api'
+import { useState } from 'react'
+import type { Id } from '../../../../../convex/_generated/dataModel'
+import { Avatar, Button, Icon, SegTabs, StatusChip, TeamMark, initials } from '#/components/ui'
+
+export const Route = createFileRoute('/org/$slug/tournaments/$tournamentId')({
+  component: TournamentDetailPage,
+})
+
+const POINTS_TO_WIN = 24
+
+function lastName(name: string) {
+  return name.split(' ').slice(-1)[0]
+}
+
+/* ─── Page ────────────────────────────────────────────────────── */
+function TournamentDetailPage() {
+  const { slug, tournamentId } = useParams({ from: '/org/$slug/tournaments/$tournamentId' })
+  const navigate = useNavigate()
+  const [tab, setTab] = useState('schedule')
+  const [scoreFor, setScoreFor] = useState<any>(null)
+
+  const tournament = useQuery(api.tournaments.get, { tournamentId: tournamentId as Id<'tournaments'> })
+  const participants = useQuery(api.participants.list, { tournamentId: tournamentId as Id<'tournaments'> })
+  const rounds = useQuery(api.rounds.list, { tournamentId: tournamentId as Id<'tournaments'> })
+  const leaderboard = useQuery(api.leaderboard.get, { tournamentId: tournamentId as Id<'tournaments'> })
+  const generateRounds = useMutation(api.rounds.generate)
+
+  if (!tournament || !participants || !rounds || !leaderboard) {
+    return <div className="p-10 animate-pulse"><div className="h-8 w-64 bg-zinc-100 rounded-xl" /></div>
+  }
+
+  const chipStatus = tournament.state === 'in_progress' ? 'live'
+    : tournament.state === 'completed' || tournament.state === 'archived' ? 'completed'
+    : 'draft'
+
+  const handleGenerate = async () => {
+    await generateRounds({ tournamentId: tournamentId as Id<'tournaments'> })
+  }
+
+  return (
+    <div className="max-w-[1100px] mx-auto px-10 py-7">
+      {/* Back */}
+      <button onClick={() => navigate({ to: `/org/${slug}/tournaments` })}
+        className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-mute hover:text-ink mb-4 group">
+        <Icon name="back" className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+        All tournaments
+      </button>
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 mb-5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="font-display font-bold text-[32px] leading-tight tracking-tight whitespace-nowrap">
+              {tournament.name}
+            </h1>
+            <StatusChip status={chipStatus as any} />
+          </div>
+          <div className="flex items-center gap-4 text-[13px] text-ink-mute font-medium whitespace-nowrap">
+            <span className="flex items-center gap-1.5">
+              <Icon name="shuffle" className="w-4 h-4" />
+              <span className="capitalize">{tournament.format.replace(/_/g, ' ')}</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Icon name="users" className="w-4 h-4" /> {participants.length} players
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Icon name="cal" className="w-4 h-4" />
+              {new Date(tournament.startsAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="md" icon="dots" />
+          <Button variant="ink" size="md" icon="flag">Finish tournament</Button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center justify-between mb-5">
+        <SegTabs value={tab} onChange={setTab} tabs={[
+          { id: 'schedule',     label: 'Schedule' },
+          { id: 'participants', label: 'Participants', count: participants.length },
+          { id: 'standings',    label: 'Standings' },
+        ]} />
+        <div className="text-[13px] text-ink-mute font-medium tnum">
+          {rounds.length} round{rounds.length !== 1 ? 's' : ''} generated
+        </div>
+      </div>
+
+      {tab === 'schedule' && (
+        <ScheduleTab
+          tournament={tournament}
+          tournamentId={tournamentId as Id<'tournaments'>}
+          rounds={rounds}
+          onGenerate={handleGenerate}
+          onScore={setScoreFor}
+        />
+      )}
+      {tab === 'participants' && <ParticipantsTab participants={participants} tournamentId={tournamentId as Id<'tournaments'>} />}
+      {tab === 'standings' && <StandingsTab leaderboard={leaderboard} />}
+
+      {scoreFor && (
+        <ScoreModal match={scoreFor} onClose={() => setScoreFor(null)} />
+      )}
+    </div>
+  )
+}
+
+/* ─── Schedule tab ────────────────────────────────────────────── */
+function ScheduleTab({ tournament, tournamentId, rounds, onGenerate, onScore }: any) {
+  if (rounds.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-12 flex flex-col items-center text-center">
+        <span className="w-16 h-16 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center mb-4">
+          <Icon name="shuffle" className="w-8 h-8" stroke={1.8} />
+        </span>
+        <h3 className="font-display font-bold text-[20px]">No rounds yet</h3>
+        <p className="text-ink-mute text-sm mt-1 max-w-xs">
+          Generate the first round to auto-assign teams across courts.
+        </p>
+        <div className="mt-5">
+          <Button variant="primary" size="lg" icon="bolt" onClick={onGenerate}>Generate round 1</Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Generator bar */}
+      <div className="flex items-center justify-between gap-4 mb-5 bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-4">
+        <div className="flex items-center gap-3">
+          <span className="w-10 h-10 rounded-xl bg-accent text-ink flex items-center justify-center">
+            <Icon name="shuffle" className="w-5 h-5" stroke={2.2} />
+          </span>
+          <div>
+            <div className="font-semibold text-[15px] leading-tight">Round generator</div>
+            <div className="text-[12.5px] text-ink-mute capitalize">
+              {tournament.format.replace(/_/g, ' ')} · first to {POINTS_TO_WIN}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="md" icon="gear">Settings</Button>
+          <Button variant="primary" size="md" icon="plus" onClick={onGenerate}>
+            Generate round {rounds.length + 1}
+          </Button>
+        </div>
+      </div>
+
+      {/* Round list — matches fetched per round */}
+      <div className="space-y-6">
+        {rounds.map((round: any) => (
+          <RoundRow key={round._id} round={round} onScore={onScore} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function RoundRow({ round, onScore }: any) {
+  const matches = useQuery(api.matches.listByRound, { roundId: round._id })
+  if (!matches) return null
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="font-display font-bold text-[15px]">R{round.roundNumber}</span>
+        <span className={`text-[10px] font-bold uppercase ${
+          round.state === 'in_progress' ? 'text-accent-dark' :
+          round.state === 'completed'   ? 'text-zinc-300' : 'text-zinc-300'
+        }`}>
+          {round.state === 'in_progress' ? 'Playing' : round.state === 'completed' ? 'Done' : 'Queued'}
+        </span>
+      </div>
+      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.max(matches.length, 1)}, minmax(0,1fr))` }}>
+        {matches.map((match: any) => (
+          <MatchCell key={match._id} match={match} onClick={onScore} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function MatchCell({ match, onClick }: any) {
+  const nameA1 = match.pairA?.participantA?.user?.name ?? match.pairA?.participantA?.walkInName ?? '?'
+  const nameA2 = match.pairA?.participantB?.user?.name ?? match.pairA?.participantB?.walkInName ?? '?'
+  const nameB1 = match.pairB?.participantA?.user?.name ?? match.pairB?.participantA?.walkInName ?? '?'
+  const nameB2 = match.pairB?.participantB?.user?.name ?? match.pairB?.participantB?.walkInName ?? '?'
+
+  const live  = match.state === 'in_progress'
+  const final = match.state === 'completed'
+
+  return (
+    <button onClick={() => onClick(match)}
+      className={`text-left w-full rounded-xl p-3 ring-1 transition-all hover:shadow-card hover:-translate-y-px
+        ${live  ? 'bg-accent-soft ring-accent-dark/30' :
+          final ? 'bg-white ring-zinc-200' :
+                  'bg-zinc-50 ring-zinc-200'}`}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">Court {match.courtNumber}</span>
+        {live  && <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-ink"><span className="relative inline-block w-1.5 h-1.5 rounded-full bg-ink live-ping" style={{ color: 'oklch(0.19 0.012 264)' }} />Live</span>}
+        {final && <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400"><Icon name="check" className="w-3 h-3" stroke={3} />Final</span>}
+        {!live && !final && <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-300">Scheduled</span>}
+      </div>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-2 text-ink">
+          <span className="text-[13.5px] truncate font-semibold min-w-0 flex-1">
+            {lastName(nameA1)} <span className="text-zinc-300 font-normal">/</span> {lastName(nameA2)}
+          </span>
+          <span className="font-mono tnum text-[15px] shrink-0">–</span>
+        </div>
+        <div className="flex items-center justify-between gap-2 text-ink">
+          <span className="text-[13.5px] truncate font-semibold min-w-0 flex-1">
+            {lastName(nameB1)} <span className="text-zinc-300 font-normal">/</span> {lastName(nameB2)}
+          </span>
+          <span className="font-mono tnum text-[15px] shrink-0">–</span>
+        </div>
+      </div>
+      <div className="mt-2.5 pt-2 border-t border-zinc-100 flex items-center justify-between">
+        <span className="text-[11px] text-ink-mute font-medium">
+          {match.state === 'scheduled' ? 'Tap to start' : match.state === 'in_progress' ? 'Update score' : 'Edit result'}
+        </span>
+        <Icon name="pencil" className="w-3.5 h-3.5 text-zinc-300" />
+      </div>
+    </button>
+  )
+}
+
+/* ─── Participants tab ────────────────────────────────────────── */
+function ParticipantsTab({ participants, tournamentId }: any) {
+  const addParticipant = useMutation(api.participants.add)
+
+  return (
+    <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-100">
+        <div className="font-semibold text-[15px]">
+          Participants <span className="text-ink-mute font-normal">· {participants.length}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" icon="filter">Sort</Button>
+          <Button variant="outline" size="sm" icon="plus">Add player</Button>
+        </div>
+      </div>
+      {participants.length === 0 ? (
+        <div className="px-5 py-12 text-center text-ink-mute text-sm">
+          No participants yet. Add players to get started.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2">
+          {participants.map((p: any, i: number) => {
+            const name = p.user?.name ?? p.walkInName ?? 'Walk-in'
+            return (
+              <div key={p._id}
+                className={`flex items-center gap-3 px-5 py-3
+                  ${i % 2 === 0 ? 'border-r border-zinc-100' : ''}
+                  border-b border-zinc-100`}>
+                <span className="tnum text-[12px] text-zinc-300 w-5 font-mono">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <Avatar name={name} size={32} />
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-sm truncate">{name}</div>
+                  <div className="text-[12px] text-ink-mute">
+                    {p.isWalkIn ? 'Walk-in' : 'Member'}
+                  </div>
+                </div>
+                <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── Standings tab ───────────────────────────────────────────── */
+function StandingsTab({ leaderboard }: any) {
+  if (leaderboard.length === 0) {
+    return (
+      <div className="text-ink-mute text-sm bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-10 text-center">
+        Standings appear once the first round is scored.
+      </div>
+    )
+  }
+  return (
+    <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card overflow-hidden">
+      <div className="grid grid-cols-[48px_1fr_70px_70px_70px] gap-2 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100">
+        <div>#</div><div>Player</div>
+        <div className="text-right">GP</div>
+        <div className="text-right">Won</div>
+        <div className="text-right">Pts</div>
+      </div>
+      {leaderboard.map((entry: any, i: number) => {
+        const name = entry.user?.name ?? entry.participant?.walkInName ?? 'Unknown'
+        return (
+          <div key={entry._id}
+            className={`grid grid-cols-[48px_1fr_70px_70px_70px] gap-2 px-5 py-2.5 items-center border-b border-zinc-100 last:border-0 ${i < 3 ? 'bg-accent-soft/40' : ''}`}>
+            <div className="flex items-center">
+              <span className={`tnum font-display font-bold text-[15px] w-7 h-7 rounded-lg flex items-center justify-center
+                ${i === 0 ? 'bg-accent text-ink' : i < 3 ? 'bg-ink text-paper' : 'text-ink-mute'}`}>
+                {i + 1}
+              </span>
+            </div>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Avatar name={name} size={28} />
+              <span className="font-semibold text-sm whitespace-nowrap">{name}</span>
+            </div>
+            <div className="text-right tnum text-sm text-ink-mute">{entry.wins + entry.losses}</div>
+            <div className="text-right tnum text-sm text-ink-mute">{entry.wins}</div>
+            <div className="text-right tnum font-mono font-bold text-[15px]">{entry.points}</div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ─── Score modal ─────────────────────────────────────────────── */
+function ScoreModal({ match, onClose }: { match: any; onClose: () => void }) {
+  const [a, setA] = useState(0)
+  const [b, setB] = useState(0)
+  const submitScore = useMutation(api.scores.submit)
+
+  const complete = a === POINTS_TO_WIN || b === POINTS_TO_WIN
+
+  const handleSave = async () => {
+    if (!match.pairA?.participantA?._id) return
+    await submitScore({
+      matchId: match._id,
+      submittedBy: match.pairA.participantA._id,
+      scoreA: a,
+      scoreB: b,
+    })
+    onClose()
+  }
+
+  const nameA1 = match.pairA?.participantA?.user?.name ?? match.pairA?.participantA?.walkInName ?? '?'
+  const nameA2 = match.pairA?.participantB?.user?.name ?? match.pairA?.participantB?.walkInName ?? '?'
+  const nameB1 = match.pairB?.participantA?.user?.name ?? match.pairB?.participantA?.walkInName ?? '?'
+  const nameB2 = match.pairB?.participantB?.user?.name ?? match.pairB?.participantB?.walkInName ?? '?'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6" onClick={onClose}>
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]" />
+      <div onClick={e => e.stopPropagation()}
+        className="relative bg-white rounded-3xl shadow-pop w-full max-w-md overflow-hidden rowin">
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
+          <div className="flex items-center gap-2.5">
+            <span className="w-9 h-9 rounded-xl bg-accent text-ink flex items-center justify-center">
+              <Icon name="court" className="w-5 h-5" />
+            </span>
+            <div>
+              <div className="font-display font-bold text-[16px] leading-tight whitespace-nowrap">
+                Court {match.courtNumber} · Score
+              </div>
+              <div className="text-[12px] text-ink-mute whitespace-nowrap">Enter the result</div>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-zinc-100 flex items-center justify-center text-ink-mute">
+            <Icon name="x" className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-5">
+          <div className="flex items-stretch gap-3">
+            <Stepper label={`${lastName(nameA1)} / ${lastName(nameA2)}`} names={[nameA1, nameA2]} val={a} set={setA} highlight={a > b} />
+            <div className="flex items-center font-display font-bold text-zinc-300 text-lg">vs</div>
+            <Stepper label={`${lastName(nameB1)} / ${lastName(nameB2)}`} names={[nameB1, nameB2]} val={b} set={setB} highlight={b > a} />
+          </div>
+
+          <div className="mt-4 flex items-center justify-between text-[12.5px]">
+            <span className="text-ink-mute">First to <span className="font-bold text-ink tnum">{POINTS_TO_WIN}</span> points</span>
+            <span className={`font-semibold tnum px-2.5 h-7 inline-flex items-center rounded-full whitespace-nowrap
+              ${complete ? 'bg-accent text-ink' : 'bg-zinc-100 text-ink-mute'}`}>
+              {complete ? 'Match point reached' : `${a + b} pts played`}
+            </span>
+          </div>
+
+          <div className="mt-5 flex gap-2">
+            <Button variant="ghost" size="lg" className="flex-1" onClick={onClose}>Cancel</Button>
+            <Button variant={complete ? 'primary' : 'ink'} size="lg" className="flex-[1.4]"
+              icon={complete ? 'check' : 'clock'} onClick={handleSave}>
+              {complete ? 'Save final result' : 'Save as live'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Stepper({ label, names, val, set, highlight }: any) {
+  return (
+    <div className={`flex-1 rounded-2xl p-4 ring-1 ${highlight ? 'bg-accent-soft ring-accent-dark/30' : 'bg-zinc-50 ring-zinc-200'}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <TeamMark names={names} size={28} />
+        <div className="text-[13px] font-bold leading-tight truncate">{label}</div>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <button onClick={() => set(Math.max(0, val - 1))}
+          className="w-10 h-10 rounded-xl bg-white ring-1 ring-zinc-200 flex items-center justify-center hover:ring-zinc-300 active:scale-95 transition-all text-xl font-bold">–</button>
+        <div className="font-mono tnum font-bold text-[40px] leading-none w-16 text-center">{val}</div>
+        <button onClick={() => set(Math.min(POINTS_TO_WIN, val + 1))}
+          className="w-10 h-10 rounded-xl bg-ink text-paper flex items-center justify-center hover:bg-ink-soft active:scale-95 transition-all text-xl font-bold">+</button>
+      </div>
+    </div>
+  )
+}
