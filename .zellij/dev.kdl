@@ -1,0 +1,18 @@
+layout {
+    tab name="CourtOS Dev" {
+        pane split_direction="vertical" {
+            pane {
+                name "Convex"
+                command "npx"
+                args "convex" "dev"
+                cwd "/home/tsholo/wp/SideProject/macs-ambassadorship-application"
+            }
+            pane {
+                name "Vite"
+                command "npm"
+                args "run" "dev"
+                cwd "/home/tsholo/wp/SideProject/macs-ambassadorship-application"
+            }
+        }
+    }
+}
