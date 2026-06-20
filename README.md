@@ -1,206 +1,129 @@
-Welcome to your new TanStack Start app! 
+# CourtOS
 
-# Getting Started
+A multitenant padel tournament management platform. Organisers create tournaments, manage players, run matches across 6 formats, and display live scores on a kiosk screen.
 
-To run this application:
+## Features
+
+**Tournament formats**
+- **Americano** — all rounds pre-generated, circle rotation pairing
+- **Round Robin** — fixed pairs, all rounds upfront
+- **Mexicano** — one round at a time, paired by current leaderboard ranking
+- **Knockout** — single elimination bracket, winners advance
+- **King of the Court** — winners stay on court, queue sorted by wait time
+- **Snakes & Ladders** — winners move up court, losers move down; only court 1 scores points
+
+**Organiser dashboard** (`/:slug`)
+- Tournament CRUD, round controls (start/end), score tracking
+- Player management — registered members and walk-ins
+- Venue and court management
+- Organisation settings with suspend/reactivate
+
+**Kiosk display** (`/kiosk/:tournamentId`)
+- Fullscreen dark UI for TVs/projectors
+- Live court scores and ranked standings
+- Auto-rotates panels on narrow screens
+- Realtime updates via Convex subscriptions
+
+**Super Admin** (`/admin`)
+- List all organisations with stats
+- Create and suspend organisations
+
+## Tech stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 19, TanStack Start, TanStack Router (file-based) |
+| Styling | Tailwind CSS 4 |
+| Backend | [Convex](https://convex.dev) (realtime database, server functions) |
+| Auth | [Clerk](https://clerk.com) (organisations + users) |
+| Hosting | Netlify |
+| Icons | Lucide React |
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 20+
+- pnpm
+
+### Environment variables
+
+Create a `.env.local` file:
+
+```
+CONVEX_DEPLOYMENT=<your convex deployment>
+VITE_CONVEX_URL=<your convex url>
+VITE_CLERK_PUBLISHABLE_KEY=<your clerk publishable key>
+```
+
+### Install and run
 
 ```bash
 pnpm install
+
+# Start Convex and the dev server together
 pnpm dev
 ```
 
-# Building For Production
+The app runs at [http://localhost:3000](http://localhost:3000).
 
-To build this application for production:
-
-```bash
-pnpm build
-```
-
-## Testing
-
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+### Seed data
 
 ```bash
-pnpm test
+npx convex run seed:seed
 ```
 
-## Styling
+## Project structure
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+```
+src/
+  routes/
+    __root.tsx            # App shell and layout
+    index.tsx             # Landing / home
+    admin.tsx             # Super admin panel
+    $slug.tsx             # Org layout (sidebar + nav)
+    $slug/
+      tournaments/        # Tournament list + detail
+      players.tsx         # Player management
+      courts.tsx          # Venue and court management
+      settings.tsx        # Org settings
+    kiosk/
+      $tournamentId.tsx   # Fullscreen kiosk display
 
-### Removing Tailwind CSS
-
-If you prefer not to use Tailwind CSS:
-
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Uninstall the packages: `pnpm add @tailwindcss/vite tailwindcss --dev`
-
-
-## Deploy to Netlify
-
-This project ships with `netlify.toml` configured for a Netlify site:
-
-1. Push this repo to GitHub
-2. Visit https://app.netlify.com/start and import the repo
-3. Netlify auto-detects the build (`vite build` → `dist/client`)
-4. Open **Site settings → Environment variables** and add anything from `.env.example` that needs a real value in production
-5. Trigger the first deploy
-
-Server functions and API routes run on Netlify Functions. For lower-latency request handling, see Netlify Edge Functions: https://docs.netlify.com/edge-functions/overview.
-
-
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
+convex/
+  schema.ts               # Database schema
+  tournaments.ts          # Tournament queries + mutations
+  rounds.ts               # Round generation + state
+  matches.ts              # Match management
+  scores.ts               # Score submission + disputes
+  leaderboard.ts          # Leaderboard calculation
+  participants.ts         # Player registration
+  organizations.ts        # Org CRUD + admin
+  venues.ts               # Venue + court management
+  users.ts                # User sync
+  seed.ts                 # Development seed data
+  formats/                # Format-specific round generation engines
+    americano.ts
+    round_robin.ts
+    mexicano.ts
+    knockout.ts
+    king_of_the_court.ts
+    snakes_and_ladders.ts
 ```
 
-Then anywhere in your JSX you can use it like so:
+## Scripts
 
-```tsx
-<Link to="/about">About</Link>
-```
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start dev server on port 3000 |
+| `pnpm build` | Production build |
+| `pnpm test` | Run unit tests (Vitest) |
+| `pnpm test:e2e` | Run end-to-end tests (Playwright) |
 
-This will create a link that will navigate to the `/about` route.
+## Deployment
 
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
+Configured for Netlify. Push to GitHub and import at [app.netlify.com](https://app.netlify.com). The `netlify.toml` handles build settings. Add your environment variables in Netlify's site settings.
 
-### Using A Layout
+## License
 
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+Private.
