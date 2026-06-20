@@ -16,13 +16,17 @@ export const generate = mutation({
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
 
+    let courtCount = tournament.courtCount;
+    if (!courtCount) {
+      const venue = await ctx.db.get(tournament.venueId);
+      if (!venue) throw new Error("Venue not found");
+      courtCount = venue.courtCount;
+    }
+
     const supported = ["americano", "round_robin", "mexicano", "knockout", "king_of_the_court", "snakes_and_ladders"];
     if (!supported.includes(tournament.format)) {
       throw new Error(`Format "${tournament.format}" not yet supported`);
     }
-
-    const venue = await ctx.db.get(tournament.venueId);
-    if (!venue) throw new Error("Venue not found");
 
     const PRE_GENERATED = ["americano", "round_robin"];
     const existingRounds = await ctx.db
@@ -56,7 +60,7 @@ export const generate = mutation({
 
     let roundPlans;
     if (tournament.format === "round_robin") {
-      roundPlans = generateRoundRobinRounds(participantIds, venue.courtCount);
+      roundPlans = generateRoundRobinRounds(participantIds, courtCount);
     } else if (tournament.format === "mexicano") {
       const leaderboard = await ctx.db
         .query("leaderboard")
@@ -66,10 +70,10 @@ export const generate = mutation({
       const rankedIds = leaderboard.map((e) => e.participantId as string);
       const rankedSet = new Set(rankedIds);
       const unranked = participantIds.filter((id) => !rankedSet.has(id));
-      roundPlans = [generateMexicanoRound([...rankedIds, ...unranked], venue.courtCount)];
+      roundPlans = [generateMexicanoRound([...rankedIds, ...unranked], courtCount)];
     } else if (tournament.format === "knockout") {
       if (existingRounds.length === 0) {
-        roundPlans = [generateKnockoutFirstRound(participantIds, venue.courtCount)];
+        roundPlans = [generateKnockoutFirstRound(participantIds, courtCount)];
       } else {
         const lastRound = existingRounds[existingRounds.length - 1];
         const lastMatches = await ctx.db
@@ -88,11 +92,11 @@ export const generate = mutation({
           if (!pair) throw new Error("Pair not found");
           winnerPairs.push([pair.participantAId as string, pair.participantBId as string]);
         }
-        roundPlans = [generateKnockoutNextRound(winnerPairs, venue.courtCount)];
+        roundPlans = [generateKnockoutNextRound(winnerPairs, courtCount)];
       }
     } else if (tournament.format === "king_of_the_court") {
       if (existingRounds.length === 0) {
-        roundPlans = [generateKingFirstRound(participantIds, venue.courtCount)];
+        roundPlans = [generateKingFirstRound(participantIds, courtCount)];
       } else {
         // Track the last round each participant appeared in (for queue ordering).
         const lastRoundPlayed = new Map<string, number>();
@@ -146,11 +150,11 @@ export const generate = mutation({
           challengers.push([queueIds[i], queueIds[i + 1]]);
         }
 
-        roundPlans = [generateKingNextRound(currentKings, challengers, venue.courtCount)];
+        roundPlans = [generateKingNextRound(currentKings, challengers, courtCount)];
       }
     } else if (tournament.format === "snakes_and_ladders") {
       if (existingRounds.length === 0) {
-        roundPlans = [generateSnakesFirstRound(participantIds, venue.courtCount)];
+        roundPlans = [generateSnakesFirstRound(participantIds, courtCount)];
       } else {
         type PK = string;
         const pKey = (a: string, b: string): PK => a < b ? `${a}:${b}` : `${b}:${a}`;
@@ -190,7 +194,7 @@ export const generate = mutation({
             const keyB = pKey(pB.participantAId as string, pB.participantBId as string);
             const lA = courtLevels.get(keyA) ?? 1;
             const lB = courtLevels.get(keyB) ?? 1;
-            const max = venue.courtCount;
+            const max = courtCount;
             if (match.scoreA >= match.scoreB) {
               courtLevels.set(keyA, Math.max(1, lA - 1));
               courtLevels.set(keyB, Math.min(max, lB + 1));
@@ -205,10 +209,10 @@ export const generate = mutation({
           level,
           pair: pairById.get(key)!,
         }));
-        roundPlans = [generateSnakesNextRound(pairsWithLevel, venue.courtCount)];
+        roundPlans = [generateSnakesNextRound(pairsWithLevel, courtCount)];
       }
     } else {
-      roundPlans = generateAmericanoRounds(participantIds, venue.courtCount);
+      roundPlans = generateAmericanoRounds(participantIds, courtCount);
     }
 
     const baseRoundNumber = existingRounds.length;

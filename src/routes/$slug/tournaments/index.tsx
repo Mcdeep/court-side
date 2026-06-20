@@ -142,7 +142,7 @@ function TournamentsPage() {
               </div>
               {/* Courts */}
               <div className="text-sm tnum font-medium text-ink-mute">
-                {t.courtCount > 0 ? t.courtCount : '—'}
+                {(t.courtCount ?? 0) > 0 ? t.courtCount : '—'}
               </div>
               {/* Progress */}
               <div className="pr-2">

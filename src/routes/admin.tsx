@@ -1,7 +1,8 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
+import { useAuth } from '@clerk/tanstack-start'
 import { api } from '#/../convex/_generated/api'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button, Icon } from '#/components/ui'
 
 export const Route = createFileRoute('/admin')({
@@ -10,10 +11,19 @@ export const Route = createFileRoute('/admin')({
 
 function AdminPage() {
   const [showCreate, setShowCreate] = useState(false)
+  const navigate = useNavigate()
+  const { isSignedIn, isLoaded } = useAuth()
   const me = useQuery(api.users.me)
   const orgs = useQuery(api.organizations.listWithStats)
 
-  if (me === undefined || orgs === undefined) return <PageSkeleton />
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      navigate({ to: '/' })
+    }
+  }, [isLoaded, isSignedIn, navigate])
+
+  if (!isLoaded || me === undefined || orgs === undefined) return <PageSkeleton />
+  if (!isSignedIn) return null
 
   if (!me?.isSuperAdmin) return (
     <div className="flex items-center justify-center h-screen">

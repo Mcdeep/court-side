@@ -45,6 +45,7 @@ export default defineSchema({
       v.literal("completed"),
       v.literal("archived"),
     ),
+    courtCount: v.optional(v.number()),
     startsAt: v.number(),
     endsAt: v.number(),
   })

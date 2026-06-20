@@ -35,6 +35,7 @@ export const devOrg = mutation({
       venueId,
       name: 'Spring Americano',
       format: 'americano',
+      courtCount: 4,
       state: 'registration_open',
       startsAt: Date.now(),
       endsAt: Date.now() + 1000 * 60 * 60 * 3,

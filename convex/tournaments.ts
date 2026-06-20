@@ -28,13 +28,25 @@ export const create = mutation({
     venueId: v.id("venues"),
     name: v.string(),
     format: formatValidator,
+    courtCount: v.optional(v.number()),
     startsAt: v.number(),
     endsAt: v.number(),
   },
   handler: async (ctx, args) => {
     await requireOrgAdmin(ctx, args.organizationId);
+    const venue = await ctx.db.get(args.venueId);
+    if (!venue) throw new Error("Venue not found");
+    const courtCount = args.courtCount ?? venue.courtCount;
+    if (courtCount < 1) throw new Error("Need at least 1 court");
+    if (courtCount > venue.courtCount) throw new Error(`Venue only has ${venue.courtCount} courts`);
     return ctx.db.insert("tournaments", {
-      ...args,
+      organizationId: args.organizationId,
+      venueId: args.venueId,
+      name: args.name,
+      format: args.format,
+      courtCount,
+      startsAt: args.startsAt,
+      endsAt: args.endsAt,
       state: "draft",
     });
   },
@@ -64,7 +76,6 @@ export const listWithDetails = query({
 
     return Promise.all(
       tournaments.map(async (t) => {
-        const venue = await ctx.db.get(t.venueId);
         const rounds = await ctx.db
           .query("rounds")
           .withIndex("by_tournament", q => q.eq("tournamentId", t._id))
@@ -73,7 +84,6 @@ export const listWithDetails = query({
         const completedRounds = rounds.filter(r => r.state === "completed").length;
         return {
           ...t,
-          courtCount: venue?.courtCount ?? 0,
           totalRounds,
           completedRounds,
         };
@@ -93,6 +103,7 @@ export const update = mutation({
   args: {
     tournamentId: v.id("tournaments"),
     name: v.optional(v.string()),
+    courtCount: v.optional(v.number()),
     startsAt: v.optional(v.number()),
     endsAt: v.optional(v.number()),
   },
@@ -100,6 +111,18 @@ export const update = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
+    if (args.courtCount !== undefined) {
+      const hasRounds = await ctx.db
+        .query("rounds")
+        .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
+        .take(1);
+      if (hasRounds.length > 0) throw new Error("Cannot change court count after rounds are generated");
+      const venue = await ctx.db.get(tournament.venueId);
+      if (args.courtCount < 1) throw new Error("Need at least 1 court");
+      if (venue && args.courtCount > venue.courtCount) {
+        throw new Error(`Venue only has ${venue.courtCount} courts`);
+      }
+    }
     const { tournamentId, ...patch } = args;
     const filteredPatch = Object.fromEntries(
       Object.entries(patch).filter(([, v]) => v !== undefined)
