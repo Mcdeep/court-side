@@ -5,7 +5,7 @@ import React, { useState } from 'react'
 import { Button, Icon, SegTabs, StatusChip } from '#/components/ui'
 import type { Id } from '../../../../../convex/_generated/dataModel'
 
-export const Route = createFileRoute('/org/$slug/tournaments/')({
+export const Route = createFileRoute('/$slug/tournaments/')({
   component: TournamentsPage,
 })
 
@@ -18,7 +18,7 @@ function normaliseStatus(state: TournamentStatus): 'draft' | 'live' | 'completed
 }
 
 function TournamentsPage() {
-  const { slug } = useParams({ from: '/org/$slug/tournaments/' })
+  const { slug } = useParams({ from: '/$slug/tournaments/' })
   const navigate = useNavigate()
   const [filter, setFilter] = useState('all')
   const [showNew, setShowNew] = useState(false)
@@ -63,7 +63,7 @@ function TournamentsPage() {
           onClose={() => setShowNew(false)}
           onCreated={(id) => {
             setShowNew(false)
-            navigate({ to: `/org/${slug}/tournaments/${id}` })
+            navigate({ to: `/${slug}/tournaments/${id}` })
           }}
         />
       )}
@@ -120,7 +120,7 @@ function TournamentsPage() {
           const chipStatus = normaliseStatus(t.state as TournamentStatus)
           return (
             <button key={t._id}
-              onClick={() => navigate({ to: `/org/${slug}/tournaments/${t._id}` })}
+              onClick={() => navigate({ to: `/${slug}/tournaments/${t._id}` })}
               className="rowin w-full text-left grid grid-cols-[1.6fr_1fr_0.8fr_1fr_auto] gap-4 px-5 py-4 items-center border-b border-zinc-100 last:border-0 hover:bg-zinc-50/80 transition-colors group">
               {/* Name + venue */}
               <div className="flex items-center gap-3 min-w-0">

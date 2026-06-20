@@ -5,12 +5,12 @@ import React, { useState } from 'react'
 import type { Id } from '../../../../convex/_generated/dataModel'
 import { Button, Icon } from '#/components/ui'
 
-export const Route = createFileRoute('/org/$slug/courts')({
+export const Route = createFileRoute('/$slug/courts')({
   component: CourtsPage,
 })
 
 function CourtsPage() {
-  const { slug } = useParams({ from: '/org/$slug/courts' })
+  const { slug } = useParams({ from: '/$slug/courts' })
   const [showAdd, setShowAdd] = useState(false)
 
   const org = useQuery(api.organizations.getBySlug, { slug })

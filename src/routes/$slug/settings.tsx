@@ -4,12 +4,12 @@ import { api } from '#/../convex/_generated/api'
 import { useState } from 'react'
 import { Button, StatusChip } from '#/components/ui'
 
-export const Route = createFileRoute('/org/$slug/settings')({
+export const Route = createFileRoute('/$slug/settings')({
   component: SettingsPage,
 })
 
 function SettingsPage() {
-  const { slug } = useParams({ from: '/org/$slug/settings' })
+  const { slug } = useParams({ from: '/$slug/settings' })
   const org = useQuery(api.organizations.getBySlug, { slug })
 
   if (org === undefined) return <PageSkeleton />

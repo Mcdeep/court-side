@@ -3,7 +3,7 @@ import { useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import { Icon } from '#/components/ui'
 
-export const Route = createFileRoute('/org/$slug')({
+export const Route = createFileRoute('/$slug')({
   component: OrgShell,
 })
 
@@ -15,7 +15,7 @@ const NAV = [
 ]
 
 function OrgShell() {
-  const { slug } = useParams({ from: '/org/$slug' })
+  const { slug } = useParams({ from: '/$slug' })
   const pathname = useRouterState({ select: s => s.location.pathname })
   const active = NAV.find(n => pathname.includes(`/${n.id}`))?.id ?? 'tournaments'
 
@@ -51,7 +51,7 @@ function Sidebar({ slug, active, tournamentCount }: { slug: string; active: stri
         {NAV.map(item => {
           const isActive = active === item.id
           return (
-            <Link key={item.id} to={`/org/${slug}/${item.id}`}
+            <Link key={item.id} to={`/${slug}/${item.id}`}
               className={`w-full flex items-center gap-3 h-10 px-3 rounded-xl text-[14px] font-semibold transition-all relative
                 ${isActive ? 'bg-white/10 text-paper' : 'text-paper/55 hover:text-paper hover:bg-white/5'}`}>
               {isActive && <span className="absolute left-0 w-1 h-5 rounded-r-full bg-accent" />}

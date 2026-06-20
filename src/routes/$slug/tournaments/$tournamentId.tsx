@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import type { Id } from '../../../../../convex/_generated/dataModel'
 import { Avatar, Button, Icon, SegTabs, StatusChip, TeamMark } from '#/components/ui'
 
-export const Route = createFileRoute('/org/$slug/tournaments/$tournamentId')({
+export const Route = createFileRoute('/$slug/tournaments/$tournamentId')({
   component: TournamentDetailPage,
 })
 
@@ -18,7 +18,7 @@ function lastName(name: string) {
 
 /* ─── Page ────────────────────────────────────────────────────── */
 function TournamentDetailPage() {
-  const { slug, tournamentId } = useParams({ from: '/org/$slug/tournaments/$tournamentId' })
+  const { slug, tournamentId } = useParams({ from: '/$slug/tournaments/$tournamentId' })
   const navigate = useNavigate()
   const [tab, setTab] = useState('schedule')
   const [scoreFor, setScoreFor] = useState<any>(null)
@@ -60,7 +60,7 @@ function TournamentDetailPage() {
       setConfirmAction(null)
     } else if (confirmAction === 'delete') {
       await deleteTournament({ tournamentId: tid })
-      navigate({ to: `/org/${slug}/tournaments` })
+      navigate({ to: `/${slug}/tournaments` })
     }
   }
 
@@ -94,7 +94,7 @@ function TournamentDetailPage() {
       )}
 
       {/* Back */}
-      <button onClick={() => navigate({ to: `/org/${slug}/tournaments` })}
+      <button onClick={() => navigate({ to: `/${slug}/tournaments` })}
         className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-mute hover:text-ink mb-4 group">
         <Icon name="back" className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
         All tournaments

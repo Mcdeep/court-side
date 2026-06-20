@@ -4,12 +4,12 @@ import { api } from '#/../convex/_generated/api'
 import { useState } from 'react'
 import { Avatar, Icon } from '#/components/ui'
 
-export const Route = createFileRoute('/org/$slug/players')({
+export const Route = createFileRoute('/$slug/players')({
   component: PlayersPage,
 })
 
 function PlayersPage() {
-  const { slug } = useParams({ from: '/org/$slug/players' })
+  const { slug } = useParams({ from: '/$slug/players' })
   const [search, setSearch] = useState('')
 
   const org = useQuery(api.organizations.getBySlug, { slug })

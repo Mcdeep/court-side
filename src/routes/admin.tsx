@@ -206,7 +206,7 @@ function CreateOrgModal({ onClose }: { onClose: () => void }) {
               className={INPUT_CLS}
               required
             />
-            <p className="text-[11px] text-ink-mute mt-1">URL: /org/{slug || '…'}</p>
+            <p className="text-[11px] text-ink-mute mt-1">URL: /{slug || '…'}</p>
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <div className="flex gap-2 pt-1">
