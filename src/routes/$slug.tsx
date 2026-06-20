@@ -9,6 +9,7 @@ export const Route = createFileRoute('/$slug')({
 
 const NAV = [
   { id: 'tournaments', label: 'Tournaments', icon: 'trophy' as const, badge: null },
+  { id: 'rankings',    label: 'Rankings',    icon: 'medal'  as const, badge: null },
   { id: 'players',     label: 'Players',     icon: 'users'  as const, badge: null },
   { id: 'courts',      label: 'Courts',      icon: 'court'  as const, badge: null },
   { id: 'settings',    label: 'Settings',    icon: 'gear'   as const, badge: null },

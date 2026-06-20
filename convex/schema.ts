@@ -122,4 +122,29 @@ export default defineSchema({
     .index("by_tournament", ["tournamentId"])
     .index("by_tournament_points", ["tournamentId", "points"])
     .index("by_tournament_and_participant", ["tournamentId", "participantId"]),
+
+  ratingConfig: defineTable({
+    organizationId: v.id("organizations"),
+    tiers: v.array(v.number()),
+  }).index("by_organization", ["organizationId"]),
+
+  playerRatings: defineTable({
+    organizationId: v.id("organizations"),
+    userId: v.id("users"),
+    totalPoints: v.number(),
+    tournamentsPlayed: v.number(),
+  })
+    .index("by_organization", ["organizationId"])
+    .index("by_organization_and_points", ["organizationId", "totalPoints"])
+    .index("by_organization_and_user", ["organizationId", "userId"]),
+
+  ratingHistory: defineTable({
+    organizationId: v.id("organizations"),
+    userId: v.id("users"),
+    tournamentId: v.id("tournaments"),
+    placement: v.number(),
+    pointsEarned: v.number(),
+  })
+    .index("by_organization_and_user", ["organizationId", "userId"])
+    .index("by_tournament", ["tournamentId"]),
 });

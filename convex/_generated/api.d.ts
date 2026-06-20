@@ -19,6 +19,7 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as matches from "../matches.js";
 import type * as organizations from "../organizations.js";
 import type * as participants from "../participants.js";
+import type * as ratings from "../ratings.js";
 import type * as rounds from "../rounds.js";
 import type * as scores from "../scores.js";
 import type * as seed from "../seed.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   matches: typeof matches;
   organizations: typeof organizations;
   participants: typeof participants;
+  ratings: typeof ratings;
   rounds: typeof rounds;
   scores: typeof scores;
   seed: typeof seed;

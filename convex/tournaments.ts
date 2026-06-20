@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireUser } from "./lib/auth";
+import { internal } from "./_generated/api";
 
 const formatValidator = v.union(
   v.literal("americano"),
@@ -138,5 +139,10 @@ export const updateState = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await ctx.db.patch(args.tournamentId, { state: args.state });
+    if (args.state === "completed") {
+      await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, {
+        tournamentId: args.tournamentId,
+      });
+    }
   },
 });

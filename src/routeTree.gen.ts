@@ -14,6 +14,7 @@ import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as KioskTournamentIdRouteImport } from './routes/kiosk/$tournamentId'
 import { Route as SlugSettingsRouteImport } from './routes/$slug/settings'
+import { Route as SlugRankingsRouteImport } from './routes/$slug/rankings'
 import { Route as SlugPlayersRouteImport } from './routes/$slug/players'
 import { Route as SlugCourtsRouteImport } from './routes/$slug/courts'
 import { Route as SlugTournamentsIndexRouteImport } from './routes/$slug/tournaments/index'
@@ -44,6 +45,11 @@ const SlugSettingsRoute = SlugSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => SlugRoute,
 } as any)
+const SlugRankingsRoute = SlugRankingsRouteImport.update({
+  id: '/rankings',
+  path: '/rankings',
+  getParentRoute: () => SlugRoute,
+} as any)
 const SlugPlayersRoute = SlugPlayersRouteImport.update({
   id: '/players',
   path: '/players',
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/$slug/courts': typeof SlugCourtsRoute
   '/$slug/players': typeof SlugPlayersRoute
+  '/$slug/rankings': typeof SlugRankingsRoute
   '/$slug/settings': typeof SlugSettingsRoute
   '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
   '/$slug/tournaments/$tournamentId': typeof SlugTournamentsTournamentIdRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/$slug/courts': typeof SlugCourtsRoute
   '/$slug/players': typeof SlugPlayersRoute
+  '/$slug/rankings': typeof SlugRankingsRoute
   '/$slug/settings': typeof SlugSettingsRoute
   '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
   '/$slug/tournaments/$tournamentId': typeof SlugTournamentsTournamentIdRoute
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/$slug/courts': typeof SlugCourtsRoute
   '/$slug/players': typeof SlugPlayersRoute
+  '/$slug/rankings': typeof SlugRankingsRoute
   '/$slug/settings': typeof SlugSettingsRoute
   '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
   '/$slug/tournaments/$tournamentId': typeof SlugTournamentsTournamentIdRoute
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/$slug/courts'
     | '/$slug/players'
+    | '/$slug/rankings'
     | '/$slug/settings'
     | '/kiosk/$tournamentId'
     | '/$slug/tournaments/$tournamentId'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/$slug/courts'
     | '/$slug/players'
+    | '/$slug/rankings'
     | '/$slug/settings'
     | '/kiosk/$tournamentId'
     | '/$slug/tournaments/$tournamentId'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/$slug/courts'
     | '/$slug/players'
+    | '/$slug/rankings'
     | '/$slug/settings'
     | '/kiosk/$tournamentId'
     | '/$slug/tournaments/$tournamentId'
@@ -180,6 +192,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SlugSettingsRouteImport
       parentRoute: typeof SlugRoute
     }
+    '/$slug/rankings': {
+      id: '/$slug/rankings'
+      path: '/rankings'
+      fullPath: '/$slug/rankings'
+      preLoaderRoute: typeof SlugRankingsRouteImport
+      parentRoute: typeof SlugRoute
+    }
     '/$slug/players': {
       id: '/$slug/players'
       path: '/players'
@@ -214,6 +233,7 @@ declare module '@tanstack/react-router' {
 interface SlugRouteChildren {
   SlugCourtsRoute: typeof SlugCourtsRoute
   SlugPlayersRoute: typeof SlugPlayersRoute
+  SlugRankingsRoute: typeof SlugRankingsRoute
   SlugSettingsRoute: typeof SlugSettingsRoute
   SlugTournamentsTournamentIdRoute: typeof SlugTournamentsTournamentIdRoute
   SlugTournamentsIndexRoute: typeof SlugTournamentsIndexRoute
@@ -222,6 +242,7 @@ interface SlugRouteChildren {
 const SlugRouteChildren: SlugRouteChildren = {
   SlugCourtsRoute: SlugCourtsRoute,
   SlugPlayersRoute: SlugPlayersRoute,
+  SlugRankingsRoute: SlugRankingsRoute,
   SlugSettingsRoute: SlugSettingsRoute,
   SlugTournamentsTournamentIdRoute: SlugTournamentsTournamentIdRoute,
   SlugTournamentsIndexRoute: SlugTournamentsIndexRoute,
