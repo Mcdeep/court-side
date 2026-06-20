@@ -44,7 +44,7 @@ A multitenant padel tournament management platform. Organisers create tournament
 ### Prerequisites
 
 - Node.js 20+
-- pnpm
+- bun
 
 ### Environment variables
 
@@ -59,10 +59,23 @@ VITE_CLERK_PUBLISHABLE_KEY=<your clerk publishable key>
 ### Install and run
 
 ```bash
-pnpm install
+bun install
+```
 
-# Start Convex and the dev server together
-pnpm dev
+You need two terminals — one for the Convex backend, one for the Vite frontend:
+
+```bash
+# Terminal 1: Convex dev server (port 3210)
+npx convex dev
+
+# Terminal 2: Vite dev server (port 3000)
+bun run dev
+```
+
+Or run both at once with [zellij](https://zellij.dev):
+
+```bash
+bun run dev:zellij
 ```
 
 The app runs at [http://localhost:3000](http://localhost:3000).
@@ -115,10 +128,12 @@ convex/
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev` | Start dev server on port 3000 |
-| `pnpm build` | Production build |
-| `pnpm test` | Run unit tests (Vitest) |
-| `pnpm test:e2e` | Run end-to-end tests (Playwright) |
+| `bun run dev` | Start Vite dev server on port 3000 |
+| `npx convex dev` | Start Convex dev server on port 3210 |
+| `bun run dev:zellij` | Start both servers in a zellij layout |
+| `bun run build` | Production build |
+| `bun run test` | Run unit tests (Vitest) |
+| `bun run test:e2e` | Run end-to-end tests (Playwright) |
 
 ## Deployment
 
