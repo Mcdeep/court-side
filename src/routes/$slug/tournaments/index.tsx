@@ -3,7 +3,7 @@ import { useMutation, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import React, { useState } from 'react'
 import { Button, Icon, SegTabs, StatusChip } from '#/components/ui'
-import type { Id } from '../../../../../convex/_generated/dataModel'
+import type { Id } from '#/../convex/_generated/dataModel'
 
 export const Route = createFileRoute('/$slug/tournaments/')({
   component: TournamentsPage,

@@ -10,9 +10,19 @@ export const Route = createFileRoute('/admin')({
 
 function AdminPage() {
   const [showCreate, setShowCreate] = useState(false)
+  const me = useQuery(api.users.me)
   const orgs = useQuery(api.organizations.listWithStats)
 
-  if (orgs === undefined) return <PageSkeleton />
+  if (me === undefined || orgs === undefined) return <PageSkeleton />
+
+  if (!me?.isSuperAdmin) return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="text-center">
+        <h1 className="font-display text-[24px] font-bold mb-2">Access Denied</h1>
+        <p className="text-ink-mute text-sm">Super admin access required.</p>
+      </div>
+    </div>
+  )
 
   const totalTournaments = orgs.reduce((s, o) => s + o.tournamentCount, 0)
   const totalCourts = orgs.reduce((s, o) => s + o.courtCount, 0)

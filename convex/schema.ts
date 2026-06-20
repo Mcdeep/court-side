@@ -15,6 +15,7 @@ export default defineSchema({
     clerkUserId: v.string(),
     name: v.string(),
     email: v.string(),
+    isSuperAdmin: v.optional(v.boolean()),
   }).index("by_clerk_user_id", ["clerkUserId"]),
 
   venues: defineTable({

@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireUser } from "./lib/auth";
+import { requireOrgAdmin } from "./lib/auth";
 
 export const listByOrg = query({
   args: { organizationId: v.id("organizations") },
@@ -21,9 +21,9 @@ export const update = mutation({
     courtCount: v.number(),
   },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
     const venue = await ctx.db.get(args.venueId);
     if (!venue) throw new Error("Venue not found");
+    await requireOrgAdmin(ctx, venue.organizationId);
     if (!args.name.trim()) throw new Error("Name required");
     if (args.courtCount < 1) throw new Error("Must have at least 1 court");
     await ctx.db.patch(args.venueId, { name: args.name.trim(), courtCount: args.courtCount });
@@ -33,9 +33,9 @@ export const update = mutation({
 export const deleteVenue = mutation({
   args: { venueId: v.id("venues") },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
     const venue = await ctx.db.get(args.venueId);
     if (!venue) throw new Error("Venue not found");
+    await requireOrgAdmin(ctx, venue.organizationId);
     const linked = await ctx.db
       .query("tournaments")
       .withIndex("by_venue", (q) => q.eq("venueId", args.venueId))
@@ -52,7 +52,7 @@ export const create = mutation({
     courtCount: v.number(),
   },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
+    await requireOrgAdmin(ctx, args.organizationId);
     return ctx.db.insert("venues", args);
   },
 });

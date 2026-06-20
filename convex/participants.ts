@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireUser } from "./lib/auth";
+import { requireOrgAdmin } from "./lib/auth";
 import type { Id } from "./_generated/dataModel";
 
 export const add = mutation({
@@ -12,9 +12,9 @@ export const add = mutation({
     walkInName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
+    await requireOrgAdmin(ctx, tournament.organizationId);
     if (
       tournament.state !== "draft" &&
       tournament.state !== "registration_open"
@@ -101,11 +101,12 @@ export const listByOrg = query({
 export const remove = mutation({
   args: { participantId: v.id("participants") },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
     const participant = await ctx.db.get(args.participantId);
     if (!participant) throw new Error("Participant not found");
     const tournament = await ctx.db.get(participant.tournamentId);
-    if (tournament?.state === "in_progress" || tournament?.state === "completed") {
+    if (!tournament) throw new Error("Tournament not found");
+    await requireOrgAdmin(ctx, tournament.organizationId);
+    if (tournament.state === "in_progress" || tournament.state === "completed") {
       throw new Error("Cannot remove participant from active tournament");
     }
     await ctx.db.delete(args.participantId);

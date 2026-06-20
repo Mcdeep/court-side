@@ -1,6 +1,6 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
-import { requireUser } from './lib/auth'
+import { requireUser, requireOrgAdmin, requireSuperAdmin } from './lib/auth'
 
 export const getBySlug = query({
   args: { slug: v.string() },
@@ -44,7 +44,7 @@ export const adminCreate = mutation({
     slug: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
+    await requireSuperAdmin(ctx);
     if (!args.name.trim()) throw new Error('Name required');
     if (!args.slug.trim()) throw new Error('Slug required');
     const existing = await ctx.db.query('organizations').withIndex('by_slug', q => q.eq('slug', args.slug.trim())).unique();
@@ -79,7 +79,7 @@ export const update = mutation({
     name: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
+    await requireOrgAdmin(ctx, args.organizationId);
     const org = await ctx.db.get(args.organizationId);
     if (!org) throw new Error('Organisation not found');
     if (!args.name.trim()) throw new Error('Name required');
@@ -90,7 +90,7 @@ export const update = mutation({
 export const activate = mutation({
   args: { organizationId: v.id('organizations') },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
+    await requireSuperAdmin(ctx);
     await ctx.db.patch(args.organizationId, { status: 'active' });
   },
 })
@@ -98,7 +98,7 @@ export const activate = mutation({
 export const suspend = mutation({
   args: { organizationId: v.id('organizations') },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
+    await requireSuperAdmin(ctx);
     await ctx.db.patch(args.organizationId, { status: 'suspended' })
   },
 })

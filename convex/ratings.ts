@@ -1,7 +1,7 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireUser } from "./lib/auth";
-import { Id } from "./_generated/dataModel";
+import { requireOrgAdmin } from "./lib/auth";
+import type { Id } from "./_generated/dataModel";
 
 const DEFAULT_TIERS = [10, 8, 6, 4, 3, 2];
 
@@ -24,7 +24,7 @@ export const setTiers = mutation({
     tiers: v.array(v.number()),
   },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
+    await requireOrgAdmin(ctx, args.organizationId);
     if (args.tiers.length === 0) throw new Error("At least one tier required");
     for (const t of args.tiers) {
       if (t < 0) throw new Error("Tiers must be non-negative");

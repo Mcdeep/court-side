@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireUser } from "./lib/auth";
+import { requireOrgAdmin, requireOrgMember } from "./lib/auth";
 import { internal } from "./_generated/api";
 
 export const submit = mutation({
@@ -11,10 +11,14 @@ export const submit = mutation({
     scoreB: v.number(),
   },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
-
     const match = await ctx.db.get(args.matchId);
     if (!match) throw new Error("Match not found");
+    const round = await ctx.db.get(match.roundId);
+    if (!round) throw new Error("Round not found");
+    const tournament = await ctx.db.get(round.tournamentId);
+    if (!tournament) throw new Error("Tournament not found");
+    await requireOrgMember(ctx, tournament.organizationId);
+
     if (match.state === "completed") throw new Error("Match already completed");
 
     const existing = await ctx.db
@@ -70,10 +74,13 @@ export const resolve = mutation({
     scoreB: v.number(),
   },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
-
     const match = await ctx.db.get(args.matchId);
     if (!match) throw new Error("Match not found");
+    const round = await ctx.db.get(match.roundId);
+    if (!round) throw new Error("Round not found");
+    const tournament = await ctx.db.get(round.tournamentId);
+    if (!tournament) throw new Error("Tournament not found");
+    await requireOrgAdmin(ctx, tournament.organizationId);
 
     const scores = await ctx.db
       .query("scores")
@@ -110,9 +117,13 @@ export const saveResult = mutation({
     scoreB: v.number(),
   },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
     const match = await ctx.db.get(args.matchId);
     if (!match) throw new Error("Match not found");
+    const round = await ctx.db.get(match.roundId);
+    if (!round) throw new Error("Round not found");
+    const tournament = await ctx.db.get(round.tournamentId);
+    if (!tournament) throw new Error("Tournament not found");
+    await requireOrgAdmin(ctx, tournament.organizationId);
     if (match.state === "completed") throw new Error("Match already completed");
     await ctx.db.patch(args.matchId, { state: "completed", scoreA: args.scoreA, scoreB: args.scoreB });
     await ctx.scheduler.runAfter(0, internal.leaderboard.recalculate, {

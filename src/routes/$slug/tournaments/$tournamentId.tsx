@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import React, { useEffect, useRef, useState } from 'react'
-import type { Id } from '../../../../../convex/_generated/dataModel'
+import type { Id } from '#/../convex/_generated/dataModel'
 import { Avatar, Button, Icon, SegTabs, StatusChip, TeamMark } from '#/components/ui'
 
 export const Route = createFileRoute('/$slug/tournaments/$tournamentId')({

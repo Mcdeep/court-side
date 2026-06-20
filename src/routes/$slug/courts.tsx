@@ -2,7 +2,7 @@ import { createFileRoute, useParams } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import React, { useState } from 'react'
-import type { Id } from '../../../../convex/_generated/dataModel'
+import type { Id } from '#/../convex/_generated/dataModel'
 import { Button, Icon } from '#/components/ui'
 
 export const Route = createFileRoute('/$slug/courts')({

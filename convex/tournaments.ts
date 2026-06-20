@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireUser } from "./lib/auth";
+import { requireOrgAdmin } from "./lib/auth";
 import { internal } from "./_generated/api";
 
 const formatValidator = v.union(
@@ -32,7 +32,7 @@ export const create = mutation({
     endsAt: v.number(),
   },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
+    await requireOrgAdmin(ctx, args.organizationId);
     return ctx.db.insert("tournaments", {
       ...args,
       state: "draft",
@@ -97,9 +97,9 @@ export const update = mutation({
     endsAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
+    await requireOrgAdmin(ctx, tournament.organizationId);
     const { tournamentId, ...patch } = args;
     const filteredPatch = Object.fromEntries(
       Object.entries(patch).filter(([, v]) => v !== undefined)
@@ -111,9 +111,9 @@ export const update = mutation({
 export const deleteTournament = mutation({
   args: { tournamentId: v.id("tournaments") },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
+    await requireOrgAdmin(ctx, tournament.organizationId);
     if (tournament.state !== "draft") throw new Error("Only draft tournaments can be deleted");
     const rounds = await ctx.db
       .query("rounds")
@@ -135,9 +135,9 @@ export const updateState = mutation({
     state: stateValidator,
   },
   handler: async (ctx, args) => {
-    await requireUser(ctx);
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
+    await requireOrgAdmin(ctx, tournament.organizationId);
     await ctx.db.patch(args.tournamentId, { state: args.state });
     if (args.state === "completed") {
       await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, {
