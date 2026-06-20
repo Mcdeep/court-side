@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
-import { useAuth } from '@clerk/tanstack-start'
+import { useAuth, UserButton } from '@clerk/tanstack-start'
 import { api } from '#/../convex/_generated/api'
 import React, { useEffect, useState } from 'react'
 import { Button, Icon } from '#/components/ui'
@@ -10,19 +10,17 @@ export const Route = createFileRoute('/admin')({
 })
 
 function AdminPage() {
-  const [showCreate, setShowCreate] = useState(false)
+  const [tab, setTab] = useState<'orgs' | 'users'>('orgs')
   const navigate = useNavigate()
   const { isSignedIn, isLoaded } = useAuth()
   const me = useQuery(api.users.me)
-  const orgs = useQuery(api.organizations.listWithStats)
+  const stats = useQuery(api.organizations.globalStats)
 
   useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      navigate({ to: '/' })
-    }
+    if (isLoaded && !isSignedIn) navigate({ to: '/' })
   }, [isLoaded, isSignedIn, navigate])
 
-  if (!isLoaded || me === undefined || orgs === undefined) return <PageSkeleton />
+  if (!isLoaded || me === undefined || stats === undefined) return <PageSkeleton />
   if (!isSignedIn) return null
 
   if (!me?.isSuperAdmin) return (
@@ -34,32 +32,65 @@ function AdminPage() {
     </div>
   )
 
-  const totalTournaments = orgs.reduce((s, o) => s + o.tournamentCount, 0)
-  const totalCourts = orgs.reduce((s, o) => s + o.courtCount, 0)
+  return (
+    <div className="min-h-screen bg-paper font-sans text-ink">
+      {/* Top bar */}
+      <header className="sticky top-0 z-30 bg-paper/95 backdrop-blur-sm border-b border-zinc-200/80">
+        <div className="max-w-[1000px] mx-auto px-10 flex items-center justify-between h-14">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <span className="w-8 h-8 rounded-lg bg-ink text-paper flex items-center justify-center font-display font-bold text-sm">C</span>
+              <span className="font-display font-bold text-[17px] tracking-tight">CourtOS</span>
+              <span className="ml-1 px-2 py-0.5 rounded-md bg-red-50 text-red-600 text-[10px] font-bold uppercase">Admin</span>
+            </div>
+            <nav className="flex gap-1">
+              {([['orgs', 'Organisations'], ['users', 'Users']] as const).map(([id, label]) => (
+                <button key={id} onClick={() => setTab(id)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors
+                    ${tab === id ? 'bg-ink text-paper' : 'text-ink-mute hover:text-ink hover:bg-zinc-100'}`}>
+                  {label}
+                </button>
+              ))}
+            </nav>
+          </div>
+          <UserButton appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
+        </div>
+      </header>
+
+      <div className="max-w-[1000px] mx-auto px-10 py-8">
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-4 mb-7">
+          <Stat label="Users" value={stats.users} icon="users" />
+          <Stat label="Organisations" value={stats.organizations} icon="grid" />
+          <Stat label="Tournaments" value={stats.tournaments} icon="trophy" />
+          <Stat label="Active" value={stats.activeTournaments} icon="medal" />
+        </div>
+
+        {tab === 'orgs' ? <OrgsTab /> : <UsersTab />}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Organisations Tab ─── */
+
+function OrgsTab() {
+  const [showCreate, setShowCreate] = useState(false)
+  const orgs = useQuery(api.organizations.listWithStats)
+
+  if (orgs === undefined) return <TabSkeleton />
 
   return (
-    <div className="max-w-[1000px] mx-auto px-10 py-8">
+    <>
       {showCreate && <CreateOrgModal onClose={() => setShowCreate(false)} />}
 
-      {/* Header */}
-      <div className="flex items-end justify-between gap-4 mb-7">
-        <div>
-          <div className="text-ink-mute text-[13px] font-semibold mb-2">System</div>
-          <h1 className="font-display text-[34px] font-bold leading-tight tracking-tight">Super Admin</h1>
-        </div>
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="font-display text-[24px] font-bold tracking-tight">Organisations</h2>
         <Button variant="primary" size="lg" icon="plus" onClick={() => setShowCreate(true)}>
           New org
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-7">
-        <Stat label="Organisations" value={orgs.length}       icon="grid" />
-        <Stat label="Tournaments"   value={totalTournaments}  icon="trophy" />
-        <Stat label="Total courts"  value={totalCourts}       icon="court" />
-      </div>
-
-      {/* Org table */}
       {orgs.length === 0 ? (
         <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-14 flex flex-col items-center text-center">
           <span className="w-16 h-16 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center mb-4">
@@ -90,7 +121,7 @@ function AdminPage() {
           </table>
         </div>
       )}
-    </div>
+    </>
   )
 }
 
@@ -162,6 +193,124 @@ function OrgRow({ org }: { org: any }) {
   )
 }
 
+/* ─── Users Tab ─── */
+
+function UsersTab() {
+  const [search, setSearch] = useState('')
+  const users = useQuery(api.users.list)
+
+  if (users === undefined) return <TabSkeleton />
+
+  const q = search.toLowerCase()
+  const filtered = users.filter(u =>
+    !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+  )
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="font-display text-[24px] font-bold tracking-tight">Users</h2>
+        <div className="relative">
+          <Icon name="search" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search users…"
+            className="h-9 w-64 pl-9 pr-3 rounded-xl bg-white ring-1 ring-zinc-200 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent-dark/40"
+          />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-zinc-100">
+              <th className="text-left px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-ink-mute">Name</th>
+              <th className="text-left px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-ink-mute">Email</th>
+              <th className="text-center px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-ink-mute">Role</th>
+              <th className="px-5 py-3" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-50">
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-5 py-8 text-center text-ink-mute text-sm">
+                  {search ? 'No users match.' : 'No users yet.'}
+                </td>
+              </tr>
+            ) : (
+              filtered.map(user => <UserRow key={user._id} user={user} />)
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
+  )
+}
+
+function UserRow({ user }: { user: any }) {
+  const [confirm, setConfirm] = useState(false)
+  const [working, setWorking] = useState(false)
+  const [error, setError] = useState('')
+  const setSuperAdmin = useMutation(api.users.setSuperAdmin)
+  const isSA = !!user.isSuperAdmin
+
+  async function toggle() {
+    setWorking(true); setError('')
+    try {
+      await setSuperAdmin({ userId: user._id, isSuperAdmin: !isSA })
+      setConfirm(false)
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed')
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  return (
+    <tr className="hover:bg-zinc-50/60 transition-colors">
+      <td className="px-5 py-3.5 font-semibold">{user.name}</td>
+      <td className="px-5 py-3.5 text-ink-mute">{user.email}</td>
+      <td className="px-5 py-3.5 text-center">
+        {isSA ? (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-violet-50 text-violet-700">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+            Super Admin
+          </span>
+        ) : (
+          <span className="text-[11px] text-ink-mute font-semibold">User</span>
+        )}
+      </td>
+      <td className="px-5 py-3.5">
+        <div className="flex items-center justify-end gap-2">
+          {error && <span className="text-red-500 text-[11px]">{error}</span>}
+          {confirm ? (
+            <>
+              <button onClick={() => setConfirm(false)}
+                className="text-[12px] text-ink-mute hover:text-ink transition-colors">Cancel</button>
+              <Button size="sm" variant="ghost"
+                className={isSA ? '!text-red-500 !ring-red-200 hover:!bg-red-50' : '!text-violet-600 !ring-violet-200 hover:!bg-violet-50'}
+                onClick={toggle} disabled={working}>
+                {working ? '…' : isSA ? 'Confirm demote' : 'Confirm promote'}
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" variant="ghost"
+              className={isSA
+                ? '!text-red-500 hover:!bg-red-50'
+                : '!text-violet-600 hover:!bg-violet-50'}
+              onClick={() => setConfirm(true)}>
+              {isSA ? 'Demote' : 'Make admin'}
+            </Button>
+          )}
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+/* ─── Shared ─── */
+
 const INPUT_CLS = 'w-full h-10 px-3.5 rounded-xl bg-white ring-1 ring-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent-dark/40 transition-all'
 
 function CreateOrgModal({ onClose }: { onClose: () => void }) {
@@ -208,24 +357,13 @@ function CreateOrgModal({ onClose }: { onClose: () => void }) {
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label className="block text-[12px] font-bold uppercase tracking-wide text-ink-mute mb-1.5">Name</label>
-            <input
-              autoFocus
-              value={name}
-              onChange={handleNameChange}
-              placeholder="e.g. City Padel Club"
-              className={INPUT_CLS}
-              required
-            />
+            <input autoFocus value={name} onChange={handleNameChange}
+              placeholder="e.g. City Padel Club" className={INPUT_CLS} required />
           </div>
           <div>
             <label className="block text-[12px] font-bold uppercase tracking-wide text-ink-mute mb-1.5">Slug</label>
-            <input
-              value={slug}
-              onChange={e => { setSlug(e.target.value); setSlugTouched(true) }}
-              placeholder="city-padel-club"
-              className={INPUT_CLS}
-              required
-            />
+            <input value={slug} onChange={e => { setSlug(e.target.value); setSlugTouched(true) }}
+              placeholder="city-padel-club" className={INPUT_CLS} required />
             <p className="text-[11px] text-ink-mute mt-1">URL: /{slug || '…'}</p>
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -255,14 +393,25 @@ function Stat({ label, value, icon }: { label: string; value: number; icon: stri
   )
 }
 
+function TabSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="h-8 w-40 bg-zinc-100 rounded-xl mb-5" />
+      <div className="h-64 bg-zinc-100 rounded-2xl" />
+    </div>
+  )
+}
+
 function PageSkeleton() {
   return (
-    <div className="max-w-[1000px] mx-auto px-10 py-8 animate-pulse">
-      <div className="h-9 w-40 bg-zinc-100 rounded-xl mb-7" />
-      <div className="grid grid-cols-3 gap-4 mb-7">
-        {[0, 1, 2].map(i => <div key={i} className="h-24 bg-zinc-100 rounded-2xl" />)}
+    <div className="min-h-screen bg-paper animate-pulse">
+      <div className="h-14 border-b border-zinc-200/80" />
+      <div className="max-w-[1000px] mx-auto px-10 py-8">
+        <div className="grid grid-cols-4 gap-4 mb-7">
+          {[0, 1, 2, 3].map(i => <div key={i} className="h-24 bg-zinc-100 rounded-2xl" />)}
+        </div>
+        <div className="h-64 bg-zinc-100 rounded-2xl" />
       </div>
-      <div className="h-64 bg-zinc-100 rounded-2xl" />
     </div>
   )
 }

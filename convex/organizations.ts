@@ -38,6 +38,30 @@ export const listWithStats = query({
   },
 })
 
+export const globalStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const orgs = await ctx.db.query('organizations').take(500)
+    const users = await ctx.db.query('users').take(10000)
+    let totalTournaments = 0
+    let activeTournaments = 0
+    for (const org of orgs) {
+      const tournaments = await ctx.db
+        .query('tournaments')
+        .withIndex('by_organization', q => q.eq('organizationId', org._id))
+        .take(500)
+      totalTournaments += tournaments.length
+      activeTournaments += tournaments.filter(t => t.state === 'in_progress').length
+    }
+    return {
+      users: users.length,
+      organizations: orgs.length,
+      tournaments: totalTournaments,
+      activeTournaments,
+    }
+  },
+})
+
 export const adminCreate = mutation({
   args: {
     name: v.string(),
