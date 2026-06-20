@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as IndexRouteImport } from './routes/index'
@@ -20,6 +21,11 @@ import { Route as SlugCourtsRouteImport } from './routes/$slug/courts'
 import { Route as SlugTournamentsIndexRouteImport } from './routes/$slug/tournaments/index'
 import { Route as SlugTournamentsTournamentIdRouteImport } from './routes/$slug/tournaments/$tournamentId'
 
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRouteWithChildren
   '/admin': typeof AdminRoute
+  '/dashboard': typeof DashboardRoute
   '/$slug/courts': typeof SlugCourtsRoute
   '/$slug/players': typeof SlugPlayersRoute
   '/$slug/rankings': typeof SlugRankingsRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRouteWithChildren
   '/admin': typeof AdminRoute
+  '/dashboard': typeof DashboardRoute
   '/$slug/courts': typeof SlugCourtsRoute
   '/$slug/players': typeof SlugPlayersRoute
   '/$slug/rankings': typeof SlugRankingsRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRouteWithChildren
   '/admin': typeof AdminRoute
+  '/dashboard': typeof DashboardRoute
   '/$slug/courts': typeof SlugCourtsRoute
   '/$slug/players': typeof SlugPlayersRoute
   '/$slug/rankings': typeof SlugRankingsRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$slug'
     | '/admin'
+    | '/dashboard'
     | '/$slug/courts'
     | '/$slug/players'
     | '/$slug/rankings'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$slug'
     | '/admin'
+    | '/dashboard'
     | '/$slug/courts'
     | '/$slug/players'
     | '/$slug/rankings'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$slug'
     | '/admin'
+    | '/dashboard'
     | '/$slug/courts'
     | '/$slug/players'
     | '/$slug/rankings'
@@ -152,11 +164,19 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SlugRoute: typeof SlugRouteWithChildren
   AdminRoute: typeof AdminRoute
+  DashboardRoute: typeof DashboardRoute
   KioskTournamentIdRoute: typeof KioskTournamentIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -254,6 +274,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SlugRoute: SlugRouteWithChildren,
   AdminRoute: AdminRoute,
+  DashboardRoute: DashboardRoute,
   KioskTournamentIdRoute: KioskTournamentIdRoute,
 }
 export const routeTree = rootRouteImport

@@ -65,6 +65,28 @@ export const list = query({
   },
 });
 
+export const listByOrgIds = query({
+  args: { organizationIds: v.array(v.id("organizations")) },
+  handler: async (ctx, args) => {
+    const all = await Promise.all(
+      args.organizationIds.map(async (orgId) => {
+        const tournaments = await ctx.db
+          .query("tournaments")
+          .withIndex("by_organization", (q) => q.eq("organizationId", orgId))
+          .order("desc")
+          .take(50);
+        return Promise.all(
+          tournaments.map(async (t) => {
+            const org = await ctx.db.get(t.organizationId);
+            return { ...t, clubName: org?.name ?? "Unknown", orgSlug: org?.slug ?? "" };
+          })
+        );
+      })
+    );
+    return all.flat().sort((a, b) => b.startsAt - a.startsAt);
+  },
+});
+
 export const listWithDetails = query({
   args: { organizationId: v.id("organizations") },
   handler: async (ctx, args) => {

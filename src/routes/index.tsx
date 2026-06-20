@@ -1,9 +1,8 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/tanstack-start'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { SignedIn, SignedOut, SignInButton, UserButton, useOrganizationList } from '@clerk/tanstack-start'
 import { useConvexAuth, useQuery } from 'convex/react'
-import { useOrganizationList } from '@clerk/tanstack-start'
 import { api } from '#/../convex/_generated/api'
-import { Icon } from '#/components/ui'
+import { useEffect } from 'react'
 
 export const Route = createFileRoute('/')({ component: Home })
 
@@ -12,7 +11,6 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-paper font-sans text-ink">
-      {/* Header */}
       <header className="flex items-center justify-between px-8 h-16 border-b border-zinc-200/80">
         <div className="flex items-center gap-2.5">
           <span className="w-9 h-9 rounded-xl bg-ink text-paper flex items-center justify-center font-display font-bold text-lg">C</span>
@@ -56,57 +54,54 @@ function Home() {
           </div>
         )}
 
-        {!isLoading && isAuthenticated && <OrgList />}
+        {!isLoading && isAuthenticated && <SmartRedirect />}
       </main>
     </div>
   )
 }
 
-function OrgList() {
-  const allOrgs = useQuery(api.organizations.list)
+function SmartRedirect() {
+  const navigate = useNavigate()
   const me = useQuery(api.users.me)
+  const allOrgs = useQuery(api.organizations.list)
   const { userMemberships, isLoaded: orgsLoaded } = useOrganizationList({
     userMemberships: { infinite: true },
   })
 
-  if (allOrgs === undefined || me === undefined || !orgsLoaded) return (
+  useEffect(() => {
+    if (me === undefined || allOrgs === undefined || !orgsLoaded) return
+
+    const isAdmin = me?.isSuperAdmin
+    const myMemberships = userMemberships.data ?? []
+    const myClerkOrgIds = new Set(myMemberships.map(m => m.organization.id))
+    const isOrgAdmin = myMemberships.some(m => m.role === 'org:admin')
+
+    if (isAdmin) {
+      // Super admin -> first org they admin, or /admin
+      const adminOrg = allOrgs.find(o => myClerkOrgIds.has(o.clerkOrgId))
+      if (adminOrg) {
+        navigate({ to: `/${adminOrg.slug}/tournaments` as any })
+      } else {
+        navigate({ to: '/admin' })
+      }
+    } else if (isOrgAdmin) {
+      // Org admin -> their org dashboard
+      const adminOrg = allOrgs.find(o => myClerkOrgIds.has(o.clerkOrgId))
+      if (adminOrg) {
+        navigate({ to: `/${adminOrg.slug}/tournaments` as any })
+      } else {
+        navigate({ to: '/dashboard' })
+      }
+    } else {
+      // Member -> flat dashboard
+      navigate({ to: '/dashboard' })
+    }
+  }, [me, allOrgs, orgsLoaded, userMemberships, navigate])
+
+  return (
     <div className="animate-pulse">
       <div className="h-8 w-48 bg-zinc-100 rounded-xl mb-4" />
       <div className="h-32 bg-zinc-100 rounded-2xl" />
-    </div>
-  )
-
-  const myClerkOrgIds = new Set(
-    (userMemberships.data ?? []).map(m => m.organization.id)
-  )
-  const orgs = me?.isSuperAdmin
-    ? allOrgs
-    : allOrgs.filter(o => myClerkOrgIds.has(o.clerkOrgId))
-
-  return (
-    <div>
-      <h2 className="font-display text-[24px] font-bold tracking-tight mb-5">Your organisations</h2>
-      {orgs.length === 0 ? (
-        <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-10 text-center">
-          <p className="text-ink-mute text-sm">No organisations yet. Ask an admin to invite you.</p>
-        </div>
-      ) : (
-        <div className="grid gap-3">
-          {orgs.map(org => (
-            <Link key={org._id} to={`/${org.slug}/tournaments` as any}
-              className="flex items-center gap-4 p-4 bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card hover:ring-zinc-300 transition-all">
-              <span className="w-11 h-11 rounded-xl bg-ink text-paper flex items-center justify-center font-display font-bold text-lg">
-                {org.name[0]?.toUpperCase()}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-[15px]">{org.name}</div>
-                <div className="text-[12px] text-ink-mute">/{org.slug}</div>
-              </div>
-              <Icon name="chevR" className="w-5 h-5 text-zinc-300" />
-            </Link>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

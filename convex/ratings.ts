@@ -70,6 +70,39 @@ export const getRankings = query({
   },
 });
 
+export const getMyRankings = query({
+  args: { organizationIds: v.array(v.id("organizations")) },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_user_id", (q) =>
+        q.eq("clerkUserId", identity.tokenIdentifier)
+      )
+      .unique();
+    if (!user) return [];
+
+    const results = await Promise.all(
+      args.organizationIds.map(async (orgId) => {
+        const rating = await ctx.db
+          .query("playerRatings")
+          .withIndex("by_organization_and_user", (q) =>
+            q.eq("organizationId", orgId).eq("userId", user._id)
+          )
+          .unique();
+        if (!rating) return null;
+        const org = await ctx.db.get(orgId);
+        return {
+          ...rating,
+          clubName: org?.name ?? "Unknown",
+        };
+      })
+    );
+    return results.filter((r): r is NonNullable<typeof r> => r !== null);
+  },
+});
+
 export const getPlayerHistory = query({
   args: {
     organizationId: v.id("organizations"),
