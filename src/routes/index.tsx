@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { SignedIn, SignedOut, SignInButton, UserButton, useOrganizationList } from '@clerk/tanstack-start'
+import { SignedIn, SignedOut, SignInButton, UserButton, useOrganization } from '@clerk/tanstack-start'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import { useEffect } from 'react'
@@ -64,39 +64,31 @@ function SmartRedirect() {
   const navigate = useNavigate()
   const me = useQuery(api.users.me)
   const allOrgs = useQuery(api.organizations.list)
-  const { userMemberships, isLoaded: orgsLoaded } = useOrganizationList({
-    userMemberships: { infinite: true },
-  })
+  const { organization, isLoaded: orgLoaded } = useOrganization()
 
   useEffect(() => {
-    if (me === undefined || allOrgs === undefined || !orgsLoaded) return
+    if (me === undefined || allOrgs === undefined || !orgLoaded) return
 
-    const isAdmin = me?.isSuperAdmin
-    const myMemberships = userMemberships.data ?? []
-    const myClerkOrgIds = new Set(myMemberships.map(m => m.organization.id))
-    const isOrgAdmin = myMemberships.some(m => m.role === 'org:admin')
-
-    if (isAdmin) {
-      // Super admin -> first org they admin, or /admin
-      const adminOrg = allOrgs.find(o => myClerkOrgIds.has(o.clerkOrgId))
-      if (adminOrg) {
-        navigate({ to: `/${adminOrg.slug}/tournaments` as any })
+    if (me?.isSuperAdmin) {
+      const firstOrg = allOrgs[0]
+      if (firstOrg) {
+        navigate({ to: `/${firstOrg.slug}/tournaments` as any })
       } else {
         navigate({ to: '/admin' })
       }
-    } else if (isOrgAdmin) {
-      // Org admin -> their org dashboard
-      const adminOrg = allOrgs.find(o => myClerkOrgIds.has(o.clerkOrgId))
-      if (adminOrg) {
-        navigate({ to: `/${adminOrg.slug}/tournaments` as any })
-      } else {
-        navigate({ to: '/dashboard' })
-      }
-    } else {
-      // Member -> flat dashboard
-      navigate({ to: '/dashboard' })
+      return
     }
-  }, [me, allOrgs, orgsLoaded, userMemberships, navigate])
+
+    if (organization) {
+      const org = allOrgs.find(o => o.clerkOrgId === organization.id)
+      if (org) {
+        navigate({ to: `/${org.slug}/tournaments` as any })
+        return
+      }
+    }
+
+    navigate({ to: '/dashboard' })
+  }, [me, allOrgs, orgLoaded, organization, navigate])
 
   return (
     <div className="animate-pulse">

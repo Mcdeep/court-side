@@ -65,6 +65,42 @@ export const list = query({
   },
 });
 
+export const listMyTournaments = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_user_id", (q) =>
+        q.eq("clerkUserId", identity.tokenIdentifier)
+      )
+      .unique();
+    if (!user) return [];
+
+    const participations = await ctx.db
+      .query("participants")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .take(200);
+
+    const seen = new Set<string>();
+    const tournaments = [];
+    for (const p of participations) {
+      if (seen.has(p.tournamentId)) continue;
+      seen.add(p.tournamentId);
+      const t = await ctx.db.get(p.tournamentId);
+      if (!t) continue;
+      const org = await ctx.db.get(t.organizationId);
+      tournaments.push({
+        ...t,
+        clubName: org?.name ?? "Unknown",
+        orgSlug: org?.slug ?? "",
+      });
+    }
+    return tournaments.sort((a, b) => b.startsAt - a.startsAt);
+  },
+});
+
 export const listByOrgIds = query({
   args: { organizationIds: v.array(v.id("organizations")) },
   handler: async (ctx, args) => {

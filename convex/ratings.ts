@@ -71,8 +71,8 @@ export const getRankings = query({
 });
 
 export const getMyRankings = query({
-  args: { organizationIds: v.array(v.id("organizations")) },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
     const user = await ctx.db
@@ -83,23 +83,17 @@ export const getMyRankings = query({
       .unique();
     if (!user) return [];
 
-    const results = await Promise.all(
-      args.organizationIds.map(async (orgId) => {
-        const rating = await ctx.db
-          .query("playerRatings")
-          .withIndex("by_organization_and_user", (q) =>
-            q.eq("organizationId", orgId).eq("userId", user._id)
-          )
-          .unique();
-        if (!rating) return null;
-        const org = await ctx.db.get(orgId);
-        return {
-          ...rating,
-          clubName: org?.name ?? "Unknown",
-        };
+    const ratings = await ctx.db
+      .query("playerRatings")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .take(50);
+
+    return Promise.all(
+      ratings.map(async (r) => {
+        const org = await ctx.db.get(r.organizationId);
+        return { ...r, clubName: org?.name ?? "Unknown" };
       })
     );
-    return results.filter((r): r is NonNullable<typeof r> => r !== null);
   },
 });
 

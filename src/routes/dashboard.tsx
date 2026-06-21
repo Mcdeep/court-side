@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
-import { useAuth, useOrganizationList, UserButton } from '@clerk/tanstack-start'
+import { useAuth, UserButton } from '@clerk/tanstack-start'
 import { api } from '#/../convex/_generated/api'
 import { Icon } from '#/components/ui'
 import { useEffect, useState } from 'react'
+
 export const Route = createFileRoute('/dashboard')({
   component: DashboardPage,
 })
@@ -49,40 +50,16 @@ function TopNav({ tab, onTab }: { tab: string; onTab: (t: any) => void }) {
             ))}
           </nav>
         </div>
-        <UserButton
-          appearance={{ elements: { avatarBox: 'w-8 h-8' } }}
-        />
+        <UserButton appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
       </div>
     </header>
   )
 }
 
-function useMyOrgIds() {
-  const { userMemberships, isLoaded } = useOrganizationList({
-    userMemberships: { infinite: true },
-  })
-  const allOrgs = useQuery(api.organizations.list)
-
-  if (!isLoaded || allOrgs === undefined) return { orgIds: undefined, isLoaded: false }
-
-  const myClerkOrgIds = new Set(
-    (userMemberships.data ?? []).map(m => m.organization.id)
-  )
-  const orgIds = allOrgs
-    .filter(o => myClerkOrgIds.has(o.clerkOrgId))
-    .map(o => o._id)
-
-  return { orgIds, isLoaded: true }
-}
-
 function TournamentsTab() {
-  const { orgIds, isLoaded } = useMyOrgIds()
-  const tournaments = useQuery(
-    api.tournaments.listByOrgIds,
-    orgIds ? { organizationIds: orgIds } : 'skip'
-  )
+  const tournaments = useQuery(api.tournaments.listMyTournaments)
 
-  if (!isLoaded || tournaments === undefined) return <TabSkeleton />
+  if (tournaments === undefined) return <TabSkeleton />
 
   if (tournaments.length === 0) return (
     <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-12 text-center">
@@ -136,13 +113,9 @@ function TournamentState({ state }: { state: string }) {
 }
 
 function RankingsTab() {
-  const { orgIds, isLoaded } = useMyOrgIds()
-  const rankings = useQuery(
-    api.ratings.getMyRankings,
-    orgIds ? { organizationIds: orgIds } : 'skip'
-  )
+  const rankings = useQuery(api.ratings.getMyRankings)
 
-  if (!isLoaded || rankings === undefined) return <TabSkeleton />
+  if (rankings === undefined) return <TabSkeleton />
 
   if (rankings.length === 0) return (
     <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-12 text-center">

@@ -63,7 +63,9 @@ export default defineSchema({
     teamId: v.optional(v.id("teams")),
     isWalkIn: v.boolean(),
     walkInName: v.optional(v.string()),
-  }).index("by_tournament", ["tournamentId"]),
+  })
+    .index("by_tournament", ["tournamentId"])
+    .index("by_user", ["userId"]),
 
   pairs: defineTable({
     tournamentId: v.id("tournaments"),
@@ -138,7 +140,8 @@ export default defineSchema({
   })
     .index("by_organization", ["organizationId"])
     .index("by_organization_and_points", ["organizationId", "totalPoints"])
-    .index("by_organization_and_user", ["organizationId", "userId"]),
+    .index("by_organization_and_user", ["organizationId", "userId"])
+    .index("by_user", ["userId"]),
 
   ratingHistory: defineTable({
     organizationId: v.id("organizations"),

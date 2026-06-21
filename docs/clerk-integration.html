@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clerk Integration — CourtOS</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink: #1a1a2e;
+      --ink-mute: #6b7280;
+      --paper: #faf9f7;
+      --card: #fff;
+      --border: #e5e5e5;
+      --accent: #6d28d9;
+      --accent-light: #ede9fe;
+      --green: #059669;
+      --green-light: #ecfdf5;
+      --amber: #d97706;
+      --amber-light: #fffbeb;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --blue: #2563eb;
+      --blue-light: #eff6ff;
+      --mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      --sans: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    body { font-family: var(--sans); background: var(--paper); color: var(--ink); line-height: 1.6; }
+    .container { max-width: 860px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+
+    h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.25rem; }
+    .subtitle { color: var(--ink-mute); font-size: 0.95rem; margin-bottom: 2.5rem; }
+    h2 { font-size: 1.25rem; font-weight: 700; margin: 2.5rem 0 1rem; letter-spacing: -0.02em; }
+    h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+    p { margin-bottom: 1rem; color: #374151; }
+
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 0.375rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; vertical-align: middle; margin-left: 0.5rem; }
+    .badge-accent { background: var(--accent-light); color: var(--accent); }
+
+    /* Diagram */
+    .diagram { background: var(--ink); color: #e2e8f0; border-radius: 1rem; padding: 2rem; margin: 1.5rem 0; overflow-x: auto; }
+    .diagram pre { font-family: var(--mono); font-size: 0.8rem; line-height: 1.7; white-space: pre; }
+    .diagram .hl { color: #a78bfa; }
+    .diagram .gr { color: #34d399; }
+    .diagram .yl { color: #fbbf24; }
+    .diagram .rd { color: #f87171; }
+    .diagram .cy { color: #22d3ee; }
+    .diagram .dm { color: #64748b; }
+
+    /* Cards */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin: 1rem 0; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th { text-align: left; padding: 0.75rem 1rem; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-mute); border-bottom: 2px solid var(--border); }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 1rem; overflow: hidden; margin: 1rem 0; }
+
+    /* Role badges */
+    .role { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .role-super { background: var(--accent-light); color: var(--accent); }
+    .role-admin { background: var(--blue-light); color: var(--blue); }
+    .role-member { background: var(--green-light); color: var(--green); }
+    .role-anon { background: #f3f4f6; color: var(--ink-mute); }
+    .role::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    /* Flow */
+    .flow { counter-reset: step; }
+    .flow-step { display: flex; gap: 1rem; margin-bottom: 1rem; align-items: flex-start; }
+    .flow-num { counter-increment: step; flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--card); font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 0.1rem; }
+    .flow-num::after { content: counter(step); }
+    .flow-text { flex: 1; }
+    .flow-text strong { color: var(--ink); }
+
+    code { font-family: var(--mono); font-size: 0.8em; background: #f3f4f6; padding: 0.15em 0.4em; border-radius: 0.25rem; }
+    pre.code-block { background: var(--ink); color: #e2e8f0; border-radius: 0.75rem; padding: 1.25rem; overflow-x: auto; font-family: var(--mono); font-size: 0.8rem; line-height: 1.7; margin: 1rem 0; }
+    pre.code-block .kw { color: #c084fc; }
+    pre.code-block .st { color: #34d399; }
+    pre.code-block .cm { color: #64748b; }
+
+    .env-table td:first-child { font-family: var(--mono); font-size: 0.8rem; white-space: nowrap; }
+
+    .decisions li { margin-bottom: 0.5rem; color: #374151; }
+    .decisions li strong { color: var(--ink); }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Clerk Integration <span class="badge badge-accent">CourtOS</span></h1>
+    <p class="subtitle">Authentication &amp; organisation membership via Clerk, authorization enforced server-side in Convex.</p>
+
+    <!-- Architecture Diagram -->
+    <h2>Architecture</h2>
+    <div class="diagram">
+<pre>
+<span class="dm">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="dm">│</span>  <span class="yl">Browser</span>                                                    <span class="dm">│</span>
+<span class="dm">│</span>                                                             <span class="dm">│</span>
+<span class="dm">│</span>  <span class="hl">ClerkProvider</span>                                               <span class="dm">│</span>
+<span class="dm">│</span>    └─ <span class="hl">ConvexProviderWithClerk</span>  <span class="dm">(passes JWT on every req)</span>    <span class="dm">│</span>
+<span class="dm">│</span>         ├─ <span class="gr">UserSync</span>            <span class="dm">upserts user doc on sign-in</span>  <span class="dm">│</span>
+<span class="dm">│</span>         └─ <span class="cy">Routes</span>                                             <span class="dm">│</span>
+<span class="dm">│</span>              ├─ <span class="cy">/</span>              landing + smart redirect       <span class="dm">│</span>
+<span class="dm">│</span>              ├─ <span class="cy">/dashboard</span>    member flat view                <span class="dm">│</span>
+<span class="dm">│</span>              ├─ <span class="cy">/$slug/*</span>     org admin dashboard             <span class="dm">│</span>
+<span class="dm">│</span>              ├─ <span class="rd">/admin</span>       super admin panel               <span class="dm">│</span>
+<span class="dm">│</span>              └─ <span class="gr">/kiosk/*</span>     public (no auth)               <span class="dm">│</span>
+<span class="dm">└────────────────────┬────────────────────────────────────────┘</span>
+                     <span class="dm">│</span> <span class="yl">JWT</span> <span class="dm">(org_id, org_role, tokenIdentifier)</span>
+                     <span class="dm">▼</span>
+<span class="dm">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="dm">│</span>  <span class="gr">Convex Backend</span>                                              <span class="dm">│</span>
+<span class="dm">│</span>                                                             <span class="dm">│</span>
+<span class="dm">│</span>  <span class="hl">ctx.auth.getUserIdentity()</span>                                  <span class="dm">│</span>
+<span class="dm">│</span>    ├─ tokenIdentifier  →  <span class="cy">users</span>.clerkUserId                  <span class="dm">│</span>
+<span class="dm">│</span>    ├─ org_id           →  <span class="cy">organizations</span>.clerkOrgId            <span class="dm">│</span>
+<span class="dm">│</span>    └─ org_role         →  <span class="st">"org:admin"</span> | <span class="st">"org:member"</span>          <span class="dm">│</span>
+<span class="dm">│</span>                                                             <span class="dm">│</span>
+<span class="dm">│</span>  <span class="yl">Auth Helpers</span> <span class="dm">(convex/lib/auth.ts)</span>                             <span class="dm">│</span>
+<span class="dm">│</span>    ├─ requireUser        → any authenticated user             <span class="dm">│</span>
+<span class="dm">│</span>    ├─ requireOrgMember   → JWT org_id matches target org      <span class="dm">│</span>
+<span class="dm">│</span>    ├─ requireOrgAdmin    → above + <span class="st">org:admin</span> role              <span class="dm">│</span>
+<span class="dm">│</span>    └─ requireSuperAdmin  → <span class="rd">isSuperAdmin</span> flag on user doc       <span class="dm">│</span>
+<span class="dm">└─────────────────────────────────────────────────────────────┘</span>
+</pre>
+    </div>
+
+    <!-- Roles -->
+    <h2>Roles</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Role</th>
+            <th>Source</th>
+            <th>Access</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="role role-super">Super Admin</span></td>
+            <td><code>isSuperAdmin</code> flag on <code>users</code> table</td>
+            <td><code>/admin</code>, all org dashboards, promote other admins</td>
+          </tr>
+          <tr>
+            <td><span class="role role-admin">Org Admin</span></td>
+            <td>Clerk org role <code>org:admin</code></td>
+            <td><code>/$slug/*</code> — CRUD tournaments, venues, players, scores</td>
+          </tr>
+          <tr>
+            <td><span class="role role-member">Member</span></td>
+            <td>Authenticated user + <code>participants</code> table (not in Clerk org)</td>
+            <td><code>/dashboard</code> — view tournaments they're added to, rankings (read-only)</td>
+          </tr>
+          <tr>
+            <td><span class="role role-anon">Unauthenticated</span></td>
+            <td>—</td>
+            <td><code>/</code> landing page, <code>/kiosk/*</code> public display</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Data Flow -->
+    <h2>Data Flow</h2>
+
+    <div class="card">
+      <h3>Sign-in</h3>
+      <div class="flow">
+        <div class="flow-step"><div class="flow-num"></div><div class="flow-text">User signs in via <strong>Clerk modal</strong> (<code>SignInButton</code>)</div></div>
+        <div class="flow-step"><div class="flow-num"></div><div class="flow-text"><code>ConvexProviderWithClerk</code> sends <strong>JWT</strong> to Convex on every request</div></div>
+        <div class="flow-step"><div class="flow-num"></div><div class="flow-text"><code>UserSync</code> calls <code>users.upsert</code> — creates or updates user doc with <code>tokenIdentifier</code>, name, email</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Organisation Membership</h3>
+      <div class="flow">
+        <div class="flow-step"><div class="flow-num"></div><div class="flow-text"><strong>Admins only</strong> are invited to Clerk Organisations (dashboard or API)</div></div>
+        <div class="flow-step"><div class="flow-num"></div><div class="flow-text">Admin's JWT includes <code>org_id</code> and <code>org_role</code> — used for mutation authorization</div></div>
+        <div class="flow-step"><div class="flow-num"></div><div class="flow-text"><strong>Members</strong> are not in Clerk orgs — they're linked via <code>participants</code> table. Admin adds them to tournaments.</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Route Protection</h3>
+      <div class="flow">
+        <div class="flow-step"><div class="flow-num"></div><div class="flow-text">Frontend checks <code>useAuth().isSignedIn</code> — redirects to <code>/</code> if false</div></div>
+        <div class="flow-step"><div class="flow-num"></div><div class="flow-text">Smart redirect: super admin / org admin → <code>/$slug/tournaments</code>, member → <code>/dashboard</code></div></div>
+        <div class="flow-step"><div class="flow-num"></div><div class="flow-text">Backend mutations enforce auth as <strong>safety net</strong> — never trust client alone</div></div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Configuration -->
+    <h2>Clerk Configuration</h2>
+
+    <div class="card-grid">
+      <div class="card">
+        <h3>Clerk Dashboard</h3>
+        <ul style="padding-left: 1.25rem; color: #374151;">
+          <li>Create JWT template named <code>convex</code> with audience <code>convex</code></li>
+          <li>Enable Organisations feature</li>
+          <li>Built-in roles: <code>org:admin</code>, <code>org:member</code></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Environment</h3>
+        <table class="env-table" style="margin: 0;">
+          <tr><td><code>VITE_CLERK_PUBLISHABLE_KEY</code></td><td>Clerk publishable key</td></tr>
+          <tr><td><code>VITE_CONVEX_URL</code></td><td>Convex deployment URL</td></tr>
+          <tr><td><code>CONVEX_DEPLOYMENT</code></td><td>Convex deployment name</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h3>convex/auth.config.ts</h3>
+    <pre class="code-block"><span class="kw">export default</span> {
+  providers: [{
+    domain: <span class="st">"https://&lt;instance&gt;.clerk.accounts.dev"</span>,
+    applicationID: <span class="st">"convex"</span>,
+  }],
+};</pre>
+
+    <hr>
+
+    <!-- Key Decisions -->
+    <h2>Key Decisions</h2>
+    <ul class="decisions" style="padding-left: 1.25rem;">
+      <li><strong>Clerk owns user lifecycle</strong> — no user create/delete in CourtOS, only sync on sign-in</li>
+      <li><strong>Clerk orgs are admin-only</strong> — members don't join Clerk orgs, they're linked via <code>participants</code> table</li>
+      <li><strong>Super admin is app-level</strong> — <code>isSuperAdmin</code> flag in DB, not a Clerk role</li>
+      <li><strong>Queries are open</strong> — any authenticated user can read any org's data (spectators, kiosk)</li>
+      <li><strong>Mutations are gated</strong> — server-side org membership + role checks on every write</li>
+      <li><strong>Kiosk is public</strong> — no auth required for read-only display screens</li>
+    </ul>
+  </div>
+</body>
+</html>
