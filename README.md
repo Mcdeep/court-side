@@ -18,9 +18,16 @@ A multitenant padel tournament management platform. Organisers create tournament
 - Venue and court management
 - Organisation settings with suspend/reactivate
 
+**QR code self-join** (`/join/:tournamentId`)
+- Players scan a QR code to join a tournament — no admin needed
+- Sign up or sign in via Clerk, then one tap to join
+- QR displayed on kiosk pre-match screen and organiser tournament page
+
 **Kiosk display** (`/kiosk/:tournamentId`)
 - Fullscreen dark UI for TVs/projectors
-- Live court scores and ranked standings
+- Live court scores and ranked standings with marquee auto-scroll
+- Configurable round timer with countdown in the header
+- "Final Point" announcement — three-tone buzzer, voice alert, and full-screen overlay when time expires
 - Auto-rotates panels on narrow screens
 - Realtime updates via Convex subscriptions
 
@@ -100,6 +107,9 @@ src/
       players.tsx         # Player management
       courts.tsx          # Venue and court management
       settings.tsx        # Org settings
+    dashboard.tsx         # Member flat dashboard
+    join/
+      $tournamentId.tsx   # QR self-join page
     kiosk/
       $tournamentId.tsx   # Fullscreen kiosk display
 
@@ -110,7 +120,8 @@ convex/
   matches.ts              # Match management
   scores.ts               # Score submission + disputes
   leaderboard.ts          # Leaderboard calculation
-  participants.ts         # Player registration
+  participants.ts         # Player registration + self-join
+  ratings.ts              # Player rating system + rankings
   organizations.ts        # Org CRUD + admin
   venues.ts               # Venue + court management
   users.ts                # User sync
