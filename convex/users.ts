@@ -7,7 +7,6 @@ export const upsert = mutation({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-
     const existing = await ctx.db
       .query("users")
       .withIndex("by_clerk_user_id", (q) =>
@@ -15,9 +14,11 @@ export const upsert = mutation({
       )
       .unique();
 
+    const name = identity.name?.trim() || identity.nickname?.trim() || identity.email || "Unknown";
+
     if (existing) {
       await ctx.db.patch(existing._id, {
-        name: identity.name ?? existing.name,
+        name,
         email: identity.email ?? existing.email,
       });
       return existing._id;
@@ -25,7 +26,7 @@ export const upsert = mutation({
 
     return ctx.db.insert("users", {
       clerkUserId: identity.tokenIdentifier,
-      name: identity.name ?? "Unknown",
+      name,
       email: identity.email ?? "",
     });
   },
