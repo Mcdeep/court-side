@@ -275,7 +275,7 @@ export const start = mutation({
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
     if (round.state !== "pending") throw new Error("Round already started");
-    await ctx.db.patch(args.roundId, { state: "in_progress" });
+    await ctx.db.patch(args.roundId, { state: "in_progress", startedAt: Date.now() });
     const matches = await ctx.db
       .query("matches")
       .withIndex("by_round", q => q.eq("roundId", args.roundId))

@@ -225,6 +225,7 @@ function NewTournamentModal({ orgId, onClose, onCreated }: {
   const [venueId, setVenueId] = useState<Id<'venues'> | ''>('')
   const [startsAt, setStartsAt] = useState(toDatetimeLocal(now + 1000 * 60 * 60))
   const [endsAt, setEndsAt]     = useState(toDatetimeLocal(now + 1000 * 60 * 60 * 4))
+  const [roundMinutes, setRoundMinutes] = useState('')
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState('')
 
@@ -244,6 +245,7 @@ function NewTournamentModal({ orgId, onClose, onCreated }: {
         venueId: resolvedVenue,
         name: name.trim(),
         format,
+        roundDurationMs: roundMinutes ? Number(roundMinutes) * 60_000 : undefined,
         startsAt: new Date(startsAt).getTime(),
         endsAt: new Date(endsAt).getTime(),
       })
@@ -314,6 +316,19 @@ function NewTournamentModal({ orgId, onClose, onCreated }: {
                 ))}
               </select>
             )}
+          </Field>
+
+          {/* Round timer */}
+          <Field label="Round duration (minutes)">
+            <input
+              type="number"
+              min={1}
+              max={60}
+              value={roundMinutes}
+              onChange={e => setRoundMinutes(e.target.value)}
+              placeholder="e.g. 4 (leave empty for no timer)"
+              className={INPUT_CLS}
+            />
           </Field>
 
           {/* Date/time row */}

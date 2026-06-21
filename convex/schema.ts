@@ -46,6 +46,7 @@ export default defineSchema({
       v.literal("archived"),
     ),
     courtCount: v.optional(v.number()),
+    roundDurationMs: v.optional(v.number()),
     startsAt: v.number(),
     endsAt: v.number(),
   })
@@ -86,6 +87,7 @@ export default defineSchema({
       v.literal("in_progress"),
       v.literal("completed"),
     ),
+    startedAt: v.optional(v.number()),
   }).index("by_tournament", ["tournamentId"]),
 
   matches: defineTable({

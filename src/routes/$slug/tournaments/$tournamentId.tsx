@@ -264,6 +264,7 @@ function EditTournamentModal({ tournament, tournamentId, onClose }: {
   tournament: any; tournamentId: Id<'tournaments'>; onClose: () => void
 }) {
   const [name, setName] = useState(tournament.name)
+  const [roundMinutes, setRoundMinutes] = useState(tournament.roundDurationMs ? String(tournament.roundDurationMs / 60_000) : '')
   const [startsAt, setStartsAt] = useState(toDatetimeLocal(tournament.startsAt))
   const [endsAt, setEndsAt] = useState(toDatetimeLocal(tournament.endsAt))
   const [saving, setSaving] = useState(false)
@@ -278,6 +279,7 @@ function EditTournamentModal({ tournament, tournamentId, onClose }: {
       await updateTournament({
         tournamentId,
         name: name.trim(),
+        roundDurationMs: roundMinutes ? Number(roundMinutes) * 60_000 : undefined,
         startsAt: new Date(startsAt).getTime(),
         endsAt: new Date(endsAt).getTime(),
       })
@@ -303,6 +305,16 @@ function EditTournamentModal({ tournament, tournamentId, onClose }: {
           <div>
             <label className="block text-[12px] font-bold uppercase tracking-wide text-ink-mute mb-1.5">Name</label>
             <input autoFocus value={name} onChange={e => setName(e.target.value)} className={INPUT_MODAL_CLS} required />
+          </div>
+          <div>
+            <label className="block text-[12px] font-bold uppercase tracking-wide text-ink-mute mb-1.5">Round duration (minutes)</label>
+            <input
+              type="number" min={1} max={60}
+              value={roundMinutes}
+              onChange={e => setRoundMinutes(e.target.value)}
+              placeholder="Leave empty for no timer"
+              className={INPUT_MODAL_CLS}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
