@@ -3,6 +3,7 @@ import { useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import { useEffect, useState } from 'react'
 import type { Id } from '../../../convex/_generated/dataModel'
+import { JoinQR } from '#/components/ui'
 
 export const Route = createFileRoute('/kiosk/$tournamentId')({
   component: KioskPage,
@@ -101,7 +102,12 @@ function KioskPage() {
           <div className={`${wide ? 'w-[58%] border-r border-white/8' : 'flex-1'} p-6 overflow-auto`}>
             <SectionLabel>Courts</SectionLabel>
             {!matches || matches.length === 0 ? (
-              <div className="flex items-center justify-center h-40 text-white/30 text-lg">No matches yet</div>
+              <div className="flex flex-col items-center justify-center h-40 gap-4">
+                {(tournament.state === 'draft' || tournament.state === 'registration_open') && (
+                  <JoinQR tournamentId={tournamentId} size={160} tone="dark" />
+                )}
+                <span className="text-white/30 text-lg">No matches yet</span>
+              </div>
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4 mt-4">
                 {[...matches].sort((a, b) => a.courtNumber - b.courtNumber).map(m => (

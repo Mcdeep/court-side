@@ -3,7 +3,7 @@ import { useMutation, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import React, { useEffect, useRef, useState } from 'react'
 import type { Id } from '#/../convex/_generated/dataModel'
-import { Avatar, Button, Icon, SegTabs, StatusChip, TeamMark } from '#/components/ui'
+import { Avatar, Button, Icon, JoinQRButton, SegTabs, StatusChip, TeamMark } from '#/components/ui'
 
 export const Route = createFileRoute('/$slug/tournaments/$tournamentId')({
   component: TournamentDetailPage,
@@ -124,6 +124,7 @@ function TournamentDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {canAddPlayer && <JoinQRButton tournamentId={tournamentId} />}
           {canEdit && (
             <Button variant="outline" size="md" icon="pencil" onClick={() => setShowEdit(true)}>
               Edit

@@ -14,6 +14,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as KioskTournamentIdRouteImport } from './routes/kiosk/$tournamentId'
+import { Route as JoinTournamentIdRouteImport } from './routes/join/$tournamentId'
 import { Route as SlugSettingsRouteImport } from './routes/$slug/settings'
 import { Route as SlugRankingsRouteImport } from './routes/$slug/rankings'
 import { Route as SlugPlayersRouteImport } from './routes/$slug/players'
@@ -44,6 +45,11 @@ const IndexRoute = IndexRouteImport.update({
 const KioskTournamentIdRoute = KioskTournamentIdRouteImport.update({
   id: '/kiosk/$tournamentId',
   path: '/kiosk/$tournamentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JoinTournamentIdRoute = JoinTournamentIdRouteImport.update({
+  id: '/join/$tournamentId',
+  path: '/join/$tournamentId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SlugSettingsRoute = SlugSettingsRouteImport.update({
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/$slug/players': typeof SlugPlayersRoute
   '/$slug/rankings': typeof SlugRankingsRoute
   '/$slug/settings': typeof SlugSettingsRoute
+  '/join/$tournamentId': typeof JoinTournamentIdRoute
   '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
   '/$slug/tournaments/$tournamentId': typeof SlugTournamentsTournamentIdRoute
   '/$slug/tournaments/': typeof SlugTournamentsIndexRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/$slug/players': typeof SlugPlayersRoute
   '/$slug/rankings': typeof SlugRankingsRoute
   '/$slug/settings': typeof SlugSettingsRoute
+  '/join/$tournamentId': typeof JoinTournamentIdRoute
   '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
   '/$slug/tournaments/$tournamentId': typeof SlugTournamentsTournamentIdRoute
   '/$slug/tournaments': typeof SlugTournamentsIndexRoute
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/$slug/players': typeof SlugPlayersRoute
   '/$slug/rankings': typeof SlugRankingsRoute
   '/$slug/settings': typeof SlugSettingsRoute
+  '/join/$tournamentId': typeof JoinTournamentIdRoute
   '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
   '/$slug/tournaments/$tournamentId': typeof SlugTournamentsTournamentIdRoute
   '/$slug/tournaments/': typeof SlugTournamentsIndexRoute
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/$slug/players'
     | '/$slug/rankings'
     | '/$slug/settings'
+    | '/join/$tournamentId'
     | '/kiosk/$tournamentId'
     | '/$slug/tournaments/$tournamentId'
     | '/$slug/tournaments/'
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/$slug/players'
     | '/$slug/rankings'
     | '/$slug/settings'
+    | '/join/$tournamentId'
     | '/kiosk/$tournamentId'
     | '/$slug/tournaments/$tournamentId'
     | '/$slug/tournaments'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/$slug/players'
     | '/$slug/rankings'
     | '/$slug/settings'
+    | '/join/$tournamentId'
     | '/kiosk/$tournamentId'
     | '/$slug/tournaments/$tournamentId'
     | '/$slug/tournaments/'
@@ -165,6 +177,7 @@ export interface RootRouteChildren {
   SlugRoute: typeof SlugRouteWithChildren
   AdminRoute: typeof AdminRoute
   DashboardRoute: typeof DashboardRoute
+  JoinTournamentIdRoute: typeof JoinTournamentIdRoute
   KioskTournamentIdRoute: typeof KioskTournamentIdRoute
 }
 
@@ -203,6 +216,13 @@ declare module '@tanstack/react-router' {
       path: '/kiosk/$tournamentId'
       fullPath: '/kiosk/$tournamentId'
       preLoaderRoute: typeof KioskTournamentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/join/$tournamentId': {
+      id: '/join/$tournamentId'
+      path: '/join/$tournamentId'
+      fullPath: '/join/$tournamentId'
+      preLoaderRoute: typeof JoinTournamentIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$slug/settings': {
@@ -275,6 +295,7 @@ const rootRouteChildren: RootRouteChildren = {
   SlugRoute: SlugRouteWithChildren,
   AdminRoute: AdminRoute,
   DashboardRoute: DashboardRoute,
+  JoinTournamentIdRoute: JoinTournamentIdRoute,
   KioskTournamentIdRoute: KioskTournamentIdRoute,
 }
 export const routeTree = rootRouteImport

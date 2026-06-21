@@ -157,6 +157,31 @@ export const get = query({
   },
 });
 
+export const getPublic = query({
+  args: { tournamentId: v.id("tournaments") },
+  handler: async (ctx, args) => {
+    const t = await ctx.db.get(args.tournamentId);
+    if (!t) return null;
+    const org = await ctx.db.get(t.organizationId);
+    const venue = await ctx.db.get(t.venueId);
+    const participants = await ctx.db
+      .query("participants")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
+      .take(200);
+    return {
+      _id: t._id,
+      name: t.name,
+      format: t.format,
+      state: t.state,
+      startsAt: t.startsAt,
+      endsAt: t.endsAt,
+      clubName: org?.name ?? "Unknown",
+      venueName: venue?.name ?? "Unknown",
+      playerCount: participants.length,
+    };
+  },
+});
+
 export const update = mutation({
   args: {
     tournamentId: v.id("tournaments"),

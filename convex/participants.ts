@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireOrgAdmin } from "./lib/auth";
+import { requireOrgAdmin, requireUser } from "./lib/auth";
 import type { Id } from "./_generated/dataModel";
 
 export const add = mutation({
@@ -95,6 +95,31 @@ export const listByOrg = query({
         .sort((a, b) => b.tournamentCount - a.tournamentCount),
       walkIns: [...walkInMap.values()].sort((a, b) => b.count - a.count),
     };
+  },
+});
+
+export const selfJoin = mutation({
+  args: { tournamentId: v.id("tournaments") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const tournament = await ctx.db.get(args.tournamentId);
+    if (!tournament) throw new Error("Tournament not found");
+    if (tournament.state !== "draft" && tournament.state !== "registration_open") {
+      throw new Error("Tournament is not accepting participants");
+    }
+    const existing = await ctx.db
+      .query("participants")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
+      .take(200);
+    if (existing.some((p) => p.userId === user._id)) {
+      throw new Error("Already joined");
+    }
+    return ctx.db.insert("participants", {
+      tournamentId: args.tournamentId,
+      userId: user._id,
+      entryType: "solo",
+      isWalkIn: false,
+    });
   },
 });
 
