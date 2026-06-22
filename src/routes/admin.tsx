@@ -215,7 +215,7 @@ function AssignAdminInline({ organizationId, onClose }: { organizationId: Id<"or
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
   const users = useQuery(api.users.list)
-  const assignAdmin = useAction(api.clerkAdmin.assignOrgAdmin)
+  const assignAdmin = useAction(api.clerkActions.assignOrgAdmin)
 
   const q = search.toLowerCase()
   const filtered = (users ?? []).filter(u =>
@@ -400,7 +400,7 @@ function CreateOrgModal({ onClose }: { onClose: () => void }) {
   const [adminUserId, setAdminUserId] = useState<Id<"users"> | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const adminCreateOrg = useAction(api.clerkAdmin.adminCreateOrg)
+  const adminCreateOrg = useAction(api.clerkActions.adminCreateOrg)
   const users = useQuery(api.users.list)
 
   const q = adminSearch.toLowerCase()

@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as clerkActions from "../clerkActions.js";
+import type * as clerkAdmin from "../clerkAdmin.js";
 import type * as formats_americano from "../formats/americano.js";
 import type * as formats_king_of_the_court from "../formats/king_of_the_court.js";
 import type * as formats_knockout from "../formats/knockout.js";
@@ -34,6 +36,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  clerkActions: typeof clerkActions;
+  clerkAdmin: typeof clerkAdmin;
   "formats/americano": typeof formats_americano;
   "formats/king_of_the_court": typeof formats_king_of_the_court;
   "formats/knockout": typeof formats_knockout;

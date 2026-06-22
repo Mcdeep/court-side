@@ -9,3 +9,4 @@ dist
 
 # Local Claude Code settings
 .claude/settings.local.json
+.playwright-mcp/
