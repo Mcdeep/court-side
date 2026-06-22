@@ -57,7 +57,7 @@ function OrgShell() {
 
   return (
     <div className="flex min-h-screen bg-paper font-sans text-ink">
-      <Sidebar slug={slug} active={active} tournamentCount={tournamentCount} />
+      <Sidebar slug={slug} active={active} tournamentCount={tournamentCount} isSuperAdmin={!!me?.isSuperAdmin} />
       <main className="flex-1 min-w-0 overflow-y-auto">
         <Outlet />
       </main>
@@ -65,7 +65,7 @@ function OrgShell() {
   )
 }
 
-function Sidebar({ slug, active, tournamentCount }: { slug: string; active: string; tournamentCount: number }) {
+function Sidebar({ slug, active, tournamentCount, isSuperAdmin }: { slug: string; active: string; tournamentCount: number; isSuperAdmin: boolean }) {
   return (
     <aside className="w-[244px] shrink-0 bg-ink text-paper flex flex-col h-screen sticky top-0">
       {/* Wordmark */}
@@ -94,8 +94,15 @@ function Sidebar({ slug, active, tournamentCount }: { slug: string; active: stri
         })}
       </nav>
 
-      {/* Org footer */}
+      {/* Super admin link + Org footer */}
       <div className="p-3 border-t border-white/5">
+        {isSuperAdmin && (
+          <Link to="/admin"
+            className="flex items-center gap-3 h-10 px-3 mb-2 rounded-xl text-[14px] font-semibold text-red-400 hover:bg-white/5 transition-all">
+            <Icon name="bolt" className="w-[18px] h-[18px]" stroke={2.2} />
+            Admin
+          </Link>
+        )}
         <div className="flex items-center gap-3 p-2">
           <UserButton
             appearance={{

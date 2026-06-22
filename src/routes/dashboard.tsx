@@ -13,6 +13,7 @@ function DashboardPage() {
   const navigate = useNavigate()
   const { isSignedIn, isLoaded } = useAuth()
   const [tab, setTab] = useState<'tournaments' | 'rankings'>('tournaments')
+  const me = useQuery(api.users.me)
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) navigate({ to: '/' })
@@ -23,7 +24,7 @@ function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-paper font-sans text-ink">
-      <TopNav tab={tab} onTab={setTab} />
+      <TopNav tab={tab} onTab={setTab} isSuperAdmin={!!me?.isSuperAdmin} />
       <main className="max-w-[900px] mx-auto px-8 py-8">
         {tab === 'tournaments' ? <TournamentsTab /> : <RankingsTab />}
       </main>
@@ -31,7 +32,7 @@ function DashboardPage() {
   )
 }
 
-function TopNav({ tab, onTab }: { tab: string; onTab: (t: any) => void }) {
+function TopNav({ tab, onTab, isSuperAdmin }: { tab: string; onTab: (t: any) => void; isSuperAdmin: boolean }) {
   return (
     <header className="sticky top-0 z-30 bg-paper/95 backdrop-blur-sm border-b border-zinc-200/80">
       <div className="max-w-[900px] mx-auto px-8 flex items-center justify-between h-14">
@@ -50,7 +51,16 @@ function TopNav({ tab, onTab }: { tab: string; onTab: (t: any) => void }) {
             ))}
           </nav>
         </div>
-        <UserButton appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
+        <div className="flex items-center gap-3">
+          {isSuperAdmin && (
+            <Link to="/admin"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors">
+              <Icon name="bolt" className="w-4 h-4" />
+              Admin
+            </Link>
+          )}
+          <UserButton appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
+        </div>
       </div>
     </header>
   )

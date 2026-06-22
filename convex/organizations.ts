@@ -62,25 +62,7 @@ export const globalStats = query({
   },
 })
 
-export const adminCreate = mutation({
-  args: {
-    name: v.string(),
-    slug: v.string(),
-  },
-  handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx);
-    if (!args.name.trim()) throw new Error('Name required');
-    if (!args.slug.trim()) throw new Error('Slug required');
-    const existing = await ctx.db.query('organizations').withIndex('by_slug', q => q.eq('slug', args.slug.trim())).unique();
-    if (existing) throw new Error('Slug already taken');
-    return ctx.db.insert('organizations', {
-      clerkOrgId: '',
-      name: args.name.trim(),
-      slug: args.slug.trim().toLowerCase().replace(/\s+/g, '-'),
-      status: 'active',
-    })
-  },
-})
+// adminCreate replaced by clerkAdmin.adminCreateOrg action
 
 export const create = mutation({
   args: {

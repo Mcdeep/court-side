@@ -39,7 +39,6 @@ export async function requireOrgMember(
   const org = await ctx.db.get(organizationId);
   if (!org) throw new Error("Organisation not found");
 
-  // Clerk JWT customClaims include org_id and org_role when user has active org
   const clerkOrgId = (identity as any).org_id as string | undefined;
   if (!clerkOrgId || clerkOrgId !== org.clerkOrgId) {
     throw new Error("Not a member of this organisation");
@@ -49,11 +48,11 @@ export async function requireOrgMember(
   return { user, role: role === "org:admin" ? "admin" as const : "member" as const };
 }
 
+// Any Clerk org member (org:member or org:admin) can manage tournaments.
+// Clerk org:admin is reserved for Clerk-level management only.
 export async function requireOrgAdmin(
   ctx: QueryCtx | MutationCtx,
   organizationId: Id<"organizations">
 ) {
-  const result = await requireOrgMember(ctx, organizationId);
-  if (result.role !== "admin") throw new Error("Admin access required");
-  return result;
+  return requireOrgMember(ctx, organizationId);
 }

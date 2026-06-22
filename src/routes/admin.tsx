@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useMutation, useQuery } from 'convex/react'
+import { useAction, useMutation, useQuery } from 'convex/react'
 import { useAuth, UserButton } from '@clerk/tanstack-start'
 import { api } from '#/../convex/_generated/api'
 import React, { useEffect, useState } from 'react'
 import { Button, Icon } from '#/components/ui'
+import type { Id } from '#/../convex/_generated/dataModel'
 
 export const Route = createFileRoute('/admin')({
   component: AdminPage,
@@ -127,6 +128,7 @@ function OrgsTab() {
 
 function OrgRow({ org }: { org: any }) {
   const [confirm, setConfirm] = useState<'suspend' | 'activate' | null>(null)
+  const [showAssign, setShowAssign] = useState(false)
   const [working, setWorking] = useState(false)
   const [error, setError] = useState('')
   const suspend = useMutation(api.organizations.suspend)
@@ -148,48 +150,125 @@ function OrgRow({ org }: { org: any }) {
   const isSuspended = org.status === 'suspended'
 
   return (
-    <tr className="hover:bg-zinc-50/60 transition-colors">
-      <td className="px-5 py-3.5 font-semibold">{org.name}</td>
-      <td className="px-5 py-3.5 font-mono text-[12px] text-ink-mute">{org.slug}</td>
-      <td className="px-5 py-3.5 text-center tnum">{org.tournamentCount}</td>
-      <td className="px-5 py-3.5 text-center tnum">{org.venueCount}</td>
-      <td className="px-5 py-3.5 text-center">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold
-          ${isSuspended ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${isSuspended ? 'bg-red-400' : 'bg-emerald-500'}`} />
-          {isSuspended ? 'Suspended' : 'Active'}
-        </span>
-      </td>
-      <td className="px-5 py-3.5">
-        <div className="flex items-center justify-end gap-2">
-          {error && <span className="text-red-500 text-[11px]">{error}</span>}
-          {confirm ? (
-            <>
-              <button onClick={() => setConfirm(null)}
-                className="text-[12px] text-ink-mute hover:text-ink transition-colors">Cancel</button>
+    <>
+      <tr className="hover:bg-zinc-50/60 transition-colors">
+        <td className="px-5 py-3.5 font-semibold">{org.name}</td>
+        <td className="px-5 py-3.5 font-mono text-[12px] text-ink-mute">{org.slug}</td>
+        <td className="px-5 py-3.5 text-center tnum">{org.tournamentCount}</td>
+        <td className="px-5 py-3.5 text-center tnum">{org.venueCount}</td>
+        <td className="px-5 py-3.5 text-center">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold
+            ${isSuspended ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isSuspended ? 'bg-red-400' : 'bg-emerald-500'}`} />
+            {isSuspended ? 'Suspended' : 'Active'}
+          </span>
+        </td>
+        <td className="px-5 py-3.5">
+          <div className="flex items-center justify-end gap-2">
+            {error && <span className="text-red-500 text-[11px]">{error}</span>}
+            <Button size="sm" variant="ghost" className="!text-blue-600 hover:!bg-blue-50"
+              onClick={() => setShowAssign(true)}>
+              Assign admin
+            </Button>
+            {confirm ? (
+              <>
+                <button onClick={() => setConfirm(null)}
+                  className="text-[12px] text-ink-mute hover:text-ink transition-colors">Cancel</button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className={confirm === 'suspend' ? '!text-red-500 !ring-red-200 hover:!bg-red-50' : '!text-emerald-600 !ring-emerald-200 hover:!bg-emerald-50'}
+                  onClick={handleAction}
+                  disabled={working}>
+                  {working ? '…' : confirm === 'suspend' ? 'Confirm suspend' : 'Confirm activate'}
+                </Button>
+              </>
+            ) : (
               <Button
                 size="sm"
                 variant="ghost"
-                className={confirm === 'suspend' ? '!text-red-500 !ring-red-200 hover:!bg-red-50' : '!text-emerald-600 !ring-emerald-200 hover:!bg-emerald-50'}
-                onClick={handleAction}
-                disabled={working}>
-                {working ? '…' : confirm === 'suspend' ? 'Confirm suspend' : 'Confirm activate'}
+                className={isSuspended
+                  ? '!text-emerald-600 hover:!bg-emerald-50'
+                  : '!text-red-500 hover:!bg-red-50'}
+                onClick={() => setConfirm(isSuspended ? 'activate' : 'suspend')}>
+                {isSuspended ? 'Activate' : 'Suspend'}
               </Button>
-            </>
-          ) : (
-            <Button
-              size="sm"
-              variant="ghost"
-              className={isSuspended
-                ? '!text-emerald-600 hover:!bg-emerald-50'
-                : '!text-red-500 hover:!bg-red-50'}
-              onClick={() => setConfirm(isSuspended ? 'activate' : 'suspend')}>
-              {isSuspended ? 'Activate' : 'Suspend'}
-            </Button>
-          )}
-        </div>
-      </td>
-    </tr>
+            )}
+          </div>
+        </td>
+      </tr>
+      {showAssign && (
+        <tr>
+          <td colSpan={6} className="px-5 py-3 bg-blue-50/50">
+            <AssignAdminInline organizationId={org._id} onClose={() => setShowAssign(false)} />
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}
+
+function AssignAdminInline({ organizationId, onClose }: { organizationId: Id<"organizations">; onClose: () => void }) {
+  const [search, setSearch] = useState('')
+  const [selectedUserId, setSelectedUserId] = useState<Id<"users"> | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
+  const users = useQuery(api.users.list)
+  const assignAdmin = useAction(api.clerkAdmin.assignOrgAdmin)
+
+  const q = search.toLowerCase()
+  const filtered = (users ?? []).filter(u =>
+    !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+  ).slice(0, 8)
+
+  async function handleAssign() {
+    if (!selectedUserId) return
+    setSaving(true); setError('')
+    try {
+      await assignAdmin({ organizationId, userId: selectedUserId })
+      setDone(true)
+      setTimeout(onClose, 1200)
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (done) return (
+    <div className="flex items-center gap-2 text-sm text-emerald-700 font-semibold">
+      <Icon name="check" className="w-4 h-4" /> Admin assigned
+    </div>
+  )
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="relative flex-1 max-w-xs">
+        <input
+          value={search}
+          onChange={e => { setSearch(e.target.value); setSelectedUserId(null) }}
+          placeholder="Search user by name or email…"
+          className={INPUT_CLS + ' !h-9'}
+        />
+        {search && !selectedUserId && filtered.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl ring-1 ring-zinc-200 shadow-lg z-10 max-h-48 overflow-y-auto">
+            {filtered.map(u => (
+              <button key={u._id} onClick={() => { setSelectedUserId(u._id); setSearch(u.name) }}
+                className="w-full text-left px-3 py-2 hover:bg-zinc-50 text-sm flex items-center gap-2">
+                <span className="font-medium">{u.name}</span>
+                <span className="text-ink-mute text-xs">{u.email}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <Button size="sm" variant="primary" disabled={!selectedUserId || saving} onClick={handleAssign}>
+        {saving ? 'Assigning…' : 'Assign'}
+      </Button>
+      <button onClick={onClose} className="text-[12px] text-ink-mute hover:text-ink">Cancel</button>
+      {error && <span className="text-red-500 text-[11px]">{error}</span>}
+    </div>
   )
 }
 
@@ -317,9 +396,17 @@ function CreateOrgModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [slugTouched, setSlugTouched] = useState(false)
+  const [adminSearch, setAdminSearch] = useState('')
+  const [adminUserId, setAdminUserId] = useState<Id<"users"> | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const adminCreate = useMutation(api.organizations.adminCreate)
+  const adminCreateOrg = useAction(api.clerkAdmin.adminCreateOrg)
+  const users = useQuery(api.users.list)
+
+  const q = adminSearch.toLowerCase()
+  const filteredUsers = (users ?? []).filter(u =>
+    !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+  ).slice(0, 8)
 
   function deriveSlug(n: string) {
     return n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -335,7 +422,11 @@ function CreateOrgModal({ onClose }: { onClose: () => void }) {
     e.preventDefault()
     setSaving(true); setError('')
     try {
-      await adminCreate({ name: name.trim(), slug: slug.trim() })
+      await adminCreateOrg({
+        name: name.trim(),
+        slug: slug.trim(),
+        adminUserId: adminUserId ?? undefined,
+      })
       onClose()
     } catch (err: any) {
       setError(err?.message ?? 'Failed to create')
@@ -365,6 +456,40 @@ function CreateOrgModal({ onClose }: { onClose: () => void }) {
             <input value={slug} onChange={e => { setSlug(e.target.value); setSlugTouched(true) }}
               placeholder="city-padel-club" className={INPUT_CLS} required />
             <p className="text-[11px] text-ink-mute mt-1">URL: /{slug || '…'}</p>
+          </div>
+          <div>
+            <label className="block text-[12px] font-bold uppercase tracking-wide text-ink-mute mb-1.5">
+              Org admin <span className="normal-case font-normal">(optional)</span>
+            </label>
+            <div className="relative">
+              <input
+                value={adminSearch}
+                onChange={e => { setAdminSearch(e.target.value); setAdminUserId(null) }}
+                placeholder="Search user by name or email…"
+                className={INPUT_CLS}
+              />
+              {adminUserId && (
+                <button type="button" onClick={() => { setAdminUserId(null); setAdminSearch('') }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-mute hover:text-ink">
+                  <Icon name="x" className="w-3.5 h-3.5" stroke={2.5} />
+                </button>
+              )}
+              {adminSearch && !adminUserId && filteredUsers.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl ring-1 ring-zinc-200 shadow-lg z-10 max-h-48 overflow-y-auto">
+                  {filteredUsers.map(u => (
+                    <button type="button" key={u._id}
+                      onClick={() => { setAdminUserId(u._id as Id<"users">); setAdminSearch(u.name) }}
+                      className="w-full text-left px-3 py-2 hover:bg-zinc-50 text-sm flex items-center gap-2">
+                      <span className="font-medium">{u.name}</span>
+                      <span className="text-ink-mute text-xs">{u.email}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <p className="text-[11px] text-ink-mute mt-1">
+              {adminUserId ? 'User will be added as org member in Clerk' : 'You can assign an admin later'}
+            </p>
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <div className="flex gap-2 pt-1">
