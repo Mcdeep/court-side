@@ -65,5 +65,13 @@
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
     "vitest": "^4.1.9"
+  },
+  "allowScripts": {
+    "@clerk/shared@3.47.7": true,
+    "esbuild@0.27.0": true,
+    "esbuild@0.28.1": true,
+    "esbuild@0.25.12": true,
+    "sharp@0.34.5": true,
+    "@parcel/watcher@2.5.6": true
   }
 }
