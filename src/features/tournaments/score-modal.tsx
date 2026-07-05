@@ -9,12 +9,14 @@ import { lastName, pairNames } from '#/lib/names'
 import { POINTS_TO_WIN } from '#/lib/constants'
 import type { Match } from './types'
 
-export function ScoreModal({ match, onClose }: { match: Match; onClose: () => void }) {
+export function ScoreModal({ match, pointsToWin = POINTS_TO_WIN, onClose }: {
+  match: Match; pointsToWin?: number; onClose: () => void
+}) {
   const [a, setA] = useState(match.scoreA ?? 0)
   const [b, setB] = useState(match.scoreB ?? 0)
   const saveResult = useMutation(api.scores.saveResult)
 
-  const complete = a === POINTS_TO_WIN || b === POINTS_TO_WIN
+  const complete = a === pointsToWin || b === pointsToWin
   const [nA1, nA2] = pairNames(match.pairA)
   const [nB1, nB2] = pairNames(match.pairB)
 
@@ -41,12 +43,12 @@ export function ScoreModal({ match, onClose }: { match: Match; onClose: () => vo
       }
     >
       <div className="flex items-stretch gap-3">
-        <Stepper label={`${lastName(nA1)} / ${lastName(nA2)}`} names={[nA1, nA2]} val={a} set={setA} highlight={a > b} />
+        <Stepper label={`${lastName(nA1)} / ${lastName(nA2)}`} names={[nA1, nA2]} val={a} set={setA} highlight={a > b} max={pointsToWin} />
         <div className="flex items-center font-display font-bold text-zinc-300 text-lg">vs</div>
-        <Stepper label={`${lastName(nB1)} / ${lastName(nB2)}`} names={[nB1, nB2]} val={b} set={setB} highlight={b > a} />
+        <Stepper label={`${lastName(nB1)} / ${lastName(nB2)}`} names={[nB1, nB2]} val={b} set={setB} highlight={b > a} max={pointsToWin} />
       </div>
       <div className="flex items-center justify-between text-[12.5px]">
-        <span className="text-ink-mute">First to <span className="font-bold text-ink tnum">{POINTS_TO_WIN}</span> points</span>
+        <span className="text-ink-mute">First to <span className="font-bold text-ink tnum">{pointsToWin}</span> points</span>
         <span className={`font-semibold tnum px-2.5 h-7 inline-flex items-center rounded-full whitespace-nowrap
           ${complete ? 'bg-accent text-ink' : 'bg-zinc-100 text-ink-mute'}`}>
           {complete ? 'Match point reached' : `${a + b} pts played`}
@@ -63,8 +65,8 @@ export function ScoreModal({ match, onClose }: { match: Match; onClose: () => vo
   )
 }
 
-function Stepper({ label, names, val, set, highlight }: {
-  label: string; names: string[]; val: number; set: (v: number) => void; highlight: boolean
+function Stepper({ label, names, val, set, highlight, max }: {
+  label: string; names: string[]; val: number; set: (v: number) => void; highlight: boolean; max: number
 }) {
   return (
     <div className={`flex-1 rounded-2xl p-4 ring-1 ${highlight ? 'bg-accent-soft ring-accent-dark/30' : 'bg-zinc-50 ring-zinc-200'}`}>
@@ -76,7 +78,7 @@ function Stepper({ label, names, val, set, highlight }: {
         <button onClick={() => set(Math.max(0, val - 1))}
           className="w-10 h-10 rounded-xl bg-white ring-1 ring-zinc-200 flex items-center justify-center hover:ring-zinc-300 active:scale-95 transition-all text-xl font-bold">–</button>
         <div className="font-mono tnum font-bold text-[40px] leading-none w-16 text-center">{val}</div>
-        <button onClick={() => set(Math.min(POINTS_TO_WIN, val + 1))}
+        <button onClick={() => set(Math.min(max, val + 1))}
           className="w-10 h-10 rounded-xl bg-ink text-paper flex items-center justify-center hover:bg-ink-soft active:scale-95 transition-all text-xl font-bold">+</button>
       </div>
     </div>

@@ -190,6 +190,7 @@ export const update = mutation({
     name: v.optional(v.string()),
     courtCount: v.optional(v.number()),
     roundDurationMs: v.optional(v.number()),
+    pointsToWin: v.optional(v.number()),
     startsAt: v.optional(v.number()),
     endsAt: v.optional(v.number()),
   },
@@ -197,6 +198,9 @@ export const update = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
+    if (args.pointsToWin !== undefined && (!Number.isInteger(args.pointsToWin) || args.pointsToWin < 1)) {
+      throw new Error("Points target must be a positive whole number");
+    }
     if (args.courtCount !== undefined) {
       const hasRounds = await ctx.db
         .query("rounds")

@@ -47,6 +47,7 @@ export default defineSchema({
     ),
     courtCount: v.optional(v.number()),
     roundDurationMs: v.optional(v.number()),
+    pointsToWin: v.optional(v.number()),
     startsAt: v.number(),
     endsAt: v.number(),
   })

@@ -193,7 +193,7 @@ function TournamentDetailPage() {
       )}
       {tab === 'standings' && <StandingsTab leaderboard={leaderboard} />}
 
-      {scoreFor && <ScoreModal match={scoreFor} onClose={() => setScoreFor(null)} />}
+      {scoreFor && <ScoreModal match={scoreFor} pointsToWin={tournament.pointsToWin} onClose={() => setScoreFor(null)} />}
     </div>
   )
 }

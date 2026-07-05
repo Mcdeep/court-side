@@ -4,12 +4,14 @@ import { api } from '#/../convex/_generated/api'
 import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
 import { POINTS_TO_WIN, PRE_GENERATED_FORMATS } from '#/lib/constants'
+import { GeneratorSettingsModal } from './generator-settings-modal'
 import { MatchCell } from './match-cell'
 import type { Match, Round, Tournament } from './types'
 
 export function ScheduleTab({ tournament, rounds, onGenerate, onScore }: {
   tournament: Tournament; rounds: Round[]; onGenerate: () => void; onScore: (match: Match) => void
 }) {
+  const [showSettings, setShowSettings] = useState(false)
   if (rounds.length === 0) {
     return (
       <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-12 flex flex-col items-center text-center">
@@ -29,6 +31,9 @@ export function ScheduleTab({ tournament, rounds, onGenerate, onScore }: {
 
   return (
     <div>
+      {showSettings && (
+        <GeneratorSettingsModal tournament={tournament} onClose={() => setShowSettings(false)} />
+      )}
       <div className="flex items-center justify-between gap-4 mb-5 bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-4">
         <div className="flex items-center gap-3">
           <span className="w-10 h-10 rounded-xl bg-accent text-ink flex items-center justify-center">
@@ -37,12 +42,12 @@ export function ScheduleTab({ tournament, rounds, onGenerate, onScore }: {
           <div>
             <div className="font-semibold text-[15px] leading-tight">Round generator</div>
             <div className="text-[12.5px] text-ink-mute capitalize">
-              {tournament.format.replace(/_/g, ' ')} · first to {POINTS_TO_WIN}
+              {tournament.format.replace(/_/g, ' ')} · first to {tournament.pointsToWin ?? POINTS_TO_WIN}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="md" icon="gear">Settings</Button>
+          <Button variant="outline" size="md" icon="gear" onClick={() => setShowSettings(true)}>Settings</Button>
           {!PRE_GENERATED_FORMATS.includes(tournament.format) && (
             <Button variant="primary" size="md" icon="plus" onClick={onGenerate}>
               Generate round {rounds.length + 1}
