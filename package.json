@@ -14,6 +14,21 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
+  "overrides": {
+    "vinxi": {
+      "h3": "^1.15.11"
+    },
+    "@opentelemetry/core": "^2.8.0",
+    "nitropack": {
+      "esbuild": "^0.28.1"
+    },
+    "@netlify/edge-bundler": {
+      "esbuild": "^0.28.1"
+    },
+    "@netlify/zip-it-and-ship-it": {
+      "esbuild": "^0.28.1"
+    }
+  },
   "dependencies": {
     "@clerk/tanstack-start": "^0.11.5",
     "@tailwindcss/vite": "^4.3.1",
