@@ -3,7 +3,7 @@ import { useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import { useEffect, useRef, useState } from 'react'
 import type { Id } from '../../../convex/_generated/dataModel'
-import { JoinQR } from '#/components/ui'
+import { JoinQR } from '#/components/ui/join-qr'
 
 export const Route = createFileRoute('/kiosk/$tournamentId')({
   component: KioskPage,

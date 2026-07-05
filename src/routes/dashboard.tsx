@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
 import { useAuth, UserButton } from '@clerk/tanstack-start'
 import { api } from '#/../convex/_generated/api'
-import { Icon } from '#/components/ui'
+import { Icon } from '#/components/ui/icon'
 import { useEffect, useState } from 'react'
 
 export const Route = createFileRoute('/dashboard')({

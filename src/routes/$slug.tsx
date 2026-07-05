@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet, useNavigate, useParams, useRouterState }
 import { useQuery } from 'convex/react'
 import { useAuth, UserButton } from '@clerk/tanstack-start'
 import { api } from '#/../convex/_generated/api'
-import { Icon } from '#/components/ui'
+import { Icon } from '#/components/ui/icon'
 import { useEffect } from 'react'
 
 export const Route = createFileRoute('/$slug')({

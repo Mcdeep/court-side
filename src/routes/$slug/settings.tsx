@@ -2,7 +2,10 @@ import { createFileRoute, useParams } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import { useState } from 'react'
-import { Button, StatusChip } from '#/components/ui'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { StatusChip } from '#/components/ui/status-chip'
+import { useAsyncAction } from '#/hooks/use-async-action'
 
 export const Route = createFileRoute('/$slug/settings')({
   component: SettingsPage,
@@ -32,13 +35,10 @@ function SettingsPage() {
   )
 }
 
-const INPUT_CLS = 'w-full h-10 px-3.5 rounded-xl bg-white ring-1 ring-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent-dark/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
-
 function GeneralSection({ org, slug }: { org: any; slug: string }) {
   const [name, setName] = useState(org.name)
-  const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [error, setError] = useState('')
+  const { working, error, run } = useAsyncAction()
   const updateOrg = useMutation(api.organizations.update)
 
   const dirty = name.trim() !== org.name
@@ -46,32 +46,20 @@ function GeneralSection({ org, slug }: { org: any; slug: string }) {
   async function save(e: React.FormEvent) {
     e.preventDefault()
     if (!dirty) return
-    setSaving(true); setError(''); setSaved(false)
-    try {
-      await updateOrg({ organizationId: org._id, name })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to save')
-    } finally {
-      setSaving(false)
-    }
+    setSaved(false)
+    const ok = await run(() => updateOrg({ organizationId: org._id, name }))
+    if (ok) { setSaved(true); setTimeout(() => setSaved(false), 2000) }
   }
 
   return (
     <Section title="General" description="Basic information about your organisation.">
       <form onSubmit={save} className="space-y-4">
         <Field label="Organisation name">
-          <input
-            value={name}
-            onChange={e => { setName(e.target.value); setSaved(false) }}
-            className={INPUT_CLS}
-            required
-          />
+          <Input value={name} onChange={e => { setName(e.target.value); setSaved(false) }} required />
         </Field>
         <Field label="Slug" hint="URL identifier — cannot be changed.">
           <div className="relative">
-            <input value={slug} disabled className={INPUT_CLS} />
+            <Input value={slug} disabled />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-zinc-300 uppercase tracking-wide">
               Read only
             </span>
@@ -84,11 +72,11 @@ function GeneralSection({ org, slug }: { org: any; slug: string }) {
         </Field>
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <div className="flex items-center gap-3 pt-1">
-          <Button type="submit" variant="primary" size="md" disabled={!dirty || saving}>
-            {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save changes'}
+          <Button type="submit" variant="primary" size="md" disabled={!dirty || working}>
+            {working ? 'Saving…' : saved ? '✓ Saved' : 'Save changes'}
           </Button>
-          {dirty && !saving && (
-            <button type="button" onClick={() => { setName(org.name); setSaved(false); setError('') }}
+          {dirty && !working && (
+            <button type="button" onClick={() => setName(org.name)}
               className="text-[13px] text-ink-mute hover:text-ink transition-colors font-medium">
               Discard
             </button>
@@ -101,24 +89,21 @@ function GeneralSection({ org, slug }: { org: any; slug: string }) {
 
 function DangerSection({ org }: { org: any }) {
   const [confirm, setConfirm] = useState(false)
-  const [working, setWorking] = useState(false)
+  const { working, run } = useAsyncAction()
   const suspendOrg = useMutation(api.organizations.suspend)
   const activateOrg = useMutation(api.organizations.activate)
 
   const isSuspended = org.status === 'suspended'
 
   async function toggleStatus() {
-    setWorking(true)
-    try {
+    await run(async () => {
       if (isSuspended) {
         await activateOrg({ organizationId: org._id })
       } else {
         await suspendOrg({ organizationId: org._id })
       }
       setConfirm(false)
-    } finally {
-      setWorking(false)
-    }
+    })
   }
 
   return (

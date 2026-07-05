@@ -2,7 +2,8 @@ import { createFileRoute, useParams } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import { useState } from 'react'
-import { Avatar, Icon } from '#/components/ui'
+import { Avatar } from '#/components/ui/avatar'
+import { Icon } from '#/components/ui/icon'
 
 export const Route = createFileRoute('/$slug/players')({
   component: PlayersPage,
