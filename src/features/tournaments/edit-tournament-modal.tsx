@@ -1,16 +1,16 @@
 import React, { useState } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
-import type { Id } from '#/../convex/_generated/dataModel'
 import { AppDialog } from '#/components/app-dialog'
 import { Button } from '#/components/ui/button'
 import { Field } from '#/components/ui/field'
 import { Input } from '#/components/ui/input'
 import { toDatetimeLocal } from '#/lib/format'
 import { useAsyncAction } from '#/hooks/use-async-action'
+import type { Id, Tournament } from './types'
 
 export function EditTournamentModal({ tournament, tournamentId, onClose }: {
-  tournament: any; tournamentId: Id<'tournaments'>; onClose: () => void
+  tournament: Tournament; tournamentId: Id<'tournaments'>; onClose: () => void
 }) {
   const [name, setName] = useState(tournament.name)
   const [roundMinutes, setRoundMinutes] = useState(tournament.roundDurationMs ? String(tournament.roundDurationMs / 60_000) : '')

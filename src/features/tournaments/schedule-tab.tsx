@@ -5,9 +5,10 @@ import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
 import { POINTS_TO_WIN, PRE_GENERATED_FORMATS } from '#/lib/constants'
 import { MatchCell } from './match-cell'
+import type { Match, Round, Tournament } from './types'
 
 export function ScheduleTab({ tournament, rounds, onGenerate, onScore }: {
-  tournament: any; rounds: any[]; onGenerate: () => void; onScore: (match: any) => void
+  tournament: Tournament; rounds: Round[]; onGenerate: () => void; onScore: (match: Match) => void
 }) {
   if (rounds.length === 0) {
     return (
@@ -57,12 +58,12 @@ export function ScheduleTab({ tournament, rounds, onGenerate, onScore }: {
       </div>
 
       <div className="space-y-6">
-        {rounds.map((round: any) => (
+        {rounds.map((round) => (
           <RoundRow
             key={round._id}
             round={round}
             onScore={onScore}
-            blocked={rounds.some((r: any) => r.roundNumber < round.roundNumber && r.state !== 'completed')}
+            blocked={rounds.some(r => r.roundNumber < round.roundNumber && r.state !== 'completed')}
           />
         ))}
       </div>
@@ -70,7 +71,7 @@ export function ScheduleTab({ tournament, rounds, onGenerate, onScore }: {
   )
 }
 
-function RoundRow({ round, onScore, blocked }: { round: any; onScore: (match: any) => void; blocked: boolean }) {
+function RoundRow({ round, onScore, blocked }: { round: Round; onScore: (match: Match) => void; blocked: boolean }) {
   const matches = useQuery(api.matches.listByRound, { roundId: round._id })
   const startRound = useMutation(api.rounds.start)
   const completeRound = useMutation(api.rounds.complete)
@@ -79,7 +80,7 @@ function RoundRow({ round, onScore, blocked }: { round: any; onScore: (match: an
 
   if (!matches) return null
 
-  const doneCount = matches.filter((m: any) => m.state === 'completed' || m.state === 'disputed').length
+  const doneCount = matches.filter(m => m.state === 'completed' || m.state === 'disputed').length
   const allDone = doneCount === matches.length && matches.length > 0
 
   async function handleStart() {
@@ -136,7 +137,7 @@ function RoundRow({ round, onScore, blocked }: { round: any; onScore: (match: an
         </div>
       </div>
       <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.max(matches.length, 1)}, minmax(0,1fr))` }}>
-        {matches.map((match: any) => (
+        {matches.map((match) => (
           <MatchCell key={match._id} match={match} onClick={onScore} />
         ))}
       </div>

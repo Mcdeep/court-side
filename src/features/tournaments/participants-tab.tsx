@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
-import type { Id } from '#/../convex/_generated/dataModel'
 import { Avatar } from '#/components/ui/avatar'
 import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
+import type { Id, Participant } from './types'
 
 export function ParticipantsTab({ participants, tournamentId: _tid, canAdd, onAdd }: {
-  participants: any[]; tournamentId: Id<'tournaments'>; canAdd: boolean; onAdd: () => void
+  participants: Participant[]; tournamentId: Id<'tournaments'>; canAdd: boolean; onAdd: () => void
 }) {
   const removeParticipant = useMutation(api.participants.remove)
   const [removingId, setRemovingId] = useState<string | null>(null)
@@ -36,7 +36,7 @@ export function ParticipantsTab({ participants, tournamentId: _tid, canAdd, onAd
         </div>
       ) : (
         <div className="grid grid-cols-2">
-          {participants.map((p: any, i: number) => {
+          {participants.map((p, i) => {
             const name = p.user?.name ?? p.walkInName ?? 'Walk-in'
             return (
               <div key={p._id}

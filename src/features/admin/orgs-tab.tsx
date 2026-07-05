@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Icon } from '#/components/ui/icon'
 import { CreateOrgDialog } from './create-org-dialog'
+import type { OrgWithStats } from './types'
 
 export function OrgsTab() {
   const [showCreate, setShowCreate] = useState(false)
@@ -58,7 +59,7 @@ export function OrgsTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orgs.map(org => <OrgRow key={org._id} org={org} />)}
+              {orgs.map((org: OrgWithStats) => <OrgRow key={org._id} org={org} />)}
             </TableBody>
           </Table>
         </Card>
@@ -67,7 +68,7 @@ export function OrgsTab() {
   )
 }
 
-function OrgRow({ org }: { org: any }) {
+function OrgRow({ org }: { org: OrgWithStats }) {
   const [confirm, setConfirm] = useState<'suspend' | 'activate' | null>(null)
   const [showAssign, setShowAssign] = useState(false)
   const [working, setWorking] = useState(false)

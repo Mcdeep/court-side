@@ -6,8 +6,9 @@ import { Field } from '#/components/ui/field'
 import { Icon } from '#/components/ui/icon'
 import { Input } from '#/components/ui/input'
 import { useAsyncAction } from '#/hooks/use-async-action'
+import type { Venue } from './types'
 
-export function VenueCard({ venue }: { venue: any }) {
+export function VenueCard({ venue }: { venue: Venue }) {
   const [editing, setEditing] = useState(false)
   const [confirm, setConfirm] = useState(false)
   const { working, error, run } = useAsyncAction()
@@ -65,7 +66,7 @@ export function VenueCard({ venue }: { venue: any }) {
   )
 }
 
-function VenueEditCard({ venue, onClose }: { venue: any; onClose: () => void }) {
+function VenueEditCard({ venue, onClose }: { venue: Venue; onClose: () => void }) {
   const [name, setName] = useState(venue.name)
   const [courtCount, setCourtCount] = useState(venue.courtCount)
   const { working, error, run } = useAsyncAction()

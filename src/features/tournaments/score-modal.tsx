@@ -7,8 +7,9 @@ import { Icon } from '#/components/ui/icon'
 import { TeamMark } from '#/components/ui/team-mark'
 import { lastName, pairNames } from '#/lib/names'
 import { POINTS_TO_WIN } from '#/lib/constants'
+import type { Match } from './types'
 
-export function ScoreModal({ match, onClose }: { match: any; onClose: () => void }) {
+export function ScoreModal({ match, onClose }: { match: Match; onClose: () => void }) {
   const [a, setA] = useState(match.scoreA ?? 0)
   const [b, setB] = useState(match.scoreB ?? 0)
   const saveResult = useMutation(api.scores.saveResult)

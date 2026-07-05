@@ -1,6 +1,7 @@
 import { Avatar } from '#/components/ui/avatar'
+import type { LeaderboardEntry } from './types'
 
-export function StandingsTab({ leaderboard }: { leaderboard: any[] }) {
+export function StandingsTab({ leaderboard }: { leaderboard: LeaderboardEntry[] }) {
   if (leaderboard.length === 0) {
     return (
       <div className="text-ink-mute text-sm bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-10 text-center">
@@ -16,7 +17,7 @@ export function StandingsTab({ leaderboard }: { leaderboard: any[] }) {
         <div className="text-right">Won</div>
         <div className="text-right">Pts</div>
       </div>
-      {leaderboard.map((entry: any, i: number) => {
+      {leaderboard.map((entry, i) => {
         const name = entry.user?.name ?? entry.participant?.walkInName ?? 'Unknown'
         return (
           <div key={entry._id}

@@ -16,6 +16,7 @@ import { ParticipantsTab } from '#/features/tournaments/participants-tab'
 import { ScheduleTab } from '#/features/tournaments/schedule-tab'
 import { ScoreModal } from '#/features/tournaments/score-modal'
 import { StandingsTab } from '#/features/tournaments/standings-tab'
+import type { Match } from '#/features/tournaments/types'
 import { formatDate } from '#/lib/format'
 
 export const Route = createFileRoute('/$slug/tournaments/$tournamentId')({
@@ -26,7 +27,7 @@ function TournamentDetailPage() {
   const { slug, tournamentId } = useParams({ from: '/$slug/tournaments/$tournamentId' })
   const navigate = useNavigate()
   const [tab, setTab] = useState('schedule')
-  const [scoreFor, setScoreFor] = useState<any>(null)
+  const [scoreFor, setScoreFor] = useState<Match | null>(null)
   const [showAddPlayer, setShowAddPlayer] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [confirmAction, setConfirmAction] = useState<'archive' | 'delete' | null>(null)

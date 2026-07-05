@@ -1,7 +1,8 @@
 import { Icon } from '#/components/ui/icon'
 import { lastName, pairNames } from '#/lib/names'
+import type { Match } from './types'
 
-export function MatchCell({ match, onClick }: { match: any; onClick: (match: any) => void }) {
+export function MatchCell({ match, onClick }: { match: Match; onClick: (match: Match) => void }) {
   const [nameA1, nameA2] = pairNames(match.pairA)
   const [nameB1, nameB2] = pairNames(match.pairB)
 

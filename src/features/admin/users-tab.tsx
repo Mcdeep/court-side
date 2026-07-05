@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
-import type { Id } from '#/../convex/_generated/dataModel'
 import {
   flexRender,
   getCoreRowModel,
@@ -27,8 +26,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Icon } from '#/components/ui/icon'
-
-type UserRecord = { _id: Id<"users">; name: string; email: string; isSuperAdmin?: boolean }
+import type { UserRecord } from './types'
 
 function UserActions({ user }: { user: UserRecord }) {
   const [confirm, setConfirm] = useState<'promote' | 'demote' | null>(null)
