@@ -124,12 +124,15 @@ export const saveResult = mutation({
     const tournament = await ctx.db.get(round.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
-    if (match.state === "completed") throw new Error("Match already completed");
+    const prevScoreA = match.scoreA;
+    const prevScoreB = match.scoreB;
     await ctx.db.patch(args.matchId, { state: "completed", scoreA: args.scoreA, scoreB: args.scoreB });
     await ctx.scheduler.runAfter(0, internal.leaderboard.recalculate, {
       matchId: args.matchId,
       scoreA: args.scoreA,
       scoreB: args.scoreB,
+      prevScoreA,
+      prevScoreB,
     });
   },
 });

@@ -275,6 +275,27 @@ export const start = mutation({
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
     if (round.state !== "pending") throw new Error("Round already started");
+
+    const allRounds = await ctx.db
+      .query("rounds")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", round.tournamentId))
+      .take(200);
+    const previousRounds = allRounds.filter((r) => r.roundNumber < round.roundNumber);
+    for (const prev of previousRounds) {
+      if (prev.state !== "completed") {
+        throw new Error(`Round ${prev.roundNumber} must be completed first`);
+      }
+      const prevMatches = await ctx.db
+        .query("matches")
+        .withIndex("by_round", (q) => q.eq("roundId", prev._id))
+        .take(50);
+      for (const match of prevMatches) {
+        if (match.scoreA === undefined || match.scoreB === undefined) {
+          throw new Error(`Record all scores for round ${prev.roundNumber} first`);
+        }
+      }
+    }
+
     await ctx.db.patch(args.roundId, { state: "in_progress", startedAt: Date.now() });
     const matches = await ctx.db
       .query("matches")

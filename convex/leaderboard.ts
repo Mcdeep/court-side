@@ -35,6 +35,10 @@ export const recalculate = internalMutation({
     matchId: v.id("matches"),
     scoreA: v.number(),
     scoreB: v.number(),
+    // Set when re-scoring an already-completed match, so the prior
+    // contribution can be reversed instead of double-counted.
+    prevScoreA: v.optional(v.number()),
+    prevScoreB: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const match = await ctx.db.get(args.matchId);
@@ -50,12 +54,14 @@ export const recalculate = internalMutation({
     const pairB = await ctx.db.get(match.pairBId);
     if (!pairA || !pairB) return;
 
+    const hadPrev = args.prevScoreA !== undefined && args.prevScoreB !== undefined;
     const winnersA = args.scoreA > args.scoreB;
+    const prevWinnersA = hadPrev && args.prevScoreA! > args.prevScoreB!;
     const participants = [
-      { id: pairA.participantAId, won: winnersA, score: args.scoreA },
-      { id: pairA.participantBId, won: winnersA, score: args.scoreA },
-      { id: pairB.participantAId, won: !winnersA, score: args.scoreB },
-      { id: pairB.participantBId, won: !winnersA, score: args.scoreB },
+      { id: pairA.participantAId, won: winnersA, score: args.scoreA, prevWon: prevWinnersA, prevScore: args.prevScoreA ?? 0 },
+      { id: pairA.participantBId, won: winnersA, score: args.scoreA, prevWon: prevWinnersA, prevScore: args.prevScoreA ?? 0 },
+      { id: pairB.participantAId, won: !winnersA, score: args.scoreB, prevWon: hadPrev && !prevWinnersA, prevScore: args.prevScoreB ?? 0 },
+      { id: pairB.participantBId, won: !winnersA, score: args.scoreB, prevWon: hadPrev && !prevWinnersA, prevScore: args.prevScoreB ?? 0 },
     ];
 
     for (const p of participants) {
@@ -68,9 +74,9 @@ export const recalculate = internalMutation({
 
       if (existing) {
         await ctx.db.patch(existing._id, {
-          points: existing.points + p.score,
-          wins: existing.wins + (p.won ? 1 : 0),
-          losses: existing.losses + (p.won ? 0 : 1),
+          points: existing.points + p.score - (hadPrev ? p.prevScore : 0),
+          wins: existing.wins + (p.won ? 1 : 0) - (p.prevWon ? 1 : 0),
+          losses: existing.losses + (p.won ? 0 : 1) - (hadPrev && !p.prevWon ? 1 : 0),
         });
       } else {
         await ctx.db.insert("leaderboard", {

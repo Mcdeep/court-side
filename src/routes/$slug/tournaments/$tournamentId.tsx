@@ -46,6 +46,10 @@ function TournamentDetailPage() {
   const tid = tournamentId as Id<'tournaments'>
 
   const handleGenerate = async () => {
+    if (participants.length < 4) {
+      setShowAddPlayer(true)
+      return
+    }
     await generateRounds({ tournamentId: tid })
   }
 
@@ -423,18 +427,24 @@ function ScheduleTab({ tournament, tournamentId: _tid, rounds, onGenerate, onSco
       {/* Round list — matches fetched per round */}
       <div className="space-y-6">
         {rounds.map((round: any) => (
-          <RoundRow key={round._id} round={round} onScore={onScore} />
+          <RoundRow
+            key={round._id}
+            round={round}
+            onScore={onScore}
+            blocked={rounds.some((r: any) => r.roundNumber < round.roundNumber && r.state !== 'completed')}
+          />
         ))}
       </div>
     </div>
   )
 }
 
-function RoundRow({ round, onScore }: any) {
+function RoundRow({ round, onScore, blocked }: any) {
   const matches = useQuery(api.matches.listByRound, { roundId: round._id })
   const startRound = useMutation(api.rounds.start)
   const completeRound = useMutation(api.rounds.complete)
   const [working, setWorking] = useState(false)
+  const [error, setError] = useState('')
 
   if (!matches) return null
 
@@ -442,8 +452,12 @@ function RoundRow({ round, onScore }: any) {
   const allDone = doneCount === matches.length && matches.length > 0
 
   async function handleStart() {
-    setWorking(true)
-    try { await startRound({ roundId: round._id }) } finally { setWorking(false) }
+    setWorking(true); setError('')
+    try {
+      await startRound({ roundId: round._id })
+    } catch (e: any) {
+      setError(e?.data ?? 'Score the previous round before starting this one')
+    } finally { setWorking(false) }
   }
 
   async function handleComplete() {
@@ -468,8 +482,16 @@ function RoundRow({ round, onScore }: any) {
             </span>
           )}
         </div>
-        <div>
-          {round.state === 'pending' && (
+        <div className="flex items-center gap-2">
+          {round.state === 'pending' && error && (
+            <span className="text-[12px] font-medium text-red-500">{error}</span>
+          )}
+          {round.state === 'pending' && blocked && (
+            <span className="text-[12px] text-ink-mute font-medium flex items-center gap-1">
+              <Icon name="clock" className="w-3.5 h-3.5" /> Score previous round first
+            </span>
+          )}
+          {round.state === 'pending' && !blocked && (
             <Button variant="outline" size="sm" icon="bolt" onClick={handleStart} disabled={working}>
               Start round
             </Button>
@@ -526,13 +548,21 @@ function MatchCell({ match, onClick }: any) {
           <span className="text-[13.5px] truncate font-semibold min-w-0 flex-1">
             {lastName(nameA1)} <span className="text-zinc-300 font-normal">/</span> {lastName(nameA2)}
           </span>
-          <span className="font-mono tnum text-[15px] shrink-0">–</span>
+          <span className={`font-mono tnum text-[15px] shrink-0 font-bold
+            ${match.scoreA === undefined ? 'text-zinc-300 font-normal' :
+              match.scoreA > (match.scoreB ?? 0) ? '' : 'text-ink-mute'}`}>
+            {match.scoreA ?? '–'}
+          </span>
         </div>
         <div className="flex items-center justify-between gap-2 text-ink">
           <span className="text-[13.5px] truncate font-semibold min-w-0 flex-1">
             {lastName(nameB1)} <span className="text-zinc-300 font-normal">/</span> {lastName(nameB2)}
           </span>
-          <span className="font-mono tnum text-[15px] shrink-0">–</span>
+          <span className={`font-mono tnum text-[15px] shrink-0 font-bold
+            ${match.scoreB === undefined ? 'text-zinc-300 font-normal' :
+              match.scoreB > (match.scoreA ?? 0) ? '' : 'text-ink-mute'}`}>
+            {match.scoreB ?? '–'}
+          </span>
         </div>
       </div>
       <div className="mt-2.5 pt-2 border-t border-zinc-100 flex items-center justify-between">
@@ -547,6 +577,14 @@ function MatchCell({ match, onClick }: any) {
 
 /* ─── Participants tab ────────────────────────────────────────── */
 function ParticipantsTab({ participants, tournamentId: _tid, canAdd, onAdd }: any) {
+  const removeParticipant = useMutation(api.participants.remove)
+  const [removingId, setRemovingId] = useState<string | null>(null)
+
+  async function handleRemove(participantId: Id<'participants'>) {
+    setRemovingId(participantId)
+    try { await removeParticipant({ participantId }) } finally { setRemovingId(null) }
+  }
+
   return (
     <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-100">
@@ -570,7 +608,7 @@ function ParticipantsTab({ participants, tournamentId: _tid, canAdd, onAdd }: an
             const name = p.user?.name ?? p.walkInName ?? 'Walk-in'
             return (
               <div key={p._id}
-                className={`flex items-center gap-3 px-5 py-3
+                className={`group flex items-center gap-3 px-5 py-3
                   ${i % 2 === 0 ? 'border-r border-zinc-100' : ''}
                   border-b border-zinc-100`}>
                 <span className="tnum text-[12px] text-zinc-300 w-5 font-mono">
@@ -583,7 +621,17 @@ function ParticipantsTab({ participants, tournamentId: _tid, canAdd, onAdd }: an
                     {p.isWalkIn ? 'Walk-in' : 'Member'}
                   </div>
                 </div>
-                <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
+                {canAdd ? (
+                  <button
+                    onClick={() => handleRemove(p._id)}
+                    disabled={removingId === p._id}
+                    title="Remove participant"
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all shrink-0 disabled:opacity-40">
+                    <Icon name="trash" className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
+                )}
               </div>
             )
           })}
@@ -604,8 +652,10 @@ function AddPlayerModal({ tournamentId, existingIds, onClose }: {
   const [mode, setMode] = useState<'walkin' | 'member'>('walkin')
   const [walkInName, setWalkInName] = useState('')
   const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState<Set<Id<'users'>>>(new Set())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [addedCount, setAddedCount] = useState(0)
 
   const allUsers = useQuery(api.users.list)
   const addParticipant = useMutation(api.participants.add)
@@ -620,16 +670,32 @@ function AddPlayerModal({ tournamentId, existingIds, onClose }: {
     try {
       await addParticipant({ tournamentId, isWalkIn: true, walkInName: walkInName.trim(), entryType: 'solo' })
       setWalkInName('')
-      onClose()
-    } catch (e: any) { setError(e?.message ?? 'Failed'); setSaving(false) }
+      setAddedCount(c => c + 1)
+    } catch (e: any) { setError(e?.message ?? 'Failed') }
+    setSaving(false)
   }
 
-  async function addMember(userId: Id<'users'>) {
+  function toggleSelect(userId: Id<'users'>) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(userId)) next.delete(userId)
+      else next.add(userId)
+      return next
+    })
+  }
+
+  async function addSelected() {
+    if (selected.size === 0) return
     setSaving(true); setError('')
     try {
-      await addParticipant({ tournamentId, userId, isWalkIn: false, entryType: 'solo' })
-      onClose()
-    } catch (e: any) { setError(e?.message ?? 'Failed'); setSaving(false) }
+      for (const userId of selected) {
+        await addParticipant({ tournamentId, userId, isWalkIn: false, entryType: 'solo' })
+        setAddedCount(c => c + 1)
+      }
+      setSelected(new Set())
+      setSearch('')
+    } catch (e: any) { setError(e?.message ?? 'Failed') }
+    setSaving(false)
   }
 
   return (
@@ -638,7 +704,14 @@ function AddPlayerModal({ tournamentId, existingIds, onClose }: {
       <div className="relative w-full max-w-[440px] bg-paper rounded-2xl shadow-pop ring-1 ring-ink/8">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
-          <h2 className="font-display font-bold text-[18px]">Add player</h2>
+          <h2 className="font-display font-bold text-[18px]">
+            Add player
+            {addedCount > 0 && (
+              <span className="ml-2 text-[12px] font-semibold text-accent-dark bg-accent-soft px-2 py-0.5 rounded-full align-middle">
+                {addedCount} added
+              </span>
+            )}
+          </h2>
           <button onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-ink/6 text-ink-mute hover:text-ink transition-colors">
             <Icon name="x" className="w-4 h-4" stroke={2.5} />
@@ -670,7 +743,7 @@ function AddPlayerModal({ tournamentId, existingIds, onClose }: {
               />
               {error && <p className="text-red-500 text-sm">{error}</p>}
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
+                <Button variant="outline" className="flex-1" onClick={onClose}>Done</Button>
                 <Button variant="primary" className="flex-1" onClick={addWalkIn} disabled={saving}>
                   {saving ? 'Adding…' : 'Add walk-in'}
                 </Button>
@@ -693,17 +766,31 @@ function AddPlayerModal({ tournamentId, existingIds, onClose }: {
                   <div className="text-center py-6 text-ink-mute text-sm">
                     {search ? 'No members match.' : 'All members already added.'}
                   </div>
-                ) : filtered.map(u => (
-                  <button key={u._id} onClick={() => addMember(u._id)} disabled={saving}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-accent-soft transition-colors group text-left">
-                    <Avatar name={u.name} size={32} />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-sm">{u.name}</div>
-                      <div className="text-[12px] text-ink-mute">{u.email}</div>
-                    </div>
-                    <Icon name="plus" className="w-4 h-4 text-zinc-300 group-hover:text-accent-dark" stroke={2.5} />
-                  </button>
-                ))}
+                ) : filtered.map(u => {
+                  const isSelected = selected.has(u._id)
+                  return (
+                    <button key={u._id} onClick={() => toggleSelect(u._id)} disabled={saving}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors group text-left
+                        ${isSelected ? 'bg-accent-soft' : 'hover:bg-zinc-50'}`}>
+                      <span className={`w-5 h-5 rounded-md ring-1 flex items-center justify-center shrink-0 transition-colors
+                        ${isSelected ? 'bg-accent-dark ring-accent-dark text-white' : 'ring-zinc-300 bg-white'}`}>
+                        {isSelected && <Icon name="check" className="w-3.5 h-3.5" stroke={3} />}
+                      </span>
+                      <Avatar name={u.name} size={32} />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-sm">{u.name}</div>
+                        <div className="text-[12px] text-ink-mute">{u.email}</div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" className="flex-1" onClick={onClose}>Done</Button>
+                <Button variant="primary" className="flex-1" onClick={addSelected}
+                  disabled={saving || selected.size === 0}>
+                  {saving ? 'Adding…' : selected.size > 0 ? `Add ${selected.size} player${selected.size !== 1 ? 's' : ''}` : 'Add players'}
+                </Button>
               </div>
             </div>
           )}
@@ -757,8 +844,8 @@ function StandingsTab({ leaderboard }: any) {
 
 /* ─── Score modal ─────────────────────────────────────────────── */
 function ScoreModal({ match, onClose }: { match: any; onClose: () => void }) {
-  const [a, setA] = useState(0)
-  const [b, setB] = useState(0)
+  const [a, setA] = useState(match.scoreA ?? 0)
+  const [b, setB] = useState(match.scoreB ?? 0)
   const saveResult = useMutation(api.scores.saveResult)
 
   const complete = a === POINTS_TO_WIN || b === POINTS_TO_WIN
