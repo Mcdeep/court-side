@@ -337,6 +337,24 @@ Anything requiring >~30 lines of implementation belongs in `src/features/<domain
 
 ---
 
+## Codegraph
+
+If a `.codegraph/` directory exists at the repo root, the workspace is indexed and codegraph tools are available. Use them to navigate the codebase efficiently before editing.
+
+```bash
+# Check whether the index exists
+ls .codegraph/
+```
+
+When indexed, prefer codegraph over grep for:
+- Finding where a symbol is defined (`codegraph find <symbol>`)
+- Listing all references to a component or hook
+- Answering "which files import X" questions
+
+When **not** indexed (no `.codegraph/` directory), fall back to `grep`/`find` as normal. Do not run `codegraph init` yourself — that is the developer's decision.
+
+---
+
 ## Commands
 
 ```bash
