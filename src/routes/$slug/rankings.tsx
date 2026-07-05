@@ -4,6 +4,8 @@ import { api } from '#/../convex/_generated/api'
 import { useState } from 'react'
 import { Avatar } from '#/components/ui/avatar'
 import { Icon } from '#/components/ui/icon'
+import { errorMessage } from '#/lib/utils'
+import type { Id } from '#/../convex/_generated/dataModel'
 
 export const Route = createFileRoute('/$slug/rankings')({
   component: RankingsPage,
@@ -113,7 +115,7 @@ function RankBadge({ rank }: { rank: number }) {
 }
 
 function TierEditor({ organizationId, currentTiers, onClose }: {
-  organizationId: any
+  organizationId: Id<'organizations'>
   currentTiers: number[]
   onClose: () => void
 }) {
@@ -134,8 +136,8 @@ function TierEditor({ organizationId, currentTiers, onClose }: {
     try {
       await setTiersMut({ organizationId, tiers: parsed })
       onClose()
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e) {
+      setError(errorMessage(e))
     }
   }
 

@@ -6,6 +6,9 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { StatusChip } from '#/components/ui/status-chip'
 import { useAsyncAction } from '#/hooks/use-async-action'
+import type { FunctionReturnType } from 'convex/server'
+
+type Organization = NonNullable<FunctionReturnType<typeof api.organizations.getBySlug>>
 
 export const Route = createFileRoute('/$slug/settings')({
   component: SettingsPage,
@@ -35,7 +38,7 @@ function SettingsPage() {
   )
 }
 
-function GeneralSection({ org, slug }: { org: any; slug: string }) {
+function GeneralSection({ org, slug }: { org: Organization; slug: string }) {
   const [name, setName] = useState(org.name)
   const [saved, setSaved] = useState(false)
   const { working, error, run } = useAsyncAction()
@@ -87,7 +90,7 @@ function GeneralSection({ org, slug }: { org: any; slug: string }) {
   )
 }
 
-function DangerSection({ org }: { org: any }) {
+function DangerSection({ org }: { org: Organization }) {
   const [confirm, setConfirm] = useState(false)
   const { working, run } = useAsyncAction()
   const suspendOrg = useMutation(api.organizations.suspend)

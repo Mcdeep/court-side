@@ -4,6 +4,7 @@ import { useAuth, SignInButton } from '@clerk/tanstack-start'
 import { api } from '#/../convex/_generated/api'
 import { useState } from 'react'
 import type { Id } from '#/../convex/_generated/dataModel'
+import { errorMessage } from '#/lib/utils'
 
 export const Route = createFileRoute('/join/$tournamentId')({
   component: JoinPage,
@@ -58,8 +59,8 @@ function JoinPage() {
     try {
       await selfJoin({ tournamentId: tournamentId as Id<'tournaments'> })
       setStatus('joined')
-    } catch (e: any) {
-      const msg = e?.message ?? 'Something went wrong'
+    } catch (e) {
+      const msg = errorMessage(e)
       if (msg.includes('Already joined')) {
         setStatus('joined')
       } else {

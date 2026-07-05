@@ -92,8 +92,8 @@ function RoundRow({ round, onScore, blocked }: { round: Round; onScore: (match: 
     setWorking(true); setError('')
     try {
       await startRound({ roundId: round._id })
-    } catch (e: any) {
-      setError(e?.data ?? 'Score the previous round before starting this one')
+    } catch (e) {
+      setError((e as { data?: string })?.data ?? 'Score the previous round before starting this one')
     } finally { setWorking(false) }
   }
 

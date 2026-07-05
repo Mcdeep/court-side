@@ -32,7 +32,9 @@ function DashboardPage() {
   )
 }
 
-function TopNav({ tab, onTab, isSuperAdmin }: { tab: string; onTab: (t: any) => void; isSuperAdmin: boolean }) {
+function TopNav({ tab, onTab, isSuperAdmin }: {
+  tab: string; onTab: (t: 'tournaments' | 'rankings') => void; isSuperAdmin: boolean
+}) {
   return (
     <header className="sticky top-0 z-30 bg-paper/95 backdrop-blur-sm border-b border-zinc-200/80">
       <div className="max-w-[900px] mx-auto px-8 flex items-center justify-between h-14">

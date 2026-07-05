@@ -4,6 +4,8 @@ import { api } from '#/../convex/_generated/api'
 import { useEffect, useRef, useState } from 'react'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { JoinQR } from '#/components/ui/join-qr'
+import { participantName } from '#/lib/names'
+import type { LeaderboardEntry, Match } from '#/features/tournaments/types'
 
 export const Route = createFileRoute('/kiosk/$tournamentId')({
   component: KioskPage,
@@ -297,11 +299,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-function CourtCard({ match }: { match: any }) {
-  const nameA1 = playerName(match.pairA?.participantA)
-  const nameA2 = playerName(match.pairA?.participantB)
-  const nameB1 = playerName(match.pairB?.participantA)
-  const nameB2 = playerName(match.pairB?.participantB)
+function CourtCard({ match }: { match: Match }) {
+  const nameA1 = participantName(match.pairA?.participantA)
+  const nameA2 = participantName(match.pairA?.participantB)
+  const nameB1 = participantName(match.pairB?.participantA)
+  const nameB2 = participantName(match.pairB?.participantB)
   const hasScore = match.scoreA !== undefined && match.scoreB !== undefined
   const isLive = match.state === 'in_progress'
 
@@ -341,7 +343,7 @@ function CourtCard({ match }: { match: any }) {
   )
 }
 
-function LeaderRow({ entry, rank }: { entry: any; rank: number }) {
+function LeaderRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
   const isPodium = rank <= 3
   const rankColors = ['text-yellow-400', 'text-zinc-400', 'text-amber-600']
 
@@ -363,8 +365,4 @@ function LeaderRow({ entry, rank }: { entry: any; rank: number }) {
       </div>
     </div>
   )
-}
-
-function playerName(p: any) {
-  return p?.user?.name ?? p?.walkInName ?? '?'
 }

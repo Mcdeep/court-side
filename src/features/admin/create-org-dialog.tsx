@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Icon } from '#/components/ui/icon'
+import { errorMessage } from '#/lib/utils'
 
 export function CreateOrgDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [name, setName] = useState('')
@@ -47,8 +48,8 @@ export function CreateOrgDialog({ open, onOpenChange }: { open: boolean; onOpenC
     try {
       await adminCreateOrg({ name: name.trim(), slug: slug.trim(), adminUserId: adminUserId ?? undefined })
       resetAndClose()
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to create')
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to create'))
       setSaving(false)
     }
   }

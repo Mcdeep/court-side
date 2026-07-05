@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { errorMessage } from '#/lib/utils'
 
 export function useAsyncAction() {
   const [working, setWorking] = useState(false)
@@ -12,7 +13,7 @@ export function useAsyncAction() {
       setWorking(false)
       return true
     } catch (e: unknown) {
-      setError((e as { message?: string })?.message ?? 'Something went wrong')
+      setError(errorMessage(e))
       setWorking(false)
       return false
     }

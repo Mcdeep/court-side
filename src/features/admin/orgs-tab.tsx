@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Icon } from '#/components/ui/icon'
 import { CreateOrgDialog } from './create-org-dialog'
+import { errorMessage } from '#/lib/utils'
 import type { OrgWithStats } from './types'
 
 export function OrgsTab() {
@@ -82,8 +83,8 @@ function OrgRow({ org }: { org: OrgWithStats }) {
       if (confirm === 'suspend') await suspend({ organizationId: org._id })
       else if (confirm === 'activate') await activate({ organizationId: org._id })
       setConfirm(null)
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed')
+    } catch (e) {
+      setError(errorMessage(e, 'Failed'))
     } finally {
       setWorking(false)
     }
@@ -175,8 +176,8 @@ function AssignAdminInline({ organizationId, onClose }: { organizationId: Id<"or
       await assignAdmin({ organizationId, userId: selectedUserId })
       setDone(true)
       setTimeout(onClose, 1200)
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed')
+    } catch (e) {
+      setError(errorMessage(e, 'Failed'))
     } finally {
       setSaving(false)
     }
