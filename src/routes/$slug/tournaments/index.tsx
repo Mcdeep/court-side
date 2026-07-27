@@ -6,7 +6,6 @@ import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
 import { SegTabs } from '#/components/ui/seg-tabs'
 import { StatusChip } from '#/components/ui/status-chip'
-import { NewTournamentModal } from '#/features/tournaments/new-tournament-modal'
 import { formatDate } from '#/lib/format'
 
 export const Route = createFileRoute('/$slug/tournaments/')({
@@ -25,7 +24,6 @@ function TournamentsPage() {
   const { slug } = useParams({ from: '/$slug/tournaments/' })
   const navigate = useNavigate()
   const [filter, setFilter] = useState('all')
-  const [showNew, setShowNew] = useState(false)
 
   // Look up org by slug
   const org = useQuery(api.organizations.getBySlug, { slug })
@@ -48,6 +46,8 @@ function TournamentsPage() {
     )
   }
 
+  const goNew = () => navigate({ to: `/${slug}/tournaments/new` })
+
   const counts = {
     all:       tournaments.length,
     live:      tournaments.filter(t => normaliseStatus(t.state as TournamentStatus) === 'live').length,
@@ -61,16 +61,6 @@ function TournamentsPage() {
 
   return (
     <div className="max-w-[1100px] mx-auto px-10 py-8">
-      {showNew && (
-        <NewTournamentModal
-          orgId={org._id}
-          onClose={() => setShowNew(false)}
-          onCreated={(id) => {
-            setShowNew(false)
-            navigate({ to: `/${slug}/tournaments/${id}` })
-          }}
-        />
-      )}
       {/* Header */}
       <div className="flex items-end justify-between gap-4 mb-7">
         <div>
@@ -79,7 +69,7 @@ function TournamentsPage() {
           </div>
           <h1 className="font-display text-[34px] font-bold leading-tight tracking-tight">Tournaments</h1>
         </div>
-        <Button variant="primary" size="lg" icon="plus" onClick={() => setShowNew(true)}>New tournament</Button>
+        <Button variant="primary" size="lg" icon="plus" onClick={goNew}>New tournament</Button>
       </div>
 
       {/* Stat strip */}

@@ -23,6 +23,7 @@ function OrgShell() {
   const { isSignedIn, isLoaded } = useAuth()
   const pathname = useRouterState({ select: s => s.location.pathname })
   const active = NAV.find(n => pathname.includes(`/${n.id}`))?.id ?? 'tournaments'
+  const isWizard = pathname.endsWith('/tournaments/new')
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -54,6 +55,10 @@ function OrgShell() {
       </div>
     </div>
   )
+
+  if (isWizard) {
+    return <Outlet />
+  }
 
   return (
     <div className="flex min-h-screen bg-paper font-sans text-ink">

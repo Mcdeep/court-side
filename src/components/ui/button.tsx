@@ -63,9 +63,11 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     >
-      {icon && <Icon name={icon} className="w-[1.05em] h-[1.05em]" stroke={2.4} />}
-      {children}
-      {iconR && <Icon name={iconR} className="w-[1.05em] h-[1.05em]" stroke={2.4} />}
+      {asChild ? children : <>
+        {icon && <Icon name={icon} className="w-[1.05em] h-[1.05em]" stroke={2.4} />}
+        {children}
+        {iconR && <Icon name={iconR} className="w-[1.05em] h-[1.05em]" stroke={2.4} />}
+      </>}
     </Comp>
   )
 }

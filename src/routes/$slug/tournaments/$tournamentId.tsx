@@ -142,10 +142,15 @@ function TournamentDetailPage() {
             </Button>
           )}
           {tournament.state === 'in_progress' && (
-            <Button variant="ink" size="md" icon="flag"
-              onClick={() => updateState({ tournamentId: tid, state: 'completed' })}>
-              Finish tournament
-            </Button>
+            <>
+              <Button variant="outline" size="md" icon="screen" asChild>
+                <a href={`/kiosk/${tournamentId}`} target="_blank" rel="noreferrer">Kiosk</a>
+              </Button>
+              <Button variant="ink" size="md" icon="flag"
+                onClick={() => updateState({ tournamentId: tid, state: 'completed' })}>
+                Finish tournament
+              </Button>
+            </>
           )}
           {(tournament.state === 'completed' || tournament.state === 'archived') && (
             <span className="text-[13px] font-semibold text-ink-mute flex items-center gap-1.5">

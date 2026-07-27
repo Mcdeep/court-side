@@ -22,6 +22,9 @@ const PATHS: Record<string, string> = {
   filter:  'M3 5h18l-7 8v6l-4-2v-4z',
   flag:    'M5 21V4M5 4h12l-2 4 2 4H5',
   medal:   'M8 3l4 7 4-7M12 21a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 16.5l1.4.9-.4-1.6 1.2-1-1.6-.1L12 13l-.6 1.6-1.6.1 1.2 1-.4 1.6z',
+  link:    'M9 15l6-6M8 17H6a4 4 0 0 1 0-8h2M16 7h2a4 4 0 0 1 0 8h-2',
+  grip:    'M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01',
+  screen:  'M2 4h20v13H2zM8 21h8M12 17v4',
 }
 
 export type IconName = keyof typeof PATHS
