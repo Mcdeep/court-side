@@ -199,6 +199,31 @@ convex/                         # Backend — Convex functions
 
 One system: **shadcn/ui**. Never write hand-rolled modal or form shells.
 
+### shadcn-first: check before you build
+
+Before writing any new UI primitive (a picker, a toggle group, a combobox,
+anything that isn't page-specific layout), check whether shadcn already has
+it:
+
+1. Search the registry — `mcp__shadcn__search_items_in_registries` or
+   `mcp__shadcn__list_items_in_registries`.
+2. If it exists, install it: `npx shadcn@latest add @shadcn/<name>`. If the
+   CLI prompts to overwrite a file we've already customised (`button.tsx`,
+   `input.tsx`, etc.), answer **no** — keep our version.
+3. Re-skin the installed component with our theme tokens (below) rather
+   than shipping its default shadcn look — see e.g. `sidebar.tsx`'s
+   `--sidebar-*` overrides in `styles.css`, or `new.tsx`'s `ToggleGroup`
+   duration pills.
+4. Only hand-roll a component when shadcn genuinely has no equivalent
+   (`icon.tsx`, `status-chip.tsx`, `team-mark.tsx`, `join-qr.tsx` are the
+   existing examples — all domain-specific, not generic UI).
+
+Existing installed primitives live in `src/components/ui/` — check there
+first too; a lot of the common ones (`button`, `input`, `dialog`,
+`dropdown-menu`, `tabs`, `toggle-group`, `sidebar`, `tooltip`, `sheet`,
+`separator`, `command`, `avatar`, `badge`, `card`, `table`, `alert-dialog`,
+`field`, `label`, `skeleton`) are already in.
+
 ### Button variants
 ```tsx
 <Button variant="primary" />   // green accent fill — primary CTA
@@ -243,11 +268,38 @@ import { Input } from '#/components/ui/input'
 ```
 Never use raw `<input>` with a hand-rolled class string. Always `<Input>` from shadcn.
 
-### Colours
-- Accent: **green** — `bg-accent`, `bg-accent-soft`, `text-accent-dark`
-- **No violet or purple anywhere.** Zinc neutrals for secondary surfaces.
-- Dark: `bg-ink text-paper`
-- Muted: `text-ink-mute`, `text-zinc-400`
+### Theme tokens — never hardcode a colour
+
+All colours are CSS custom properties defined once in `src/styles.css`
+(`:root`) and exposed as Tailwind utilities via `@theme`. Every component —
+shadcn-installed or hand-rolled — must use these, not arbitrary hex/oklch
+values or one-off `text-[#...]` classes.
+
+| Token | Utility | Use |
+|---|---|---|
+| `--ink` | `bg-ink`, `text-ink` | Primary text / dark surfaces (sidebar, kiosk) |
+| `--ink-soft` | `bg-ink-soft` | Slightly lighter dark surface (hover on ink bg) |
+| `--ink-line` | `border-ink-line` | Dividers on dark surfaces |
+| `--ink-mute` | `text-ink-mute` | Secondary/muted text |
+| `--paper` | `bg-paper`, `text-paper` | Page background / text-on-dark |
+| `--accent` | `bg-accent`, `text-accent` | Brand green — primary actions, live indicators |
+| `--accent-dark` | `text-accent-dark`, `ring-accent-dark/40` | Focus rings, pressed accent states |
+| `--accent-soft` | `bg-accent-soft` | Accent-tinted backgrounds (selected cards, badges) |
+| `--sidebar-*` | `bg-sidebar`, `text-sidebar-foreground`, etc. | shadcn Sidebar internals — already wired to ink/paper/accent, don't override per-usage |
+
+Neutrals: use Tailwind's built-in `zinc-*` scale for secondary chrome
+(borders, disabled states, skeletons) — don't invent a second grey scale.
+
+Rules:
+- **No violet or purple anywhere.**
+- Never write `bg-[#...]`, `bg-[oklch(...)]`, or similar inline colour
+  literals in a component. If the palette is missing a shade you need, add
+  it to `:root` in `styles.css` and consume it as a token — don't patch
+  around it locally.
+- When installing/re-skinning a shadcn component, map its CSS vars to ours
+  (see `--sidebar-*` mapping in `styles.css` as the template) instead of
+  leaving shadcn's default zinc/slate values in place.
+- Dark surfaces: `bg-ink text-paper`. Muted text: `text-ink-mute`.
 
 ---
 
