@@ -72,7 +72,7 @@ function TournamentDetailPage() {
   }
 
   return (
-    <div className="max-w-[1100px] mx-auto px-10 py-7">
+    <div className="w-full px-10 py-7">
       {showAddPlayer && (
         <AddPlayerModal
           tournamentId={tid}

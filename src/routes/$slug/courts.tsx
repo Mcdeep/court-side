@@ -28,7 +28,7 @@ function CourtsPage() {
   const totalCourts = venues.reduce((sum, v) => sum + v.courtCount, 0)
 
   return (
-    <div className="max-w-[1100px] mx-auto px-10 py-8">
+    <div className="w-full px-10 py-8">
       {showAdd && <VenueModal orgId={org._id} onClose={() => setShowAdd(false)} />}
 
       <div className="flex items-end justify-between gap-4 mb-7">
@@ -80,7 +80,7 @@ function Stat({ label, value, icon }: { label: string; value: number; icon: stri
 
 function PageSkeleton() {
   return (
-    <div className="max-w-[900px] mx-auto px-10 py-8 animate-pulse">
+    <div className="w-full px-10 py-8 animate-pulse">
       <div className="h-9 w-28 bg-zinc-100 rounded-xl mb-7" />
       <div className="grid grid-cols-2 gap-4 mb-7">
         {[0, 1].map(i => <div key={i} className="h-24 bg-zinc-100 rounded-2xl" />)}
