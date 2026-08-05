@@ -5,6 +5,7 @@ import type { Id } from '#/../convex/_generated/dataModel'
 import { useState, useRef } from 'react'
 import { Icon } from '#/components/ui/icon'
 import { Avatar } from '#/components/ui/avatar'
+import { ToggleGroup, ToggleGroupItem } from '#/components/ui/toggle-group'
 import { toDatetimeLocal } from '#/lib/format'
 import { useAsyncAction } from '#/hooks/use-async-action'
 
@@ -30,9 +31,20 @@ type WizardData = {
   roundMinutes: string
   startsAt: string
   endsAt: string
+  duration: DurationPreset
   players: WizardPlayer[]
   teams: WizardTeam[]
 }
+
+type DurationPreset = '1' | '1.5' | '2' | '3' | 'custom'
+
+const DURATION_PRESETS: { id: DurationPreset; label: string }[] = [
+  { id: '1',      label: '1H' },
+  { id: '1.5',    label: '1.5H' },
+  { id: '2',      label: '2H' },
+  { id: '3',      label: '3H' },
+  { id: 'custom', label: 'Custom' },
+]
 
 // ─── Format definitions ───────────────────────────────────────────────────────
 
@@ -158,15 +170,42 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
           <label className="block">
             <span className="text-[13px] font-semibold text-ink-mute mb-1.5 block">Starts</span>
             <input type="datetime-local" value={data.startsAt}
-              onChange={e => set({ startsAt: e.target.value })}
+              onChange={e => {
+                const startsAt = e.target.value
+                if (data.duration === 'custom') { set({ startsAt }); return }
+                const endMs = new Date(startsAt).getTime() + Number(data.duration) * 60 * 60 * 1000
+                set({ startsAt, endsAt: toDatetimeLocal(endMs) })
+              }}
               className={INPUT_CLS} />
           </label>
 
           <label className="block">
-            <span className="text-[13px] font-semibold text-ink-mute mb-1.5 block">Ends</span>
-            <input type="datetime-local" value={data.endsAt}
-              onChange={e => set({ endsAt: e.target.value })}
-              className={INPUT_CLS} />
+            <span className="text-[13px] font-semibold text-ink-mute mb-1.5 block">Duration</span>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              value={data.duration}
+              onValueChange={(v: string) => {
+                if (!v) return
+                const preset = v as DurationPreset
+                if (preset === 'custom') { set({ duration: preset }); return }
+                const startMs = new Date(data.startsAt).getTime()
+                const endMs = startMs + Number(preset) * 60 * 60 * 1000
+                set({ duration: preset, endsAt: toDatetimeLocal(endMs) })
+              }}
+              className="w-full"
+            >
+              {DURATION_PRESETS.map(p => (
+                <ToggleGroupItem key={p.id} value={p.id} className="flex-1 h-11 text-[13.5px] font-semibold">
+                  {p.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+            {data.duration === 'custom' && (
+              <input type="datetime-local" value={data.endsAt}
+                onChange={e => set({ endsAt: e.target.value })}
+                className={`${INPUT_CLS} mt-2`} />
+            )}
           </label>
 
           <label className="block">
@@ -567,6 +606,7 @@ function NewTournamentPage() {
     roundMinutes: '',
     startsAt: toDatetimeLocal(now + 60 * 60 * 1000),
     endsAt: toDatetimeLocal(now + 4 * 60 * 60 * 1000),
+    duration: '3',
     players: [],
     teams: [],
   })
