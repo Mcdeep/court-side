@@ -27,6 +27,14 @@
     },
     "@netlify/zip-it-and-ship-it": {
       "esbuild": "^0.28.1"
+    },
+    "readdir-glob": {
+      "minimatch": {
+        "brace-expansion": "^2.1.4"
+      }
+    },
+    "ipx": {
+      "sharp": "^0.35.3"
     }
   },
   "dependencies": {
@@ -71,7 +79,7 @@
     "esbuild@0.27.0": true,
     "esbuild@0.28.1": true,
     "esbuild@0.25.12": true,
-    "sharp@0.34.5": true,
+    "sharp@0.35.3": true,
     "@parcel/watcher@2.5.6": true
   }
 }
