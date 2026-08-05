@@ -65,6 +65,9 @@ export default defineSchema({
     teamId: v.optional(v.id("teams")),
     isWalkIn: v.boolean(),
     walkInName: v.optional(v.string()),
+    // Manually entered by an admin (e.g. from the player's Playtomic level).
+    // Walk-ins have no account, so their rating lives on the participant row.
+    skillRating: v.optional(v.number()),
   })
     .index("by_tournament", ["tournamentId"])
     .index("by_user", ["userId"]),
@@ -140,6 +143,9 @@ export default defineSchema({
     userId: v.id("users"),
     totalPoints: v.number(),
     tournamentsPlayed: v.number(),
+    // Manually entered by an org admin (e.g. from the player's Playtomic level).
+    // Used to seed skill-based formats like Mexicano before any in-org results exist.
+    skillRating: v.optional(v.number()),
   })
     .index("by_organization", ["organizationId"])
     .index("by_organization_and_points", ["organizationId", "totalPoints"])

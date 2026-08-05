@@ -4,17 +4,42 @@ import { api } from '#/../convex/_generated/api'
 import { Avatar } from '#/components/ui/avatar'
 import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
+import { errorMessage } from '#/lib/utils'
 import type { Id, Participant } from './types'
 
 export function ParticipantsTab({ participants, tournamentId: _tid, canAdd, onAdd }: {
   participants: Participant[]; tournamentId: Id<'tournaments'>; canAdd: boolean; onAdd: () => void
 }) {
   const removeParticipant = useMutation(api.participants.remove)
+  const setSkillRating = useMutation(api.participants.setSkillRating)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [ratingInput, setRatingInput] = useState('')
+  const [ratingError, setRatingError] = useState('')
 
   async function handleRemove(participantId: Id<'participants'>) {
     setRemovingId(participantId)
     try { await removeParticipant({ participantId }) } finally { setRemovingId(null) }
+  }
+
+  function startEditRating(p: Participant) {
+    setEditingId(p._id)
+    setRatingInput(p.rating !== undefined ? String(p.rating) : '')
+    setRatingError('')
+  }
+
+  async function saveRating(participantId: Id<'participants'>) {
+    const value = Number(ratingInput)
+    if (!ratingInput.trim() || isNaN(value) || value < 1 || value > 7) {
+      setRatingError('1.0 – 7.0')
+      return
+    }
+    try {
+      await setSkillRating({ participantId, skillRating: value })
+      setEditingId(null)
+    } catch (e) {
+      setRatingError(errorMessage(e))
+    }
   }
 
   return (
@@ -51,6 +76,36 @@ export function ParticipantsTab({ participants, tournamentId: _tid, canAdd, onAd
                   <div className="font-semibold text-sm truncate">{name}</div>
                   <div className="text-[12px] text-ink-mute">{p.isWalkIn ? 'Walk-in' : 'Member'}</div>
                 </div>
+                {editingId === p._id ? (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <input
+                      autoFocus
+                      value={ratingInput}
+                      onChange={e => { setRatingInput(e.target.value); setRatingError('') }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') saveRating(p._id)
+                        if (e.key === 'Escape') setEditingId(null)
+                      }}
+                      placeholder="1–7"
+                      className="w-14 h-7 px-2 rounded-lg bg-white ring-1 ring-zinc-200 text-xs tnum focus:outline-none focus:ring-2 focus:ring-accent-dark/40"
+                    />
+                    <button onClick={() => saveRating(p._id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-accent-dark hover:bg-accent-soft shrink-0">
+                      <Icon name="check" className="w-4 h-4" />
+                    </button>
+                    {ratingError && <span className="text-[11px] text-red-500 whitespace-nowrap">{ratingError}</span>}
+                  </div>
+                ) : p.isWalkIn && canAdd ? (
+                  <button
+                    onClick={() => startEditRating(p)}
+                    title="Set skill rating"
+                    className="shrink-0 px-2 h-7 rounded-lg text-xs font-semibold tnum ring-1 ring-zinc-200 text-ink-mute hover:bg-zinc-50 transition-colors">
+                    {p.rating !== undefined ? p.rating.toFixed(1) : 'Set rating'}
+                  </button>
+                ) : p.rating !== undefined ? (
+                  <span className="shrink-0 px-2 h-7 flex items-center rounded-lg text-xs font-semibold tnum bg-zinc-100 text-ink-mute" title="Skill rating">
+                    {p.rating.toFixed(1)}
+                  </span>
+                ) : null}
                 {canAdd ? (
                   <button
                     onClick={() => handleRemove(p._id)}

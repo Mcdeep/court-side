@@ -1,9 +1,11 @@
 import { createFileRoute, useParams } from '@tanstack/react-router'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import { useState } from 'react'
 import { Avatar } from '#/components/ui/avatar'
 import { Icon } from '#/components/ui/icon'
+import { errorMessage } from '#/lib/utils'
+import type { Id } from '#/../convex/_generated/dataModel'
 
 export const Route = createFileRoute('/$slug/players')({
   component: PlayersPage,
@@ -75,20 +77,24 @@ function PlayersPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-[auto_1fr_1fr_80px] gap-4 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100">
+            <div className="grid grid-cols-[auto_1fr_1fr_90px_80px] gap-4 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100">
               <div className="w-8" />
               <div>Name</div>
               <div>Email</div>
+              <div className="text-right">Rating</div>
               <div className="text-right">Tournaments</div>
             </div>
             {filteredMembers.map((m) => (
               <div key={m._id}
-                className="grid grid-cols-[auto_1fr_1fr_80px] gap-4 px-5 py-3 items-center border-b border-zinc-100 last:border-0 hover:bg-zinc-50/60 transition-colors">
+                className="grid grid-cols-[auto_1fr_1fr_90px_80px] gap-4 px-5 py-3 items-center border-b border-zinc-100 last:border-0 hover:bg-zinc-50/60 transition-colors">
                 <Avatar name={m.name} size={32} />
                 <div className="min-w-0">
                   <div className="font-semibold text-sm truncate">{m.name}</div>
                 </div>
                 <div className="text-sm text-ink-mute truncate">{m.email}</div>
+                <div className="flex justify-end">
+                  <RatingEditor organizationId={org._id} userId={m._id} skillRating={m.skillRating} />
+                </div>
                 <div className="text-right">
                   <span className="tnum text-sm font-semibold">{m.tournamentCount}</span>
                 </div>
@@ -127,6 +133,62 @@ function PlayersPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function RatingEditor({ organizationId, userId, skillRating }: {
+  organizationId: Id<'organizations'>
+  userId: Id<'users'>
+  skillRating: number | undefined
+}) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(skillRating !== undefined ? String(skillRating) : '')
+  const [error, setError] = useState('')
+  const setSkillRating = useMutation(api.ratings.setSkillRating)
+
+  async function save() {
+    const parsed = Number(value)
+    if (!value.trim() || isNaN(parsed) || parsed < 1 || parsed > 7) {
+      setError('1.0 – 7.0')
+      return
+    }
+    try {
+      await setSkillRating({ organizationId, userId, skillRating: parsed })
+      setEditing(false)
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          autoFocus
+          value={value}
+          onChange={e => { setValue(e.target.value); setError('') }}
+          onKeyDown={e => {
+            if (e.key === 'Enter') save()
+            if (e.key === 'Escape') setEditing(false)
+          }}
+          placeholder="1–7"
+          className="w-14 h-7 px-2 rounded-lg bg-white ring-1 ring-zinc-200 text-xs tnum focus:outline-none focus:ring-2 focus:ring-accent-dark/40"
+        />
+        <button onClick={save} className="w-7 h-7 rounded-lg flex items-center justify-center text-accent-dark hover:bg-accent-soft shrink-0">
+          <Icon name="check" className="w-4 h-4" />
+        </button>
+        {error && <span className="text-[11px] text-red-500 whitespace-nowrap">{error}</span>}
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => { setValue(skillRating !== undefined ? String(skillRating) : ''); setEditing(true) }}
+      title="Set skill rating (e.g. from Playtomic)"
+      className="px-2 h-7 rounded-lg text-xs font-semibold tnum ring-1 ring-zinc-200 text-ink-mute hover:bg-zinc-50 transition-colors">
+      {skillRating !== undefined ? skillRating.toFixed(1) : 'Set'}
+    </button>
   )
 }
 

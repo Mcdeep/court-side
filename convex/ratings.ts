@@ -46,6 +46,42 @@ export const setTiers = mutation({
   },
 });
 
+const MIN_SKILL_RATING = 1;
+const MAX_SKILL_RATING = 7;
+
+export const setSkillRating = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    userId: v.id("users"),
+    skillRating: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await requireOrgAdmin(ctx, args.organizationId);
+    if (args.skillRating < MIN_SKILL_RATING || args.skillRating > MAX_SKILL_RATING) {
+      throw new Error(`Rating must be between ${MIN_SKILL_RATING} and ${MAX_SKILL_RATING}`);
+    }
+
+    const existing = await ctx.db
+      .query("playerRatings")
+      .withIndex("by_organization_and_user", (q) =>
+        q.eq("organizationId", args.organizationId).eq("userId", args.userId)
+      )
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { skillRating: args.skillRating });
+    } else {
+      await ctx.db.insert("playerRatings", {
+        organizationId: args.organizationId,
+        userId: args.userId,
+        totalPoints: 0,
+        tournamentsPlayed: 0,
+        skillRating: args.skillRating,
+      });
+    }
+  },
+});
+
 export const getRankings = query({
   args: { organizationId: v.id("organizations") },
   handler: async (ctx, args) => {

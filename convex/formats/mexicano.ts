@@ -3,7 +3,7 @@ import type { RoundPlan } from "./americano";
 // Mexicano: one round at a time, paired by current standings.
 // Rank 1+2 pair up and play rank 3+4; rank 5+6 vs rank 7+8; etc.
 // participantsByRank must already be sorted highest-points first.
-// First round: pass participants in any order (no leaderboard yet).
+// First round: pass participants sorted by skill rating (no leaderboard yet).
 export function generateMexicanoRound(
   participantsByRank: string[],
   courtCount: number,

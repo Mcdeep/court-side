@@ -69,8 +69,31 @@ export const generate = mutation({
         .take(200);
       const rankedIds = leaderboard.map((e) => e.participantId as string);
       const rankedSet = new Set(rankedIds);
-      const unranked = participantIds.filter((id) => !rankedSet.has(id));
-      roundPlans = [generateMexicanoRound([...rankedIds, ...unranked], courtCount)];
+      const unranked = participants.filter((p) => !rankedSet.has(p._id as string));
+
+      // No in-tournament results yet for these participants (typically round 1) —
+      // seed by admin-entered skill rating (e.g. Playtomic level) instead of arbitrary order.
+      const skillRatings = new Map<string, number>();
+      for (const p of unranked) {
+        if (p.isWalkIn) {
+          if (p.skillRating !== undefined) skillRatings.set(p._id as string, p.skillRating);
+        } else if (p.userId) {
+          const playerRating = await ctx.db
+            .query("playerRatings")
+            .withIndex("by_organization_and_user", (q) =>
+              q.eq("organizationId", tournament.organizationId).eq("userId", p.userId!)
+            )
+            .unique();
+          if (playerRating?.skillRating !== undefined) {
+            skillRatings.set(p._id as string, playerRating.skillRating);
+          }
+        }
+      }
+      const unrankedIds = unranked
+        .map((p) => p._id as string)
+        .sort((a, b) => (skillRatings.get(b) ?? -1) - (skillRatings.get(a) ?? -1));
+
+      roundPlans = [generateMexicanoRound([...rankedIds, ...unrankedIds], courtCount)];
     } else if (tournament.format === "knockout") {
       if (existingRounds.length === 0) {
         roundPlans = [generateKnockoutFirstRound(participantIds, courtCount)];

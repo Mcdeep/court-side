@@ -16,6 +16,7 @@ export function AddPlayerModal({ tournamentId, existingIds, onClose }: {
 }) {
   const [mode, setMode] = useState<'walkin' | 'member'>('walkin')
   const [walkInName, setWalkInName] = useState('')
+  const [walkInRating, setWalkInRating] = useState('')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<Id<'users'>>>(new Set())
   const [addedCount, setAddedCount] = useState(0)
@@ -30,9 +31,20 @@ export function AddPlayerModal({ tournamentId, existingIds, onClose }: {
 
   async function addWalkIn() {
     if (!walkInName.trim()) { setError('Enter a name'); return }
+    let skillRating: number | undefined
+    if (walkInRating.trim()) {
+      skillRating = Number(walkInRating)
+      if (isNaN(skillRating) || skillRating < 1 || skillRating > 7) {
+        setError('Rating must be between 1.0 and 7.0')
+        return
+      }
+    }
     await run(async () => {
-      await addParticipant({ tournamentId, isWalkIn: true, walkInName: walkInName.trim(), entryType: 'solo' })
+      await addParticipant({
+        tournamentId, isWalkIn: true, walkInName: walkInName.trim(), entryType: 'solo', skillRating,
+      })
       setWalkInName('')
+      setWalkInRating('')
       setAddedCount(c => c + 1)
     })
   }
@@ -90,6 +102,12 @@ export function AddPlayerModal({ tournamentId, existingIds, onClose }: {
             onChange={e => setWalkInName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addWalkIn()}
             placeholder="Player name"
+          />
+          <Input
+            value={walkInRating}
+            onChange={e => setWalkInRating(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addWalkIn()}
+            placeholder="Skill rating (optional, e.g. Playtomic 3.5)"
           />
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <div className="flex gap-2">
