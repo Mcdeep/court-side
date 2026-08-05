@@ -23,7 +23,7 @@ function normaliseStatus(state: TournamentStatus): 'draft' | 'live' | 'completed
 function TournamentsPage() {
   const { slug } = useParams({ from: '/$slug/tournaments/' })
   const navigate = useNavigate()
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState('live')
 
   // Look up org by slug
   const org = useQuery(api.organizations.getBySlug, { slug })
@@ -82,7 +82,6 @@ function TournamentsPage() {
       {/* Filter + search row */}
       <div className="flex items-center justify-between mb-3">
         <SegTabs value={filter} onChange={setFilter} tabs={[
-          { id: 'all',       label: 'All',       count: counts.all },
           { id: 'live',      label: 'Live',      count: counts.live },
           { id: 'draft',     label: 'Draft',     count: counts.draft },
           { id: 'completed', label: 'Completed', count: counts.completed },
@@ -105,8 +104,13 @@ function TournamentsPage() {
         </div>
 
         {rows.length === 0 && (
-          <div className="px-5 py-16 text-center text-ink-mute text-sm">
-            {filter === 'all' ? 'No tournaments yet. Create one to get started.' : `No ${filter} tournaments.`}
+          <div className="px-5 py-16 flex flex-col items-center gap-4 text-center">
+            <p className="text-ink-mute text-sm">
+              {filter === 'live' ? 'No live tournaments right now.' : `No ${filter} tournaments.`}
+            </p>
+            {filter === 'live' && (
+              <Button variant="primary" size="md" icon="plus" onClick={goNew}>New tournament</Button>
+            )}
           </div>
         )}
 
