@@ -5,6 +5,7 @@ import type { Id } from '#/../convex/_generated/dataModel'
 import { useState, useRef } from 'react'
 import { Icon } from '#/components/ui/icon'
 import { Avatar } from '#/components/ui/avatar'
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '#/components/ui/carousel'
 import { ToggleGroup, ToggleGroupItem } from '#/components/ui/toggle-group'
 import { toDatetimeLocal } from '#/lib/format'
 import { useAsyncAction } from '#/hooks/use-async-action'
@@ -118,30 +119,36 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
       <h2 className="font-display font-bold text-[26px] tracking-tight">Choose a format</h2>
       <p className="text-ink-mute text-[15px] mt-1.5">This decides how pairing and scoring work — you can't change it after players check in.</p>
 
-      <div className="flex gap-4 mt-6 overflow-x-auto overflow-y-visible pb-2 pt-2 -mx-1 px-1 scrollbar-none">
-        {FORMATS.map(f => {
-          const sel = fmt === f.id
-          return (
-            <button key={f.id} onClick={() => set({ format: f.id })}
-              className={`text-left rounded-2xl p-5 ring-1 transition-all hover:-translate-y-0.5 hover:shadow-card shrink-0 w-[236px]
-                ${sel ? 'bg-accent-soft ring-accent-dark/40 ring-2' : 'bg-white ring-zinc-200'}`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`w-10 h-10 rounded-xl flex items-center justify-center ${sel ? 'bg-accent text-ink' : 'bg-zinc-100 text-zinc-400'}`}>
-                  <Icon name={f.icon} className="w-5 h-5" stroke={2.2} />
-                </span>
-                {sel && (
-                  <span className="w-6 h-6 rounded-full bg-ink text-paper flex items-center justify-center">
-                    <Icon name="check" className="w-3.5 h-3.5" stroke={3} />
-                  </span>
-                )}
-              </div>
-              <div className="font-bold text-[15px]">{f.name}</div>
-              <div className="text-[12.5px] text-ink-mute mt-1 leading-relaxed">{f.desc}</div>
-              <div className="mt-3 inline-flex text-[11px] font-bold uppercase tracking-wide text-accent-dark bg-accent/25 rounded-full px-2 h-6 items-center whitespace-nowrap">{f.tag}</div>
-            </button>
-          )
-        })}
-      </div>
+      <Carousel opts={{ align: 'start', dragFree: true }} className="mt-6 px-1 py-2">
+        <CarouselContent className="-ml-4">
+          {FORMATS.map(f => {
+            const sel = fmt === f.id
+            return (
+              <CarouselItem key={f.id} className="pl-4 basis-auto">
+                <button onClick={() => set({ format: f.id })}
+                  className={`text-left rounded-2xl p-5 ring-1 transition-all hover:-translate-y-0.5 hover:shadow-card w-[236px]
+                    ${sel ? 'bg-accent-soft ring-accent-dark/40 ring-2' : 'bg-white ring-zinc-200'}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`w-10 h-10 rounded-xl flex items-center justify-center ${sel ? 'bg-accent text-ink' : 'bg-zinc-100 text-zinc-400'}`}>
+                      <Icon name={f.icon} className="w-5 h-5" stroke={2.2} />
+                    </span>
+                    {sel && (
+                      <span className="w-6 h-6 rounded-full bg-ink text-paper flex items-center justify-center">
+                        <Icon name="check" className="w-3.5 h-3.5" stroke={3} />
+                      </span>
+                    )}
+                  </div>
+                  <div className="font-bold text-[15px]">{f.name}</div>
+                  <div className="text-[12.5px] text-ink-mute mt-1 leading-relaxed">{f.desc}</div>
+                  <div className="mt-3 inline-flex text-[11px] font-bold uppercase tracking-wide text-accent-dark bg-accent/25 rounded-full px-2 h-6 items-center whitespace-nowrap">{f.tag}</div>
+                </button>
+              </CarouselItem>
+            )
+          })}
+        </CarouselContent>
+        <CarouselPrevious className="-left-4" />
+        <CarouselNext className="-right-4" />
+      </Carousel>
 
       <div className="mt-8 bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-6">
         <div className="font-bold text-[15px] mb-4">Basics</div>

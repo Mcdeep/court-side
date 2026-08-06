@@ -50,6 +50,7 @@
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "convex": "^1.41.0",
+    "embla-carousel-react": "^8.6.0",
     "lucide-react": "^0.545.0",
     "qrcode.react": "^4.2.0",
     "radix-ui": "^1.6.0",
