@@ -1,16 +1,62 @@
+import { useState } from 'react'
+import { useMutation } from 'convex/react'
+import { api } from '#/../convex/_generated/api'
+import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
 import { lastName, pairNames } from '#/lib/names'
+import { POINTS_TO_WIN } from '#/lib/constants'
 import type { Match } from './types'
 
-export function MatchCell({ match, onClick }: { match: Match; onClick: (match: Match) => void }) {
+export function MatchCell({ match, pointsToWin = POINTS_TO_WIN }: { match: Match; pointsToWin?: number }) {
+  const [editing, setEditing] = useState(false)
+  const [a, setA] = useState(match.scoreA ?? 0)
+  const [b, setB] = useState(match.scoreB ?? 0)
+  const [saving, setSaving] = useState(false)
+  const saveResult = useMutation(api.scores.saveResult)
+
   const [nameA1, nameA2] = pairNames(match.pairA)
   const [nameB1, nameB2] = pairNames(match.pairB)
 
   const live  = match.state === 'in_progress'
   const final = match.state === 'completed'
 
+  function startEditing() {
+    setA(match.scoreA ?? 0)
+    setB(match.scoreB ?? 0)
+    setEditing(true)
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await saveResult({ matchId: match._id, scoreA: a, scoreB: b })
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="rounded-xl p-3 ring-2 ring-accent-dark/40 bg-white">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">Court {match.courtNumber}</span>
+          <button onClick={() => setEditing(false)} className="text-zinc-300 hover:text-ink">
+            <Icon name="x" className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <NumberGrid label={`${lastName(nameA1)} / ${lastName(nameA2)}`} value={a} onChange={setA} max={pointsToWin} highlight={a > b} />
+        <NumberGrid label={`${lastName(nameB1)} / ${lastName(nameB2)}`} value={b} onChange={setB} max={pointsToWin} highlight={b > a} />
+        <div className="flex gap-2 mt-2.5">
+          <Button variant="ghost" size="sm" className="flex-1" onClick={() => setEditing(false)}>Cancel</Button>
+          <Button variant="primary" size="sm" className="flex-1" icon="check" onClick={handleSave} disabled={saving}>Save</Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <button onClick={() => onClick(match)}
+    <button onClick={startEditing}
       className={`text-left w-full rounded-xl p-3 ring-1 transition-all hover:shadow-card hover:-translate-y-px
         ${live  ? 'bg-accent-soft ring-accent-dark/30' :
           final ? 'bg-white ring-zinc-200' :
@@ -50,5 +96,24 @@ export function MatchCell({ match, onClick }: { match: Match; onClick: (match: M
         <Icon name="pencil" className="w-3.5 h-3.5 text-zinc-300" />
       </div>
     </button>
+  )
+}
+
+function NumberGrid({ label, value, onChange, max, highlight }: {
+  label: string; value: number; onChange: (n: number) => void; max: number; highlight: boolean
+}) {
+  return (
+    <div className={`mb-2 rounded-xl p-2 ring-1 ${highlight ? 'bg-accent-soft ring-accent-dark/30' : 'bg-zinc-50 ring-zinc-200'}`}>
+      <div className="text-[11px] font-bold text-ink-mute mb-1.5 truncate">{label}</div>
+      <div className="flex flex-wrap gap-1">
+        {Array.from({ length: max + 1 }, (_, n) => (
+          <button key={n} onClick={() => onChange(n)}
+            className={`w-6 h-6 rounded-md text-[11px] font-bold tnum flex items-center justify-center transition-colors
+              ${value === n ? 'bg-accent text-ink' : 'bg-white text-ink-mute ring-1 ring-zinc-200 hover:bg-zinc-100'}`}>
+            {n}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }

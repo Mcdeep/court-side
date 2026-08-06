@@ -6,11 +6,11 @@ import { Icon } from '#/components/ui/icon'
 import { POINTS_TO_WIN, PRE_GENERATED_FORMATS } from '#/lib/constants'
 import { GeneratorSettingsModal } from './generator-settings-modal'
 import { MatchCell } from './match-cell'
-import type { Match, Participant, Round, Tournament } from './types'
+import type { Participant, Round, Tournament } from './types'
 
-export function ScheduleTab({ tournament, rounds, participants, onGenerate, onScore }: {
+export function ScheduleTab({ tournament, rounds, participants, onGenerate }: {
   tournament: Tournament; rounds: Round[]; participants: Participant[]
-  onGenerate: () => void; onScore: (match: Match) => void
+  onGenerate: () => void
 }) {
   const [showSettings, setShowSettings] = useState(false)
   const isPreGenerated = PRE_GENERATED_FORMATS.includes(tournament.format)
@@ -86,7 +86,7 @@ export function ScheduleTab({ tournament, rounds, participants, onGenerate, onSc
           <RoundRow
             key={round._id}
             round={round}
-            onScore={onScore}
+            pointsToWin={tournament.pointsToWin ?? POINTS_TO_WIN}
             blocked={rounds.some(r => r.roundNumber < round.roundNumber && r.state !== 'completed')}
           />
         ))}
@@ -95,7 +95,7 @@ export function ScheduleTab({ tournament, rounds, participants, onGenerate, onSc
   )
 }
 
-function RoundRow({ round, onScore, blocked }: { round: Round; onScore: (match: Match) => void; blocked: boolean }) {
+function RoundRow({ round, pointsToWin, blocked }: { round: Round; pointsToWin: number; blocked: boolean }) {
   const matches = useQuery(api.matches.listByRound, { roundId: round._id })
   const startRound = useMutation(api.rounds.start)
   const completeRound = useMutation(api.rounds.complete)
@@ -162,7 +162,7 @@ function RoundRow({ round, onScore, blocked }: { round: Round; onScore: (match: 
       </div>
       <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.max(matches.length, 1)}, minmax(0,1fr))` }}>
         {matches.map((match) => (
-          <MatchCell key={match._id} match={match} onClick={onScore} />
+          <MatchCell key={match._id} match={match} pointsToWin={pointsToWin} />
         ))}
       </div>
     </div>
