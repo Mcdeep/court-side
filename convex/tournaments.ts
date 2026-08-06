@@ -223,6 +223,30 @@ export const update = mutation({
   },
 });
 
+export const duplicate = mutation({
+  args: { tournamentId: v.id("tournaments") },
+  handler: async (ctx, args) => {
+    const source = await ctx.db.get(args.tournamentId);
+    if (!source) throw new Error("Tournament not found");
+    await requireOrgAdmin(ctx, source.organizationId);
+
+    const durationMs = source.endsAt - source.startsAt;
+    const startsAt = Date.now() + 60 * 60 * 1000;
+    return ctx.db.insert("tournaments", {
+      organizationId: source.organizationId,
+      venueId: source.venueId,
+      name: `${source.name} (Copy)`,
+      format: source.format,
+      courtCount: source.courtCount,
+      roundDurationMs: source.roundDurationMs,
+      pointsToWin: source.pointsToWin,
+      startsAt,
+      endsAt: startsAt + durationMs,
+      state: "draft",
+    });
+  },
+});
+
 export const deleteTournament = mutation({
   args: { tournamentId: v.id("tournaments") },
   handler: async (ctx, args) => {

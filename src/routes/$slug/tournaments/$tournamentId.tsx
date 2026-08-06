@@ -40,6 +40,7 @@ function TournamentDetailPage() {
   const generateRounds = useMutation(api.rounds.generate)
   const updateState = useMutation(api.tournaments.updateState)
   const deleteTournament = useMutation(api.tournaments.deleteTournament)
+  const duplicateTournament = useMutation(api.tournaments.duplicate)
 
   if (!tournament || !participants || !rounds || !leaderboard) {
     return <div className="p-10 animate-pulse"><div className="h-8 w-64 bg-zinc-100 rounded-xl" /></div>
@@ -60,6 +61,12 @@ function TournamentDetailPage() {
   const canEdit = ['draft', 'published', 'registration_open'].includes(tournament.state)
   const canDelete = tournament.state === 'draft' && rounds.length === 0
   const canArchive = tournament.state !== 'archived'
+
+  const handleDuplicate = async () => {
+    setMenuOpen(false)
+    const newId = await duplicateTournament({ tournamentId: tid })
+    navigate({ to: `/${slug}/tournaments/${newId}` })
+  }
 
   const handleConfirm = async () => {
     if (confirmAction === 'archive') {
@@ -165,6 +172,7 @@ function TournamentDetailPage() {
             canDelete={canDelete}
             onArchive={() => { setMenuOpen(false); setConfirmAction('archive') }}
             onDelete={() => { setMenuOpen(false); setConfirmAction('delete') }}
+            onDuplicate={handleDuplicate}
           />
         </div>
       </div>
