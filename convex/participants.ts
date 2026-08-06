@@ -63,6 +63,37 @@ export const setSkillRating = mutation({
   },
 });
 
+export const setCheckedIn = mutation({
+  args: {
+    participantId: v.id("participants"),
+    checkedIn: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const participant = await ctx.db.get(args.participantId);
+    if (!participant) throw new Error("Participant not found");
+    const tournament = await ctx.db.get(participant.tournamentId);
+    if (!tournament) throw new Error("Tournament not found");
+    await requireOrgAdmin(ctx, tournament.organizationId);
+    await ctx.db.patch(args.participantId, { checkedIn: args.checkedIn });
+  },
+});
+
+export const checkInAll = mutation({
+  args: { tournamentId: v.id("tournaments") },
+  handler: async (ctx, args) => {
+    const tournament = await ctx.db.get(args.tournamentId);
+    if (!tournament) throw new Error("Tournament not found");
+    await requireOrgAdmin(ctx, tournament.organizationId);
+    const participants = await ctx.db
+      .query("participants")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
+      .take(200);
+    for (const p of participants) {
+      if (!p.checkedIn) await ctx.db.patch(p._id, { checkedIn: true });
+    }
+  },
+});
+
 export const list = query({
   args: { tournamentId: v.id("tournaments") },
   handler: async (ctx, args) => {

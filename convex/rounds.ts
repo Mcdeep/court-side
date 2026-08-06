@@ -45,15 +45,23 @@ export const generate = mutation({
       }
     }
 
-    const participants = await ctx.db
+    const allParticipants = await ctx.db
       .query("participants")
       .withIndex("by_tournament", (q) =>
         q.eq("tournamentId", args.tournamentId)
       )
       .take(200);
+    const isPreGenerated = PRE_GENERATED.includes(tournament.format);
+    const participants = isPreGenerated
+      ? allParticipants
+      : allParticipants.filter((p) => p.checkedIn === true);
 
     if (participants.length < 4) {
-      throw new Error("Need at least 4 participants to generate rounds");
+      throw new Error(
+        isPreGenerated
+          ? "Need at least 4 participants to generate rounds"
+          : "Need at least 4 checked-in participants to generate rounds"
+      );
     }
 
     const participantIds = participants.map((p) => p._id as string);
@@ -228,10 +236,10 @@ export const generate = mutation({
           }
         }
 
-        const pairsWithLevel = [...courtLevels.entries()].map(([key, level]) => ({
-          level,
-          pair: pairById.get(key)!,
-        }));
+        const checkedInSet = new Set(participantIds);
+        const pairsWithLevel = [...courtLevels.entries()]
+          .map(([key, level]) => ({ level, pair: pairById.get(key)! }))
+          .filter(({ pair }) => checkedInSet.has(pair[0]) && checkedInSet.has(pair[1]));
         roundPlans = [generateSnakesNextRound(pairsWithLevel, courtCount)];
       }
     } else {

@@ -4,18 +4,26 @@ import { api } from '#/../convex/_generated/api'
 import { Avatar } from '#/components/ui/avatar'
 import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
+import { Switch } from '#/components/ui/switch'
+import { PRE_GENERATED_FORMATS } from '#/lib/constants'
 import { errorMessage } from '#/lib/utils'
-import type { Id, Participant } from './types'
+import type { Id, Participant, TournamentFormat } from './types'
 
-export function ParticipantsTab({ participants, tournamentId: _tid, canAdd, onAdd }: {
-  participants: Participant[]; tournamentId: Id<'tournaments'>; canAdd: boolean; onAdd: () => void
+export function ParticipantsTab({ participants, tournamentId, format, canAdd, onAdd }: {
+  participants: Participant[]; tournamentId: Id<'tournaments'>; format: TournamentFormat
+  canAdd: boolean; onAdd: () => void
 }) {
   const removeParticipant = useMutation(api.participants.remove)
   const setSkillRating = useMutation(api.participants.setSkillRating)
+  const setCheckedIn = useMutation(api.participants.setCheckedIn)
+  const checkInAll = useMutation(api.participants.checkInAll)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [ratingInput, setRatingInput] = useState('')
   const [ratingError, setRatingError] = useState('')
+
+  const showCheckIn = !PRE_GENERATED_FORMATS.includes(format)
+  const checkedInCount = participants.filter(p => p.checkedIn === true).length
 
   async function handleRemove(participantId: Id<'participants'>) {
     setRemovingId(participantId)
@@ -47,8 +55,18 @@ export function ParticipantsTab({ participants, tournamentId: _tid, canAdd, onAd
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-100">
         <div className="font-semibold text-[15px]">
           Participants <span className="text-ink-mute font-normal">· {participants.length}</span>
+          {showCheckIn && (
+            <span className="text-ink-mute font-normal ml-2 text-[13px]">
+              · {checkedInCount} checked in
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          {showCheckIn && canAdd && (
+            <Button variant="ghost" size="sm" icon="check" onClick={() => checkInAll({ tournamentId })}>
+              Check in all
+            </Button>
+          )}
           <Button variant="ghost" size="sm" icon="filter">Sort</Button>
           {canAdd && (
             <Button variant="outline" size="sm" icon="plus" onClick={onAdd}>Add player</Button>
@@ -76,6 +94,17 @@ export function ParticipantsTab({ participants, tournamentId: _tid, canAdd, onAd
                   <div className="font-semibold text-sm truncate">{name}</div>
                   <div className="text-[12px] text-ink-mute">{p.isWalkIn ? 'Walk-in' : 'Member'}</div>
                 </div>
+                {showCheckIn && (
+                  <label className="flex items-center gap-1.5 shrink-0" title="Checked in">
+                    <span className="text-[11px] font-semibold text-ink-mute hidden sm:inline">
+                      {p.checkedIn ? 'In' : 'Absent'}
+                    </span>
+                    <Switch
+                      checked={p.checkedIn === true}
+                      onCheckedChange={checked => setCheckedIn({ participantId: p._id, checkedIn: checked })}
+                    />
+                  </label>
+                )}
                 {editingId === p._id ? (
                   <div className="flex items-center gap-1 shrink-0">
                     <input

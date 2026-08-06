@@ -6,12 +6,17 @@ import { Icon } from '#/components/ui/icon'
 import { POINTS_TO_WIN, PRE_GENERATED_FORMATS } from '#/lib/constants'
 import { GeneratorSettingsModal } from './generator-settings-modal'
 import { MatchCell } from './match-cell'
-import type { Match, Round, Tournament } from './types'
+import type { Match, Participant, Round, Tournament } from './types'
 
-export function ScheduleTab({ tournament, rounds, onGenerate, onScore }: {
-  tournament: Tournament; rounds: Round[]; onGenerate: () => void; onScore: (match: Match) => void
+export function ScheduleTab({ tournament, rounds, participants, onGenerate, onScore }: {
+  tournament: Tournament; rounds: Round[]; participants: Participant[]
+  onGenerate: () => void; onScore: (match: Match) => void
 }) {
   const [showSettings, setShowSettings] = useState(false)
+  const isPreGenerated = PRE_GENERATED_FORMATS.includes(tournament.format)
+  const checkedInCount = participants.filter(p => p.checkedIn === true).length
+  const canGenerate = isPreGenerated || checkedInCount >= 4
+
   if (rounds.length === 0) {
     return (
       <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-12 flex flex-col items-center text-center">
@@ -22,9 +27,17 @@ export function ScheduleTab({ tournament, rounds, onGenerate, onScore }: {
         <p className="text-ink-mute text-sm mt-1 max-w-xs">
           Generate the first round to auto-assign teams across courts.
         </p>
+        {!isPreGenerated && (
+          <p className="text-ink-mute text-[12.5px] mt-2 tnum">{checkedInCount} checked in</p>
+        )}
         <div className="mt-5">
-          <Button variant="primary" size="lg" icon="bolt" onClick={onGenerate}>Generate round 1</Button>
+          <Button variant="primary" size="lg" icon="bolt" onClick={onGenerate} disabled={!canGenerate}>
+            Generate round 1
+          </Button>
         </div>
+        {!canGenerate && (
+          <p className="text-[12.5px] text-red-500 mt-2">Check in at least 4 players first</p>
+        )}
       </div>
     )
   }
@@ -48,12 +61,15 @@ export function ScheduleTab({ tournament, rounds, onGenerate, onScore }: {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="md" icon="gear" onClick={() => setShowSettings(true)}>Settings</Button>
-          {!PRE_GENERATED_FORMATS.includes(tournament.format) && (
-            <Button variant="primary" size="md" icon="plus" onClick={onGenerate}>
-              Generate round {rounds.length + 1}
-            </Button>
+          {!isPreGenerated && (
+            <>
+              <span className="text-[12.5px] text-ink-mute font-medium tnum">{checkedInCount} checked in</span>
+              <Button variant="primary" size="md" icon="plus" onClick={onGenerate} disabled={!canGenerate}>
+                Generate round {rounds.length + 1}
+              </Button>
+            </>
           )}
-          {PRE_GENERATED_FORMATS.includes(tournament.format) && (
+          {isPreGenerated && (
             <span className="text-[12.5px] text-ink-mute font-medium flex items-center gap-1.5">
               <Icon name="check" className="w-4 h-4 text-zinc-400" stroke={2.5} />
               All {rounds.length} rounds scheduled
@@ -61,6 +77,9 @@ export function ScheduleTab({ tournament, rounds, onGenerate, onScore }: {
           )}
         </div>
       </div>
+      {!isPreGenerated && !canGenerate && (
+        <p className="text-[12.5px] text-red-500 -mt-3 mb-5">Check in at least 4 players before generating the next round</p>
+      )}
 
       <div className="space-y-6">
         {rounds.map((round) => (

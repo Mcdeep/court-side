@@ -192,6 +192,7 @@ function TournamentDetailPage() {
         <ScheduleTab
           tournament={tournament}
           rounds={rounds}
+          participants={participants}
           onGenerate={handleGenerate}
           onScore={setScoreFor}
         />
@@ -200,6 +201,7 @@ function TournamentDetailPage() {
         <ParticipantsTab
           participants={participants}
           tournamentId={tid}
+          format={tournament.format}
           canAdd={canAddPlayer}
           onAdd={() => setShowAddPlayer(true)}
         />

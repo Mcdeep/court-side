@@ -68,6 +68,9 @@ export default defineSchema({
     // Manually entered by an admin (e.g. from the player's Playtomic level).
     // Walk-ins have no account, so their rating lives on the participant row.
     skillRating: v.optional(v.number()),
+    // Opt-in attendance confirmation. Round generation for round-by-round
+    // formats only includes checkedIn === true participants.
+    checkedIn: v.optional(v.boolean()),
   })
     .index("by_tournament", ["tournamentId"])
     .index("by_user", ["userId"]),
