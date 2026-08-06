@@ -120,7 +120,7 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
       <p className="text-ink-mute text-[15px] mt-1.5">This decides how pairing and scoring work — you can't change it after players check in.</p>
 
       <Carousel opts={{ align: 'start', dragFree: true }} className="mt-6">
-        <CarouselContent className="-ml-2 py-2 pr-2">
+        <CarouselContent className="-ml-2 py-2">
           {FORMATS.map(f => {
             const sel = fmt === f.id
             return (
@@ -145,6 +145,9 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
               </CarouselItem>
             )
           })}
+          <CarouselItem className="pl-4 basis-auto" aria-hidden>
+            <div className="w-2 h-1" />
+          </CarouselItem>
         </CarouselContent>
         <CarouselPrevious className="-left-4" />
         <CarouselNext className="-right-4" />
