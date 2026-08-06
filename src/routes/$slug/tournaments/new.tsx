@@ -155,7 +155,7 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
 
       <div className="mt-8 bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-6">
         <div className="font-bold text-[15px] mb-4">Basics</div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="block">
             <span className="text-[13px] font-semibold text-ink-mute mb-1.5 block">Tournament name</span>
             <input value={data.name} onChange={e => set({ name: e.target.value })} placeholder="e.g. Summer Americano"
@@ -339,9 +339,9 @@ function StepPlayers({ data, set, orgId }: { data: WizardData; set: (p: Partial<
         {data.players.length === 0 ? (
           <div className="py-14 text-center text-ink-mute text-sm">No players yet. Add your first one above.</div>
         ) : (
-          <div className="grid grid-cols-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2">
             {data.players.map((p, i) => (
-              <div key={p.id} className={`flex items-center gap-3 px-5 py-2.5 border-b border-zinc-100 ${i % 2 === 0 ? 'border-r' : ''}`}>
+              <div key={p.id} className={`flex items-center gap-3 px-5 py-2.5 border-b border-zinc-100 ${i % 2 === 0 ? 'sm:border-r' : ''}`}>
                 <span className="tabular-nums text-[12px] text-zinc-300 w-5 font-mono">{String(i + 1).padStart(2, '0')}</span>
                 <Avatar name={p.name} size={30} />
                 <span className="font-semibold text-sm flex-1 truncate">{p.name}</span>
@@ -367,6 +367,7 @@ function StepPairing({ data, set }: { data: WizardData; set: (p: Partial<WizardD
   const [dragging, setDragging] = useState<string | null>(null)
   const [overSlot, setOverSlot] = useState<string | null>(null)
   const [overPool, setOverPool] = useState(false)
+  const [selected, setSelected] = useState<DragRef | null>(null)
 
   if (AUTO_PAIR.includes(data.format)) {
     const fmtObj = FORMATS.find(f => f.id === data.format)!
@@ -408,9 +409,8 @@ function StepPairing({ data, set }: { data: WizardData; set: (p: Partial<WizardD
     return next
   }
 
-  const dropInSlot = (teamIdx: number, seatIdx: 0 | 1) => {
-    if (!dragRef.current) return
-    const { player, from } = dragRef.current
+  const assignToSlot = (ref: DragRef, teamIdx: number, seatIdx: 0 | 1) => {
+    const { player, from } = ref
     let next = teams.map(seats => [...seats] as WizardTeam)
     const displaced = next[teamIdx][seatIdx]
     next[teamIdx][seatIdx] = player
@@ -419,22 +419,54 @@ function StepPairing({ data, set }: { data: WizardData; set: (p: Partial<WizardD
       if (displaced) next[from.team][from.seat] = displaced
     }
     set({ teams: next })
+  }
+
+  const returnToPool = (ref: DragRef) => {
+    if (!ref.from) return
+    set({ teams: clearFrom(teams, ref.from) })
+  }
+
+  const dropInSlot = (teamIdx: number, seatIdx: 0 | 1) => {
+    if (!dragRef.current) return
+    assignToSlot(dragRef.current, teamIdx, seatIdx)
     dragRef.current = null; setDragging(null)
   }
 
   const dropInPool = () => {
     if (!dragRef.current) return
-    const { from } = dragRef.current
-    if (from) set({ teams: clearFrom(teams, from) })
+    returnToPool(dragRef.current)
     dragRef.current = null; setDragging(null); setOverPool(false)
+  }
+
+  // Tap-to-assign fallback for touch devices, where native HTML5 drag-and-drop doesn't fire.
+  const selectPlayer = (player: WizardPlayer, from?: DragRef['from']) => {
+    setSelected(cur => (cur && cur.player.id === player.id) ? null : { player, from })
+  }
+
+  const handlePoolPlayerClick = (player: WizardPlayer) => selectPlayer(player)
+
+  const handlePoolAreaClick = () => {
+    if (selected?.from) { returnToPool(selected); setSelected(null) }
+  }
+
+  const handleSlotClick = (teamIdx: number, seatIdx: 0 | 1) => {
+    const player = teams[teamIdx][seatIdx]
+    if (selected) {
+      if (player && selected.player.id === player.id) { setSelected(null); return }
+      assignToSlot(selected, teamIdx, seatIdx)
+      setSelected(null)
+    } else if (player) {
+      selectPlayer(player, { team: teamIdx, seat: seatIdx })
+    }
   }
 
   const autoPair = () => {
     const shuffled = [...data.players].sort(() => Math.random() - 0.5)
     set({ teams: Array.from({ length: nTeams }, (_, i) => [shuffled[i * 2] ?? null, shuffled[i * 2 + 1] ?? null]) })
+    setSelected(null)
   }
 
-  const resetPairs = () => set({ teams: Array.from({ length: nTeams }, () => [null, null]) })
+  const resetPairs = () => { set({ teams: Array.from({ length: nTeams }, () => [null, null]) }); setSelected(null) }
 
   const pairedCount = teams.filter(t => t[0] && t[1]).length
 
@@ -443,7 +475,7 @@ function StepPairing({ data, set }: { data: WizardData; set: (p: Partial<WizardD
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="font-display font-bold text-[26px] tracking-tight">Pair up teams</h2>
-          <p className="text-ink-mute text-[15px] mt-1.5">Drag players from the pool into a team slot. Drag a paired player back to swap.</p>
+          <p className="text-ink-mute text-[15px] mt-1.5">Drag players from the pool into a team slot, or tap a player then tap a slot to place them.</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button onClick={resetPairs} className="h-10 px-4 rounded-xl bg-white ring-1 ring-zinc-200 hover:ring-zinc-300 font-semibold text-[13.5px] whitespace-nowrap">Clear all</button>
@@ -460,33 +492,39 @@ function StepPairing({ data, set }: { data: WizardData; set: (p: Partial<WizardD
         <span className="tabular-nums whitespace-nowrap">{pairedCount} of {nTeams} teams paired</span>
       </div>
 
-      <div className="mt-5 grid grid-cols-[240px_1fr] gap-5 items-start">
+      <div className="mt-5 grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-5 items-start">
         {/* Pool */}
         <div
           onDragOver={e => { e.preventDefault(); setOverPool(true) }}
           onDragLeave={() => setOverPool(false)}
           onDrop={e => { e.preventDefault(); dropInPool() }}
-          className={`rounded-2xl p-4 ring-1 min-h-[200px] sticky top-4 transition-all ${overPool ? 'ring-2 ring-accent-dark bg-accent-soft' : 'bg-white ring-zinc-200/80 shadow-card'}`}>
+          onClick={handlePoolAreaClick}
+          className={`rounded-2xl p-4 ring-1 min-h-[200px] sm:sticky sm:top-4 transition-all ${overPool ? 'ring-2 ring-accent-dark bg-accent-soft' : 'bg-white ring-zinc-200/80 shadow-card'}`}>
           <div className="text-[12px] font-bold uppercase tracking-wider text-ink-mute mb-3 flex items-center justify-between">
             <span>Unpaired</span><span className="tabular-nums">{pool.length}</span>
           </div>
           <div className="flex flex-col gap-2">
             {pool.length === 0 ? (
               <div className="text-[12.5px] text-zinc-400 text-center py-8">Everyone's paired!</div>
-            ) : pool.map(p => (
-              <div key={p.id} draggable onDragStart={e => onDragStart(e, p)}
-                className={`flex items-center gap-2 pl-1.5 pr-3 h-10 rounded-full bg-white ring-1 ring-zinc-200 cursor-grab active:cursor-grabbing select-none transition-all
-                  ${dragging === p.id ? 'opacity-30 scale-95' : 'hover:ring-accent-dark/40 hover:shadow-card'}`}>
-                <Avatar name={p.name} size={26} />
-                <span className="text-[13.5px] font-semibold whitespace-nowrap flex-1 truncate">{p.name}</span>
-                <Icon name="grip" className="w-3.5 h-3.5 text-zinc-300 ml-0.5" />
-              </div>
-            ))}
+            ) : pool.map(p => {
+              const isSelected = selected?.player.id === p.id
+              return (
+                <div key={p.id} draggable onDragStart={e => onDragStart(e, p)}
+                  onClick={e => { e.stopPropagation(); handlePoolPlayerClick(p) }}
+                  className={`flex items-center gap-2 pl-1.5 pr-3 h-10 rounded-full bg-white ring-1 ring-zinc-200 cursor-grab active:cursor-grabbing select-none transition-all
+                    ${dragging === p.id ? 'opacity-30 scale-95' : ''}
+                    ${isSelected ? 'ring-2 ring-accent-dark bg-accent-soft' : 'hover:ring-accent-dark/40 hover:shadow-card'}`}>
+                  <Avatar name={p.name} size={26} />
+                  <span className="text-[13.5px] font-semibold whitespace-nowrap flex-1 truncate">{p.name}</span>
+                  <Icon name="grip" className="w-3.5 h-3.5 text-zinc-300 ml-0.5" />
+                </div>
+              )
+            })}
           </div>
         </div>
 
         {/* Teams grid */}
-        <div className="grid grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
           {teams.map((team, teamIdx) => (
             <div key={teamIdx} className={`rounded-2xl p-3.5 ring-1 transition-all ${team[0] && team[1] ? 'bg-accent-soft/50 ring-accent-dark/30' : 'bg-zinc-50 ring-zinc-200'}`}>
               <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-2.5 flex items-center justify-between">
@@ -498,21 +536,24 @@ function StepPairing({ data, set }: { data: WizardData; set: (p: Partial<WizardD
                   const player = team[seatIdx]
                   const key = `${teamIdx}-${seatIdx}`
                   const isOver = overSlot === key
+                  const isSelected = selected?.from?.team === teamIdx && selected.from.seat === seatIdx
                   return (
                     <div key={seatIdx}
                       onDragOver={e => { e.preventDefault(); setOverSlot(key) }}
                       onDragLeave={() => setOverSlot(s => s === key ? null : s)}
                       onDrop={e => { e.preventDefault(); dropInSlot(teamIdx, seatIdx); setOverSlot(null) }}
-                      className={`h-12 rounded-xl flex items-center transition-all ${isOver ? 'ring-2 ring-accent-dark bg-accent-soft' : player ? '' : 'ring-1 ring-dashed ring-zinc-300'}`}>
+                      onClick={e => { e.stopPropagation(); handleSlotClick(teamIdx, seatIdx) }}
+                      className={`h-12 rounded-xl flex items-center transition-all cursor-pointer ${isOver ? 'ring-2 ring-accent-dark bg-accent-soft' : player ? '' : 'ring-1 ring-dashed ring-zinc-300'}`}>
                       {player ? (
                         <div draggable onDragStart={e => onDragStart(e, player, { team: teamIdx, seat: seatIdx })}
-                          className={`w-full flex items-center gap-2 pl-1.5 pr-2.5 h-full rounded-xl bg-white ring-1 ring-zinc-200 cursor-grab active:cursor-grabbing ${dragging === player.id ? 'opacity-30' : ''}`}>
+                          className={`w-full flex items-center gap-2 pl-1.5 pr-2.5 h-full rounded-xl bg-white ring-1 ring-zinc-200 cursor-grab active:cursor-grabbing
+                            ${dragging === player.id ? 'opacity-30' : ''} ${isSelected ? 'ring-2 ring-accent-dark bg-accent-soft' : ''}`}>
                           <Avatar name={player.name} size={26} />
                           <span className="text-[13px] font-semibold truncate flex-1">{player.name}</span>
                           <Icon name="grip" className="w-3.5 h-3.5 text-zinc-300 shrink-0" />
                         </div>
                       ) : (
-                        <span className="text-[12.5px] text-zinc-400 pl-3 font-medium">Drop a player here</span>
+                        <span className="text-[12.5px] text-zinc-400 pl-3 font-medium">Tap or drop a player</span>
                       )}
                     </div>
                   )
@@ -539,7 +580,7 @@ function StepReview({ data, venues }: { data: WizardData; venues: { _id: string;
       <h2 className="font-display font-bold text-[26px] tracking-tight">Review & create</h2>
       <p className="text-ink-mute text-[15px] mt-1.5">Double-check the details — you can edit everything after creating.</p>
 
-      <div className="mt-6 grid grid-cols-2 gap-4">
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-5">
           <div className="flex items-center gap-3 mb-4">
             <span className="w-10 h-10 rounded-xl bg-accent text-ink flex items-center justify-center">
@@ -577,7 +618,7 @@ function StepReview({ data, venues }: { data: WizardData; venues: { _id: string;
           <div className="font-bold text-[15px] mb-3">
             Teams <span className="text-ink-mute font-normal">· {pairedTeams.length} of {data.teams.length} paired</span>
           </div>
-          <div className="grid grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {data.teams.map((t, i) => (
               <div key={i} className={`rounded-xl px-3 py-2.5 ring-1 ${t[0] && t[1] ? 'bg-accent-soft/50 ring-accent-dark/30' : 'bg-zinc-50 ring-zinc-200'}`}>
                 <div className="text-[10.5px] font-bold uppercase tracking-wider text-zinc-400 mb-1">Team {i + 1}</div>
@@ -720,7 +761,7 @@ function NewTournamentPage() {
     <div className="min-h-screen bg-paper flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-paper/90 backdrop-blur border-b border-zinc-200/80">
-        <div className="max-w-[980px] mx-auto px-8 h-[76px] flex items-center justify-between gap-6">
+        <div className="max-w-[980px] mx-auto px-4 sm:px-8 h-[76px] flex items-center justify-between gap-3 sm:gap-6">
           <div className="flex items-center gap-2.5 shrink-0">
             <span className="w-9 h-9 rounded-xl bg-ink text-paper flex items-center justify-center font-display font-bold text-[17px]">C</span>
             <span className="font-display font-bold text-[18px] tracking-tight hidden md:inline whitespace-nowrap">New tournament</span>
@@ -734,7 +775,7 @@ function NewTournamentPage() {
       </header>
 
       {/* Main */}
-      <main className="flex-1 max-w-[980px] mx-auto w-full px-8 py-9">
+      <main className="flex-1 max-w-[980px] mx-auto w-full px-4 sm:px-8 py-6 sm:py-9">
         {step === 0 && org && <StepFormat data={data} set={set} orgId={org._id} />}
         {step === 1 && org && <StepPlayers data={data} set={set} orgId={org._id} />}
         {step === 2 && <StepPairing data={data} set={set} />}
@@ -743,13 +784,13 @@ function NewTournamentPage() {
 
       {/* Footer */}
       <footer className="sticky bottom-0 bg-paper/95 backdrop-blur border-t border-zinc-200/80">
-        <div className="max-w-[980px] mx-auto px-8 h-20 flex items-center justify-between">
+        <div className="max-w-[980px] mx-auto px-4 sm:px-8 h-20 flex items-center justify-between gap-2 sm:gap-4">
           <button onClick={back} disabled={step === 0}
-            className="h-11 px-4 rounded-xl font-semibold text-[14.5px] text-ink-mute hover:text-ink hover:bg-zinc-100 disabled:opacity-0 inline-flex items-center gap-1.5 whitespace-nowrap transition-all">
+            className="h-11 px-4 rounded-xl font-semibold text-[14.5px] text-ink-mute hover:text-ink hover:bg-zinc-100 disabled:opacity-0 inline-flex items-center gap-1.5 whitespace-nowrap transition-all shrink-0">
             <Icon name="back" className="w-4 h-4" /> Back
           </button>
 
-          <div className="text-[13px] text-ink-mute font-medium whitespace-nowrap">
+          <div className="flex-1 min-w-0 text-center sm:text-left truncate text-[13px] text-ink-mute font-medium">
             {step === 0 && !data.name.trim() && <span>Enter a tournament name to continue</span>}
             {step === 1 && isOdd && <span className="text-amber-700">Add one more player for even teams</span>}
             {step === 1 && !isOdd && data.players.length < 4 && <span>Add at least 4 players</span>}
@@ -758,12 +799,12 @@ function NewTournamentPage() {
 
           {step < STEPS.length - 1 ? (
             <button onClick={next} disabled={!canNext}
-              className="h-11 px-5 rounded-xl bg-accent text-ink font-bold text-[14.5px] whitespace-nowrap inline-flex items-center gap-1.5 shadow-[0_1px_0_oklch(0.6_0.16_140)] hover:brightness-105 active:translate-y-px disabled:opacity-40 disabled:pointer-events-none transition-all">
+              className="h-11 px-5 rounded-xl bg-accent text-ink font-bold text-[14.5px] whitespace-nowrap inline-flex items-center gap-1.5 shadow-[0_1px_0_oklch(0.6_0.16_140)] hover:brightness-105 active:translate-y-px disabled:opacity-40 disabled:pointer-events-none transition-all shrink-0">
               Continue <Icon name="chevR" className="w-4 h-4" stroke={2.4} />
             </button>
           ) : (
             <button onClick={handleCreate} disabled={working}
-              className="h-11 px-5 rounded-xl bg-accent text-ink font-bold text-[14.5px] whitespace-nowrap inline-flex items-center gap-1.5 shadow-[0_1px_0_oklch(0.6_0.16_140)] hover:brightness-105 active:translate-y-px disabled:opacity-40 disabled:pointer-events-none transition-all">
+              className="h-11 px-5 rounded-xl bg-accent text-ink font-bold text-[14.5px] whitespace-nowrap inline-flex items-center gap-1.5 shadow-[0_1px_0_oklch(0.6_0.16_140)] hover:brightness-105 active:translate-y-px disabled:opacity-40 disabled:pointer-events-none transition-all shrink-0">
               <Icon name="bolt" className="w-4 h-4" stroke={2.4} />
               {working ? 'Creating…' : 'Create tournament'}
             </button>

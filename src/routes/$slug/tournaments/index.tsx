@@ -60,27 +60,27 @@ function TournamentsPage() {
   )
 
   return (
-    <div className="w-full px-10 py-8">
+    <div className="w-full px-4 sm:px-10 py-5 sm:py-8">
       {/* Header */}
-      <div className="flex items-end justify-between gap-4 mb-7">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-7">
         <div>
           <div className="text-ink-mute text-[13px] font-semibold mb-2 whitespace-nowrap capitalize">
             {org.name}
           </div>
-          <h1 className="font-display text-[34px] font-bold leading-tight tracking-tight">Tournaments</h1>
+          <h1 className="font-display text-[28px] sm:text-[34px] font-bold leading-tight tracking-tight">Tournaments</h1>
         </div>
-        <Button variant="primary" size="lg" icon="plus" onClick={goNew}>New tournament</Button>
+        <Button variant="primary" size="lg" icon="plus" onClick={goNew} className="w-full sm:w-auto">New tournament</Button>
       </div>
 
       {/* Stat strip */}
-      <div className="grid grid-cols-3 gap-4 mb-7">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
         <Stat label="Live now"      value={counts.live}  accent sub={`across ${org.name}`} icon="bolt" />
         <Stat label="Total"         value={counts.all}   sub="tournaments"                  icon="trophy" />
         <Stat label="Completed"     value={counts.completed} sub="finished"                icon="check" />
       </div>
 
       {/* Filter + search row */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
         <SegTabs value={filter} onChange={setFilter} tabs={[
           { id: 'live',      label: 'Live',      count: counts.live },
           { id: 'draft',     label: 'Draft',     count: counts.draft },
@@ -89,86 +89,88 @@ function TournamentsPage() {
         <div className="relative">
           <Icon name="search" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input placeholder="Search tournaments"
-            className="h-9 w-60 pl-9 pr-3 rounded-xl bg-white ring-1 ring-zinc-200 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent-dark/40" />
+            className="h-9 w-full sm:w-60 pl-9 pr-3 rounded-xl bg-white ring-1 ring-zinc-200 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent-dark/40" />
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card overflow-hidden">
-        <div className="grid grid-cols-[1.6fr_1fr_0.8fr_1fr_auto] gap-4 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100">
-          <div>Tournament</div>
-          <div>Format</div>
-          <div>Courts</div>
-          <div>Progress</div>
-          <div className="w-28 text-right pr-2">Status</div>
-        </div>
-
-        {rows.length === 0 && (
-          <div className="px-5 py-16 flex flex-col items-center gap-4 text-center">
-            <p className="text-ink-mute text-sm">
-              {filter === 'live' ? 'No live tournaments right now.' : `No ${filter} tournaments.`}
-            </p>
-            {filter === 'live' && (
-              <Button variant="primary" size="md" icon="plus" onClick={goNew}>New tournament</Button>
-            )}
+      <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card overflow-x-auto">
+        <div className="min-w-[640px]">
+          <div className="grid grid-cols-[1.6fr_1fr_0.8fr_1fr_auto] gap-4 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100">
+            <div>Tournament</div>
+            <div>Format</div>
+            <div>Courts</div>
+            <div>Progress</div>
+            <div className="w-28 text-right pr-2">Status</div>
           </div>
-        )}
 
-        {rows.map(t => {
-          const chipStatus = normaliseStatus(t.state as TournamentStatus)
-          return (
-            <button key={t._id}
-              onClick={() => navigate({ to: `/${slug}/tournaments/${t._id}` })}
-              className="rowin w-full text-left grid grid-cols-[1.6fr_1fr_0.8fr_1fr_auto] gap-4 px-5 py-4 items-center border-b border-zinc-100 last:border-0 hover:bg-zinc-50/80 transition-colors group">
-              {/* Name + venue */}
-              <div className="flex items-center gap-3 min-w-0">
-                <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0
-                  ${chipStatus === 'live' ? 'bg-accent text-ink' : chipStatus === 'completed' ? 'bg-ink text-paper' : 'bg-zinc-100 text-zinc-400'}`}>
-                  <Icon name={t.format === 'knockout' ? 'trophy' : 'shuffle'} className="w-[18px] h-[18px]" stroke={2.2} />
-                </span>
-                <div className="min-w-0">
-                  <div className="font-semibold text-[15px] truncate">{t.name}</div>
-                  <div className="text-[12.5px] text-ink-mute flex items-center gap-1.5">
-                    <Icon name="cal" className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{formatDate(t.startsAt)}</span>
+          {rows.length === 0 && (
+            <div className="px-5 py-16 flex flex-col items-center gap-4 text-center">
+              <p className="text-ink-mute text-sm">
+                {filter === 'live' ? 'No live tournaments right now.' : `No ${filter} tournaments.`}
+              </p>
+              {filter === 'live' && (
+                <Button variant="primary" size="md" icon="plus" onClick={goNew}>New tournament</Button>
+              )}
+            </div>
+          )}
+
+          {rows.map(t => {
+            const chipStatus = normaliseStatus(t.state as TournamentStatus)
+            return (
+              <button key={t._id}
+                onClick={() => navigate({ to: `/${slug}/tournaments/${t._id}` })}
+                className="rowin w-full text-left grid grid-cols-[1.6fr_1fr_0.8fr_1fr_auto] gap-4 px-5 py-4 items-center border-b border-zinc-100 last:border-0 hover:bg-zinc-50/80 transition-colors group">
+                {/* Name + venue */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0
+                    ${chipStatus === 'live' ? 'bg-accent text-ink' : chipStatus === 'completed' ? 'bg-ink text-paper' : 'bg-zinc-100 text-zinc-400'}`}>
+                    <Icon name={t.format === 'knockout' ? 'trophy' : 'shuffle'} className="w-[18px] h-[18px]" stroke={2.2} />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-[15px] truncate">{t.name}</div>
+                    <div className="text-[12.5px] text-ink-mute flex items-center gap-1.5">
+                      <Icon name="cal" className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{formatDate(t.startsAt)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              {/* Format */}
-              <div className="text-sm">
-                <span className="font-medium capitalize">{t.format.replace(/_/g, ' ')}</span>
-              </div>
-              {/* Courts */}
-              <div className="text-sm tnum font-medium text-ink-mute">
-                {(t.courtCount ?? 0) > 0 ? t.courtCount : '—'}
-              </div>
-              {/* Progress */}
-              <div className="pr-2">
-                {t.totalRounds > 0 ? (() => {
-                  const pct = Math.round((t.completedRounds / t.totalRounds) * 100)
-                  return (
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 flex-1 rounded-full bg-zinc-100 overflow-hidden">
-                        <div className="h-full rounded-full bg-accent-dark" style={{ width: `${pct}%` }} />
+                {/* Format */}
+                <div className="text-sm">
+                  <span className="font-medium capitalize">{t.format.replace(/_/g, ' ')}</span>
+                </div>
+                {/* Courts */}
+                <div className="text-sm tnum font-medium text-ink-mute">
+                  {(t.courtCount ?? 0) > 0 ? t.courtCount : '—'}
+                </div>
+                {/* Progress */}
+                <div className="pr-2">
+                  {t.totalRounds > 0 ? (() => {
+                    const pct = Math.round((t.completedRounds / t.totalRounds) * 100)
+                    return (
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 flex-1 rounded-full bg-zinc-100 overflow-hidden">
+                          <div className="h-full rounded-full bg-accent-dark" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="tnum text-[12px] text-ink-mute w-9 text-right">{pct}%</span>
                       </div>
-                      <span className="tnum text-[12px] text-ink-mute w-9 text-right">{pct}%</span>
+                    )
+                  })() : (
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 flex-1 rounded-full bg-zinc-100" />
+                      <span className="tnum text-[12px] text-ink-mute w-9 text-right">—</span>
                     </div>
-                  )
-                })() : (
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 flex-1 rounded-full bg-zinc-100" />
-                    <span className="tnum text-[12px] text-ink-mute w-9 text-right">—</span>
-                  </div>
-                )}
-              </div>
-              {/* Status */}
-              <div className="w-28 flex items-center justify-end gap-1 pr-1">
-                <StatusChip status={chipStatus} />
-                <Icon name="chevR" className="w-4 h-4 text-zinc-300 group-hover:text-ink group-hover:translate-x-0.5 transition-all" />
-              </div>
-            </button>
-          )
-        })}
+                  )}
+                </div>
+                {/* Status */}
+                <div className="w-28 flex items-center justify-end gap-1 pr-1">
+                  <StatusChip status={chipStatus} />
+                  <Icon name="chevR" className="w-4 h-4 text-zinc-300 group-hover:text-ink group-hover:translate-x-0.5 transition-all" />
+                </div>
+              </button>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

@@ -52,7 +52,7 @@ export function ParticipantsTab({ participants, tournamentId, format, canAdd, on
 
   return (
     <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-5 py-3.5 border-b border-zinc-100">
         <div className="font-semibold text-[15px]">
           Participants <span className="text-ink-mute font-normal">· {participants.length}</span>
           {showCheckIn && (
@@ -61,7 +61,7 @@ export function ParticipantsTab({ participants, tournamentId, format, canAdd, on
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2">
           {showCheckIn && canAdd && (
             <Button variant="ghost" size="sm" icon="check" onClick={() => checkInAll({ tournamentId })}>
               Check in all
@@ -78,13 +78,13 @@ export function ParticipantsTab({ participants, tournamentId, format, canAdd, on
           No participants yet. Add players to get started.
         </div>
       ) : (
-        <div className="grid grid-cols-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2">
           {participants.map((p, i) => {
             const name = p.user?.name ?? p.walkInName ?? 'Walk-in'
             return (
               <div key={p._id}
                 className={`group flex items-center gap-3 px-5 py-3
-                  ${i % 2 === 0 ? 'border-r border-zinc-100' : ''}
+                  ${i % 2 === 0 ? 'sm:border-r border-zinc-100' : ''}
                   border-b border-zinc-100`}>
                 <span className="tnum text-[12px] text-zinc-300 w-5 font-mono">
                   {String(i + 1).padStart(2, '0')}

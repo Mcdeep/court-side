@@ -30,7 +30,7 @@ export function StandingsTab({ leaderboard }: { leaderboard: LeaderboardEntry[] 
             </div>
             <div className="flex items-center gap-2.5 min-w-0">
               <Avatar name={name} size={28} />
-              <span className="font-semibold text-sm whitespace-nowrap">{name}</span>
+              <span className="font-semibold text-sm truncate">{name}</span>
             </div>
             <div className="text-right tnum text-sm text-ink-mute">{entry.wins + entry.losses}</div>
             <div className="text-right tnum text-sm text-ink-mute">{entry.wins}</div>

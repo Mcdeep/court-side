@@ -47,7 +47,7 @@ export function ScheduleTab({ tournament, rounds, participants, onGenerate }: {
       {showSettings && (
         <GeneratorSettingsModal tournament={tournament} onClose={() => setShowSettings(false)} />
       )}
-      <div className="flex items-center justify-between gap-4 mb-5 bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-4">
         <div className="flex items-center gap-3">
           <span className="w-10 h-10 rounded-xl bg-accent text-ink flex items-center justify-center">
             <Icon name="shuffle" className="w-5 h-5" stroke={2.2} />
@@ -59,7 +59,7 @@ export function ScheduleTab({ tournament, rounds, participants, onGenerate }: {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2">
           <Button variant="outline" size="md" icon="gear" onClick={() => setShowSettings(true)}>Settings</Button>
           {!isPreGenerated && (
             <>
@@ -123,8 +123,8 @@ function RoundRow({ round, pointsToWin, blocked }: { round: Round; pointsToWin: 
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div className="flex items-center flex-wrap gap-2.5">
           <span className="font-display font-bold text-[15px]">Round {round.roundNumber}</span>
           <span className={`text-[10px] font-bold uppercase tracking-wide px-2 h-5 inline-flex items-center rounded-full
             ${round.state === 'in_progress' ? 'bg-accent text-ink' : 'bg-zinc-100 text-zinc-400'}`}>
@@ -160,7 +160,7 @@ function RoundRow({ round, pointsToWin, blocked }: { round: Round; pointsToWin: 
           )}
         </div>
       </div>
-      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.max(matches.length, 1)}, minmax(0,1fr))` }}>
+      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
         {matches.map((match) => (
           <MatchCell key={match._id} match={match} pointsToWin={pointsToWin} />
         ))}

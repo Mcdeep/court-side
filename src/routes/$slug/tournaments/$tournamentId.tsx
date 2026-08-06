@@ -76,7 +76,7 @@ function TournamentDetailPage() {
   }
 
   return (
-    <div className="w-full px-10 py-7">
+    <div className="w-full px-4 sm:px-10 py-5 sm:py-7">
       {showAddPlayer && (
         <AddPlayerModal
           tournamentId={tid}
@@ -106,29 +106,29 @@ function TournamentDetailPage() {
         All tournaments
       </button>
 
-      <div className="flex items-start justify-between gap-4 mb-5">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
         <div className="min-w-0">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="font-display font-bold text-[32px] leading-tight tracking-tight whitespace-nowrap">
+          <div className="flex items-center gap-3 mb-2 min-w-0">
+            <h1 className="font-display font-bold text-[26px] sm:text-[32px] leading-tight tracking-tight truncate">
               {tournament.name}
             </h1>
             <StatusChip status={chipStatus as any} />
           </div>
-          <div className="flex items-center gap-4 text-[13px] text-ink-mute font-medium whitespace-nowrap">
-            <span className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-ink-mute font-medium">
+            <span className="flex items-center gap-1.5 whitespace-nowrap">
               <Icon name="shuffle" className="w-4 h-4" />
               <span className="capitalize">{tournament.format.replace(/_/g, ' ')}</span>
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5 whitespace-nowrap">
               <Icon name="users" className="w-4 h-4" /> {participants.length} players
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5 whitespace-nowrap">
               <Icon name="cal" className="w-4 h-4" />
               {formatDate(tournament.startsAt)}
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {canAddPlayer && <JoinQRButton tournamentId={tournamentId} />}
           {canEdit && (
             <Button variant="outline" size="md" icon="pencil" onClick={() => setShowEdit(true)}>Edit</Button>
@@ -174,7 +174,7 @@ function TournamentDetailPage() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-5">
         <SegTabs value={tab} onChange={setTab} tabs={[
           { id: 'schedule',     label: 'Schedule' },
           { id: 'participants', label: 'Participants', count: participants.length },
