@@ -39,7 +39,7 @@ export const adminCreateOrg = action({
     adminUserId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
-    await ctx.runQuery(internal.clerkAdmin.verifySuperAdmin);
+    const superAdmin = await ctx.runQuery(internal.clerkAdmin.verifySuperAdmin);
 
     if (!args.name.trim()) throw new Error("Name required");
     if (!args.slug.trim()) throw new Error("Slug required");
@@ -53,7 +53,7 @@ export const adminCreateOrg = action({
       body: JSON.stringify({
         name: isDev ? `[DEV] ${args.name.trim()}` : args.name.trim(),
         slug: clerkSlug,
-        created_by: "system",
+        created_by: extractClerkUserId(superAdmin.clerkUserId),
       }),
     });
 

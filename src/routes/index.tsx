@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { SignedIn, SignedOut, SignInButton, UserButton, useOrganization } from '@clerk/tanstack-start'
+import { SignedIn, SignedOut, SignInButton, UserButton, useOrganization, useOrganizationList } from '@clerk/tanstack-start'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import { useEffect } from 'react'
@@ -65,9 +65,22 @@ function SmartRedirect() {
   const me = useQuery(api.users.me)
   const allOrgs = useQuery(api.organizations.list)
   const { organization, isLoaded: orgLoaded } = useOrganization()
+  const { isLoaded: membershipsLoaded, userMemberships, setActive } = useOrganizationList({
+    userMemberships: true,
+  })
+
+  // Clerk doesn't auto-activate an org for members added via the backend API,
+  // so if the user has no active org but belongs to exactly one, activate it.
+  useEffect(() => {
+    if (!orgLoaded || !membershipsLoaded || organization || !setActive) return
+    const memberships = userMemberships?.data ?? []
+    if (memberships.length === 1) {
+      setActive({ organization: memberships[0].organization.id })
+    }
+  }, [orgLoaded, membershipsLoaded, organization, userMemberships, setActive])
 
   useEffect(() => {
-    if (me === undefined || allOrgs === undefined || !orgLoaded) return
+    if (me === undefined || allOrgs === undefined || !orgLoaded || !membershipsLoaded) return
 
     if (me?.isSuperAdmin) {
       const firstOrg = allOrgs[0]
@@ -87,8 +100,11 @@ function SmartRedirect() {
       }
     }
 
+    // If we have exactly one membership but haven't activated it yet, wait for that effect.
+    if (!organization && (userMemberships?.data?.length ?? 0) === 1) return
+
     navigate({ to: '/dashboard' })
-  }, [me, allOrgs, orgLoaded, organization, navigate])
+  }, [me, allOrgs, orgLoaded, membershipsLoaded, organization, userMemberships, navigate])
 
   return (
     <div className="animate-pulse">
