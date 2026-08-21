@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import type { Id } from '#/../convex/_generated/dataModel'
@@ -72,6 +72,7 @@ export function OrgsTab() {
 function OrgRow({ org }: { org: OrgWithStats }) {
   const [confirm, setConfirm] = useState<'suspend' | 'activate' | null>(null)
   const [showAssign, setShowAssign] = useState(false)
+  const [showAdmins, setShowAdmins] = useState(false)
   const [working, setWorking] = useState(false)
   const [error, setError] = useState('')
   const suspend = useMutation(api.organizations.suspend)
@@ -109,6 +110,10 @@ function OrgRow({ org }: { org: OrgWithStats }) {
         <TableCell className="px-5 py-3.5">
           <div className="flex items-center justify-end gap-2">
             {error && <span className="text-destructive text-[11px]">{error}</span>}
+            <Button variant="ghost" size="sm"
+              onClick={() => setShowAdmins(v => !v)}>
+              {showAdmins ? 'Hide admins' : 'Admins'}
+            </Button>
             <Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
               onClick={() => setShowAssign(true)}>
               Assign admin
@@ -151,7 +156,45 @@ function OrgRow({ org }: { org: OrgWithStats }) {
           </TableCell>
         </TableRow>
       )}
+      {showAdmins && (
+        <TableRow>
+          <TableCell colSpan={6} className="px-5 py-3 bg-muted/40">
+            <OrgAdminsInline organizationId={org._id} />
+          </TableCell>
+        </TableRow>
+      )}
     </>
+  )
+}
+
+function OrgAdminsInline({ organizationId }: { organizationId: Id<"organizations"> }) {
+  const listOrgAdmins = useAction(api.clerkActions.listOrgAdmins)
+  const [state, setState] = useState<
+    { status: 'loading' } | { status: 'error'; error: string } | { status: 'loaded'; admins: { clerkUserId: string; name: string; email: string; role: string }[] }
+  >({ status: 'loading' })
+
+  useEffect(() => {
+    setState({ status: 'loading' })
+    listOrgAdmins({ organizationId })
+      .then(admins => setState({ status: 'loaded', admins }))
+      .catch(e => setState({ status: 'error', error: errorMessage(e, 'Failed to load admins') }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organizationId])
+
+  if (state.status === 'loading') return <p className="text-sm text-muted-foreground">Loading admins…</p>
+  if (state.status === 'error') return <p className="text-destructive text-sm">{state.error}</p>
+  if (state.admins.length === 0) return <p className="text-sm text-muted-foreground">No admins assigned yet.</p>
+
+  return (
+    <ul className="space-y-1.5">
+      {state.admins.map(a => (
+        <li key={a.clerkUserId} className="flex items-center gap-2 text-sm">
+          <span className="font-medium">{a.name || 'Unknown'}</span>
+          <span className="text-muted-foreground text-xs">{a.email}</span>
+          <Badge variant="secondary" className="text-[10px]">{a.role.replace('org:', '')}</Badge>
+        </li>
+      ))}
+    </ul>
   )
 }
 

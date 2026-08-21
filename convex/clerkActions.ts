@@ -86,6 +86,34 @@ export const adminCreateOrg = action({
   },
 });
 
+export const listOrgAdmins = action({
+  args: {
+    organizationId: v.id("organizations"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.runQuery(internal.clerkAdmin.verifySuperAdmin);
+
+    const org = await ctx.runQuery(internal.clerkAdmin.getOrg, {
+      organizationId: args.organizationId,
+    });
+    if (!org) throw new Error("Organisation not found");
+    if (!org.clerkOrgId) return [];
+
+    const result = await clerkFetch(
+      `/organizations/${org.clerkOrgId}/memberships?limit=100`
+    );
+
+    return (result.data as any[]).map((m) => ({
+      clerkUserId: m.public_user_data?.user_id as string,
+      name: [m.public_user_data?.first_name, m.public_user_data?.last_name]
+        .filter(Boolean)
+        .join(" ") || m.public_user_data?.identifier,
+      email: m.public_user_data?.identifier as string,
+      role: m.role as string,
+    }));
+  },
+});
+
 export const assignOrgAdmin = action({
   args: {
     organizationId: v.id("organizations"),
