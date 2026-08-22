@@ -39,12 +39,20 @@ export async function requireOrgMember(
   const org = await ctx.db.get(organizationId);
   if (!org) throw new Error("Organisation not found");
 
-  const clerkOrgId = (identity as any).org_id as string | undefined;
+  // Clerk's default session token (used when its `aud` claim is "convex")
+  // encodes org membership as a compact `o: { id, slg, rol }` claim rather
+  // than flat `org_id`/`org_role` fields used by custom JWT templates.
+  const compactOrg = (identity as any).o as
+    | { id?: string; rol?: string }
+    | undefined;
+  const clerkOrgId =
+    ((identity as any).org_id as string | undefined) ?? compactOrg?.id;
   if (!clerkOrgId || clerkOrgId !== org.clerkOrgId) {
     throw new Error("Not a member of this organisation");
   }
 
-  const role = (identity as any).org_role as string | undefined;
+  const role =
+    ((identity as any).org_role as string | undefined) ?? compactOrg?.rol;
   return { user, role: role === "org:admin" ? "admin" as const : "member" as const };
 }
 
