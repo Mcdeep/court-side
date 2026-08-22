@@ -97,12 +97,6 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN }: { match: Match
             </span>
           </div>
         </div>
-        <div className="mt-2.5 pt-2 border-t border-zinc-100 flex items-center justify-between">
-          <span className="text-[11px] text-ink-mute font-medium">
-            {match.state === 'scheduled' ? 'Tap to start' : match.state === 'in_progress' ? 'Update score' : 'Edit result'}
-          </span>
-          <Icon name="pencil" className="w-3.5 h-3.5 text-zinc-300" />
-        </div>
       </button>
     </>
   )

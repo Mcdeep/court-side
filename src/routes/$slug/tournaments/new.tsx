@@ -37,13 +37,12 @@ type WizardData = {
   teams: WizardTeam[]
 }
 
-type DurationPreset = '1' | '1.5' | '2' | '3' | 'custom'
+type DurationPreset = '1' | '1.5' | '2' | 'custom'
 
 const DURATION_PRESETS: { id: DurationPreset; label: string }[] = [
   { id: '1',      label: '1H' },
   { id: '1.5',    label: '1.5H' },
   { id: '2',      label: '2H' },
-  { id: '3',      label: '3H' },
   { id: 'custom', label: 'Custom' },
 ]
 
@@ -657,7 +656,7 @@ function NewTournamentPage() {
     roundMinutes: '',
     startsAt: toDatetimeLocal(now + 60 * 60 * 1000),
     endsAt: toDatetimeLocal(now + 4 * 60 * 60 * 1000),
-    duration: '3',
+    duration: '2',
     players: [],
     teams: [],
   })
