@@ -35,7 +35,8 @@
     },
     "ipx": {
       "sharp": "^0.35.3"
-    }
+    },
+    "nanoid": "^3.3.18"
   },
   "dependencies": {
     "@clerk/tanstack-start": "^0.11.5",
