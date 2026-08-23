@@ -55,19 +55,36 @@ A multitenant padel tournament management platform. Organisers create tournament
 
 ### Environment variables
 
-Create a `.env.local` file:
+Create a `.env.local` file (copy `.env.local.example` as a starting point):
 
 ```
 CONVEX_DEPLOYMENT=<your convex deployment>
 VITE_CONVEX_URL=<your convex url>
+VITE_CONVEX_SITE_URL=<your convex site url>
 VITE_CLERK_PUBLISHABLE_KEY=<your clerk publishable key>
+CLERK_SECRET_KEY=<your clerk secret key>
+CLERK_JWT_ISSUER_DOMAIN=<your clerk instance domain, e.g. https://xxx.clerk.accounts.dev>
 ```
+
+Ask an existing contributor for the Clerk dev instance keys, or create your
+own Clerk application and point `convex/auth.config.ts` at it.
 
 ### Install and run
 
 ```bash
 npm install
 ```
+
+Convex functions run in Convex's cloud, not on your machine, so they don't
+read `.env.local` — **`CLERK_SECRET_KEY` must be pushed to your Convex dev
+deployment separately**, once, per deployment:
+
+```bash
+npx convex env set CLERK_SECRET_KEY <your clerk secret key>
+```
+
+Skip this and anything that calls Clerk's API (creating an organisation,
+assigning an org admin) will fail with `CLERK_SECRET_KEY not configured`.
 
 You need two terminals — one for the Convex backend, one for the Vite frontend:
 
@@ -92,6 +109,14 @@ The app runs at [http://localhost:3000](http://localhost:3000).
 ```bash
 npx convex run seed:seed
 ```
+
+### Becoming a super admin locally
+
+`setSuperAdmin` requires an existing super admin to call it, so the first
+one has to be bootstrapped by hand: sign in once (so your `users` row
+exists), then open the [Convex dashboard](https://dashboard.convex.dev) →
+your dev deployment → **Data** → `users` table, find your row, and set
+`isSuperAdmin` to `true` directly.
 
 ## Project structure
 
