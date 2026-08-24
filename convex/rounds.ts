@@ -353,6 +353,46 @@ export const complete = mutation({
   },
 });
 
+export const resetSchedule = mutation({
+  args: { tournamentId: v.id("tournaments") },
+  handler: async (ctx, args) => {
+    const tournament = await ctx.db.get(args.tournamentId);
+    if (!tournament) throw new Error("Tournament not found");
+    await requireOrgAdmin(ctx, tournament.organizationId);
+
+    const rounds = await ctx.db
+      .query("rounds")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
+      .take(200);
+
+    for (const round of rounds) {
+      const matches = await ctx.db
+        .query("matches")
+        .withIndex("by_round", (q) => q.eq("roundId", round._id))
+        .take(50);
+      for (const match of matches) {
+        const scores = await ctx.db
+          .query("scores")
+          .withIndex("by_match", (q) => q.eq("matchId", match._id))
+          .take(50);
+        for (const score of scores) await ctx.db.delete(score._id);
+        await ctx.db.delete(match._id);
+        await ctx.db.delete(match.pairAId);
+        await ctx.db.delete(match.pairBId);
+      }
+      await ctx.db.delete(round._id);
+    }
+
+    const leaderboardEntries = await ctx.db
+      .query("leaderboard")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
+      .take(200);
+    for (const entry of leaderboardEntries) await ctx.db.delete(entry._id);
+
+    await ctx.db.patch(args.tournamentId, { state: "registration_open" });
+  },
+});
+
 export const updateState = internalMutation({
   args: {
     roundId: v.id("rounds"),

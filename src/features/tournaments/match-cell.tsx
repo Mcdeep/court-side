@@ -8,12 +8,25 @@ import { lastName, pairNames } from '#/lib/names'
 import { POINTS_TO_WIN } from '#/lib/constants'
 import type { Match } from './types'
 
-export function MatchCell({ match, pointsToWin = POINTS_TO_WIN }: { match: Match; pointsToWin?: number }) {
+export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'first_to' }: {
+  match: Match; pointsToWin?: number; scoringMode?: 'first_to' | 'shared_total'
+}) {
   const [editing, setEditing] = useState(false)
   const [a, setA] = useState(match.scoreA ?? 0)
   const [b, setB] = useState(match.scoreB ?? 0)
   const [saving, setSaving] = useState(false)
   const saveResult = useMutation(api.scores.saveResult)
+  const shared = scoringMode === 'shared_total'
+
+  function handleChangeA(n: number) {
+    setA(n)
+    if (shared) setB(pointsToWin - n)
+  }
+
+  function handleChangeB(n: number) {
+    setB(n)
+    if (shared) setA(pointsToWin - n)
+  }
 
   const [nameA1, nameA2] = pairNames(match.pairA)
   const [nameB1, nameB2] = pairNames(match.pairB)
@@ -51,13 +64,15 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN }: { match: Match
               </span>
               <div>
                 <div className="font-display font-bold text-[16px] leading-tight">Court {match.courtNumber} · Score</div>
-                <div className="text-[12px] text-ink-mute font-normal">Tap each side's score</div>
+                <div className="text-[12px] text-ink-mute font-normal">
+                  {shared ? `Tap one side — the other fills to ${pointsToWin}` : "Tap each side's score"}
+                </div>
               </div>
             </div>
           }
         >
-          <NumberGrid label={`${lastName(nameA1)} / ${lastName(nameA2)}`} value={a} onChange={setA} max={pointsToWin} highlight={a > b} />
-          <NumberGrid label={`${lastName(nameB1)} / ${lastName(nameB2)}`} value={b} onChange={setB} max={pointsToWin} highlight={b > a} />
+          <NumberGrid label={`${lastName(nameA1)} / ${lastName(nameA2)}`} value={a} onChange={handleChangeA} max={pointsToWin} highlight={a > b} />
+          <NumberGrid label={`${lastName(nameB1)} / ${lastName(nameB2)}`} value={b} onChange={handleChangeB} max={pointsToWin} highlight={b > a} />
           <div className="flex gap-2">
             <Button variant="ghost" size="lg" className="flex-1" onClick={() => setEditing(false)}>Cancel</Button>
             <Button variant="primary" size="lg" className="flex-[1.4]" icon="check" onClick={handleSave} disabled={saving}>Save</Button>

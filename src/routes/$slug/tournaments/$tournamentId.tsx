@@ -7,6 +7,7 @@ import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
 import { JoinQRButton } from '#/components/ui/join-qr'
 import { SegTabs } from '#/components/ui/seg-tabs'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '#/components/ui/sheet'
 import { StatusChip } from '#/components/ui/status-chip'
 import { AddPlayerModal } from '#/features/tournaments/add-player-modal'
 import { ConfirmDialog } from '#/features/tournaments/confirm-dialog'
@@ -29,6 +30,7 @@ function TournamentDetailPage() {
   const [showEdit, setShowEdit] = useState(false)
   const [confirmAction, setConfirmAction] = useState<'archive' | 'delete' | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
 
   const tournament = useQuery(api.tournaments.get, { tournamentId: tournamentId as Id<'tournaments'> })
   const participants = useQuery(api.participants.list, { tournamentId: tournamentId as Id<'tournaments'> })
@@ -129,6 +131,7 @@ function TournamentDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="md" icon="trophy" onClick={() => setShowLeaderboard(true)}>Leaderboard</Button>
           {canAddPlayer && <JoinQRButton tournamentId={tournamentId} />}
           {canEdit && (
             <Button variant="outline" size="md" icon="pencil" onClick={() => setShowEdit(true)}>Edit</Button>
@@ -203,6 +206,17 @@ function TournamentDetailPage() {
         />
       )}
       {tab === 'standings' && <StandingsTab leaderboard={leaderboard} />}
+
+      <Sheet open={showLeaderboard} onOpenChange={setShowLeaderboard}>
+        <SheetContent side="right" className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle className="font-display font-bold text-[20px] tracking-tight">Leaderboard</SheetTitle>
+          </SheetHeader>
+          <div className="px-4 pb-4 overflow-y-auto">
+            <StandingsTab leaderboard={leaderboard} />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

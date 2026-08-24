@@ -26,6 +26,7 @@ const PATHS: Record<string, string> = {
   grip:    'M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01',
   screen:  'M2 4h20v13H2zM8 21h8M12 17v4',
   copy:    'M8 8h11a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM5 16H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v1',
+  reset:   'M1 4v6h6M3.51 15a9 9 0 1 0 2.13-9.36L1 10',
 }
 
 export type IconName = keyof typeof PATHS

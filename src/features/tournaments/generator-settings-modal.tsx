@@ -13,6 +13,7 @@ export function GeneratorSettingsModal({ tournament, onClose }: {
   tournament: Tournament; onClose: () => void
 }) {
   const [points, setPoints] = useState(String(tournament.pointsToWin ?? POINTS_TO_WIN))
+  const [scoringMode, setScoringMode] = useState<'first_to' | 'shared_total'>(tournament.scoringMode ?? 'first_to')
   const { working, error, setError, run } = useAsyncAction()
   const updateTournament = useMutation(api.tournaments.update)
 
@@ -21,7 +22,7 @@ export function GeneratorSettingsModal({ tournament, onClose }: {
     const parsed = Number(points)
     if (!Number.isInteger(parsed) || parsed < 1) { setError('Enter a positive whole number'); return }
     await run(async () => {
-      await updateTournament({ tournamentId: tournament._id, pointsToWin: parsed })
+      await updateTournament({ tournamentId: tournament._id, pointsToWin: parsed, scoringMode })
       onClose()
     })
   }
@@ -36,8 +37,24 @@ export function GeneratorSettingsModal({ tournament, onClose }: {
             onChange={e => setPoints(e.target.value)}
           />
         </Field>
+        <Field label="Scoring">
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setScoringMode('first_to')}
+              className={`flex-1 h-9 rounded-lg text-sm font-semibold ring-1 transition-colors
+                ${scoringMode === 'first_to' ? 'bg-accent text-ink ring-accent-dark/30' : 'bg-white text-ink-mute ring-zinc-200 hover:bg-zinc-50'}`}>
+              First to
+            </button>
+            <button type="button" onClick={() => setScoringMode('shared_total')}
+              className={`flex-1 h-9 rounded-lg text-sm font-semibold ring-1 transition-colors
+                ${scoringMode === 'shared_total' ? 'bg-accent text-ink ring-accent-dark/30' : 'bg-white text-ink-mute ring-zinc-200 hover:bg-zinc-50'}`}>
+              Split total
+            </button>
+          </div>
+        </Field>
         <p className="text-[12.5px] text-ink-mute">
-          First team to reach this score wins the match. Applies to new and edited scores.
+          {scoringMode === 'shared_total'
+            ? 'Points are shared between both teams — this is the total per match. Setting one side fills the other with the remainder.'
+            : 'First team to reach this score wins the match. Applies to new and edited scores.'}
         </p>
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <div className="flex gap-2 pt-1">

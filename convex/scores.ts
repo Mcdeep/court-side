@@ -2,6 +2,15 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireOrgAdmin, requireOrgMember } from "./lib/auth";
 import { internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
+
+function assertValidScores(tournament: Doc<"tournaments">, scoreA: number, scoreB: number) {
+  if (tournament.scoringMode === "shared_total" && tournament.pointsToWin !== undefined) {
+    if (scoreA + scoreB !== tournament.pointsToWin) {
+      throw new Error(`Scores must add up to ${tournament.pointsToWin}`);
+    }
+  }
+}
 
 export const submit = mutation({
   args: {
@@ -18,6 +27,7 @@ export const submit = mutation({
     const tournament = await ctx.db.get(round.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgMember(ctx, tournament.organizationId);
+    assertValidScores(tournament, args.scoreA, args.scoreB);
 
     if (match.state === "completed") throw new Error("Match already completed");
 
@@ -81,6 +91,7 @@ export const resolve = mutation({
     const tournament = await ctx.db.get(round.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
+    assertValidScores(tournament, args.scoreA, args.scoreB);
 
     const scores = await ctx.db
       .query("scores")
@@ -124,6 +135,7 @@ export const saveResult = mutation({
     const tournament = await ctx.db.get(round.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
+    assertValidScores(tournament, args.scoreA, args.scoreB);
     const prevScoreA = match.scoreA;
     const prevScoreB = match.scoreB;
     await ctx.db.patch(args.matchId, { state: "completed", scoreA: args.scoreA, scoreB: args.scoreB });

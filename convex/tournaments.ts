@@ -13,6 +13,8 @@ const formatValidator = v.union(
   v.literal("team_clash"),
 );
 
+const scoringModeValidator = v.union(v.literal("first_to"), v.literal("shared_total"));
+
 const stateValidator = v.union(
   v.literal("draft"),
   v.literal("published"),
@@ -31,6 +33,7 @@ export const create = mutation({
     courtCount: v.optional(v.number()),
     roundDurationMs: v.optional(v.number()),
     pointsToWin: v.optional(v.number()),
+    scoringMode: v.optional(scoringModeValidator),
     startsAt: v.number(),
     endsAt: v.number(),
   },
@@ -49,6 +52,7 @@ export const create = mutation({
       courtCount,
       roundDurationMs: args.roundDurationMs,
       pointsToWin: args.pointsToWin,
+      scoringMode: args.scoringMode,
       startsAt: args.startsAt,
       endsAt: args.endsAt,
       state: "draft",
@@ -193,6 +197,7 @@ export const update = mutation({
     courtCount: v.optional(v.number()),
     roundDurationMs: v.optional(v.number()),
     pointsToWin: v.optional(v.number()),
+    scoringMode: v.optional(scoringModeValidator),
     startsAt: v.optional(v.number()),
     endsAt: v.optional(v.number()),
   },
@@ -240,6 +245,7 @@ export const duplicate = mutation({
       courtCount: source.courtCount,
       roundDurationMs: source.roundDurationMs,
       pointsToWin: source.pointsToWin,
+      scoringMode: source.scoringMode,
       startsAt,
       endsAt: startsAt + durationMs,
       state: "draft",

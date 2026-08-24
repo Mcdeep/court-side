@@ -48,6 +48,9 @@ export default defineSchema({
     courtCount: v.optional(v.number()),
     roundDurationMs: v.optional(v.number()),
     pointsToWin: v.optional(v.number()),
+    // "first_to" (default): first team to reach pointsToWin wins, scores are independent.
+    // "shared_total": each match splits a fixed pool of pointsToWin points between the two teams.
+    scoringMode: v.optional(v.union(v.literal("first_to"), v.literal("shared_total"))),
     startsAt: v.number(),
     endsAt: v.number(),
   })
