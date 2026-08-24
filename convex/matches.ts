@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireOrgAdmin } from "./lib/auth";
+import type { Id } from "./_generated/dataModel";
 
 export const listByRound = query({
   args: { roundId: v.id("rounds") },
@@ -45,6 +46,57 @@ export const listByRound = query({
         };
       })
     );
+  },
+});
+
+export const historyByTournament = query({
+  args: { tournamentId: v.id("tournaments") },
+  handler: async (ctx, args) => {
+    const rounds = await ctx.db
+      .query("rounds")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
+      .order("asc")
+      .take(200);
+
+    const resolveTeam = async (pairId: Id<"pairs">) => {
+      const pair = await ctx.db.get(pairId);
+      if (!pair) return [];
+      const [pA, pB] = await Promise.all([
+        ctx.db.get(pair.participantAId),
+        ctx.db.get(pair.participantBId),
+      ]);
+      const withName = async (p: typeof pA) => {
+        if (!p) return null;
+        const user = p.userId ? await ctx.db.get(p.userId) : null;
+        return { participantId: p._id, name: user?.name ?? p.walkInName ?? "Unknown" };
+      };
+      const [a, b] = await Promise.all([withName(pA), withName(pB)]);
+      return [a, b].filter((p): p is NonNullable<typeof a> => p !== null);
+    };
+
+    const results = [];
+    for (const round of rounds) {
+      const matches = await ctx.db
+        .query("matches")
+        .withIndex("by_round", (q) => q.eq("roundId", round._id))
+        .take(50);
+      for (const match of matches) {
+        if (match.scoreA === undefined || match.scoreB === undefined) continue;
+        const [teamA, teamB] = await Promise.all([
+          resolveTeam(match.pairAId),
+          resolveTeam(match.pairBId),
+        ]);
+        results.push({
+          roundNumber: round.roundNumber,
+          courtNumber: match.courtNumber,
+          scoreA: match.scoreA,
+          scoreB: match.scoreB,
+          teamA,
+          teamB,
+        });
+      }
+    }
+    return results;
   },
 });
 

@@ -9,6 +9,9 @@ import { CourtsPanel } from '#/features/kiosk/courts-panel'
 import { BoardList } from '#/features/kiosk/leaderboard-list'
 import { TickerMarquee } from '#/features/kiosk/ticker'
 import { RoundTimer } from '#/features/kiosk/round-timer'
+import { PodiumOverlay } from '#/features/kiosk/podium-overlay'
+import { FinishedView } from '#/features/kiosk/finished-view'
+import { computeKioskStats } from '#/features/kiosk/stats'
 
 export const Route = createFileRoute('/kiosk/$tournamentId')({
   component: KioskPage,
@@ -28,6 +31,15 @@ function KioskPage() {
 
   const activeRound = rounds?.find(r => r.state === 'in_progress') ?? rounds?.[rounds.length - 1]
   const matches = useQuery(api.matches.listByRound, activeRound ? { roundId: activeRound._id } : 'skip')
+
+  const isCompleted = tournament?.state === 'completed'
+  const history = useQuery(api.matches.historyByTournament, isCompleted ? { tournamentId: tournamentId as Id<'tournaments'> } : 'skip')
+
+  const podiumKey = `kiosk-podium-seen-${tournamentId}`
+  const [podiumDismissed, setPodiumDismissed] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem(podiumKey) === '1'
+  })
 
   useEffect(() => {
     const check = () => setWide(window.innerWidth >= 1100)
@@ -78,9 +90,11 @@ function KioskPage() {
               {tournament.name}
             </div>
             <div className="text-[14px] text-paper/45 font-medium mt-1 whitespace-nowrap">
-              {activeRound
-                ? `Round ${activeRound.roundNumber}${totalRounds > 1 ? ` of ${totalRounds}` : ''}`
-                : 'Setting up…'}
+              {isCompleted
+                ? 'Tournament complete'
+                : activeRound
+                  ? `Round ${activeRound.roundNumber}${totalRounds > 1 ? ` of ${totalRounds}` : ''}`
+                  : 'Setting up…'}
             </div>
           </div>
           {isLive && tournament.roundDurationMs && activeRound?.startedAt && (
@@ -103,7 +117,7 @@ function KioskPage() {
       </header>
 
       {/* Tab strip — narrow only */}
-      {!wide && (
+      {!wide && !isCompleted && (
         <div className="flex border-b border-white/8 shrink-0">
           {(['courts', 'board'] as const).map(t => (
             <button
@@ -119,7 +133,15 @@ function KioskPage() {
       )}
 
       {/* Body */}
-      {wide ? (
+      {isCompleted ? (
+        history === undefined ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full border-2 border-white/10 border-t-white/60 animate-spin" />
+          </div>
+        ) : (
+          <FinishedView leaderboard={leaderboard} stats={computeKioskStats(history)} />
+        )
+      ) : wide ? (
         <main className="flex-1 grid grid-cols-[1fr_460px] gap-7 p-8 min-h-0">
           <CourtsPanel
             matches={sortedMatches}
@@ -164,7 +186,18 @@ function KioskPage() {
         </div>
       )}
 
-      {pendingMatches.length > 0 && <TickerMarquee matches={pendingMatches} />}
+      {!isCompleted && pendingMatches.length > 0 && <TickerMarquee matches={pendingMatches} />}
+
+      {isCompleted && !podiumDismissed && leaderboard.length > 0 && (
+        <PodiumOverlay
+          tournamentName={tournament.name}
+          top3={leaderboard.slice(0, 3)}
+          onDismiss={() => {
+            localStorage.setItem(podiumKey, '1')
+            setPodiumDismissed(true)
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -7,7 +7,45 @@ import { generateMexicanoRound } from "./formats/mexicano";
 import { generateKnockoutFirstRound, generateKnockoutNextRound } from "./formats/knockout";
 import { generateKingFirstRound, generateKingNextRound } from "./formats/king_of_the_court";
 import { generateSnakesFirstRound, generateSnakesNextRound } from "./formats/snakes_and_ladders";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
+
+const FIXED_PAIR_FORMATS = ["round_robin", "knockout", "king_of_the_court", "snakes_and_ladders"];
+
+// These formats pair participants by consecutive array position
+// (ids[2i] with ids[2i+1]) for round 1. Order the array so that persisted
+// team pairing (set via teams.setPairs) lands on those consecutive slots;
+// anyone without a team is appended individually at the end.
+async function orderByTeamPairing(
+  ctx: { db: any },
+  tournamentId: Id<"tournaments">,
+  participants: Doc<"participants">[]
+): Promise<string[]> {
+  const teams = await ctx.db
+    .query("teams")
+    .withIndex("by_tournament", (q: any) => q.eq("tournamentId", tournamentId))
+    .take(200);
+
+  const byTeam = new Map<string, Doc<"participants">[]>();
+  const unpaired: Doc<"participants">[] = [];
+  for (const p of participants) {
+    if (p.teamId) {
+      const arr = byTeam.get(p.teamId as string) ?? [];
+      arr.push(p);
+      byTeam.set(p.teamId as string, arr);
+    } else {
+      unpaired.push(p);
+    }
+  }
+
+  const ordered: string[] = [];
+  for (const team of teams) {
+    const members = (byTeam.get(team._id as string) ?? [])
+      .sort((a, b) => a._creationTime - b._creationTime);
+    for (const m of members) ordered.push(m._id as string);
+  }
+  for (const p of unpaired) ordered.push(p._id as string);
+  return ordered;
+}
 
 export const generate = mutation({
   args: { tournamentId: v.id("tournaments") },
@@ -64,7 +102,10 @@ export const generate = mutation({
       );
     }
 
-    const participantIds = participants.map((p) => p._id as string);
+    let participantIds = participants.map((p) => p._id as string);
+    if (FIXED_PAIR_FORMATS.includes(tournament.format) && existingRounds.length === 0) {
+      participantIds = await orderByTeamPairing(ctx, args.tournamentId, participants);
+    }
 
     let roundPlans;
     if (tournament.format === "round_robin") {

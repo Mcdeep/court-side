@@ -29,6 +29,7 @@ type WizardData = {
   venueId: string
   courts: number
   points: number
+  scoringMode: 'first_to' | 'shared_total'
   roundMinutes: string
   startsAt: string
   endsAt: string
@@ -248,6 +249,29 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
                 className={`h-9 px-4 rounded-lg text-[14px] font-bold tabular-nums transition-all
                   ${data.points === p ? 'bg-white text-ink shadow-sm' : 'text-ink-mute hover:text-ink'}`}>{p}</button>
             ))}
+          </div>
+        </div>
+
+        <div className="mt-5 pt-5 border-t border-zinc-100 flex items-center justify-between">
+          <div>
+            <div className="text-[13px] font-semibold text-ink-mute">Scoring</div>
+            <div className="text-[12px] text-ink-mute/70">
+              {data.scoringMode === 'shared_total'
+                ? 'Points are shared — both teams’ scores add up to the target'
+                : 'First team to reach the target wins'}
+            </div>
+          </div>
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100">
+            <button type="button" onClick={() => set({ scoringMode: 'first_to' })}
+              className={`h-9 px-4 rounded-lg text-[14px] font-bold transition-all
+                ${data.scoringMode === 'first_to' ? 'bg-white text-ink shadow-sm' : 'text-ink-mute hover:text-ink'}`}>
+              First to
+            </button>
+            <button type="button" onClick={() => set({ scoringMode: 'shared_total' })}
+              className={`h-9 px-4 rounded-lg text-[14px] font-bold transition-all
+                ${data.scoringMode === 'shared_total' ? 'bg-white text-ink shadow-sm' : 'text-ink-mute hover:text-ink'}`}>
+              Split total
+            </button>
           </div>
         </div>
       </div>
@@ -594,6 +618,7 @@ function StepReview({ data, venues }: { data: WizardData; venues: { _id: string;
             <div className="flex justify-between"><dt className="text-ink-mute">Venue</dt><dd className="font-semibold">{venue?.name ?? '—'}</dd></div>
             <div className="flex justify-between"><dt className="text-ink-mute">Courts</dt><dd className="font-semibold tabular-nums">{data.courts}</dd></div>
             <div className="flex justify-between"><dt className="text-ink-mute">Points to win</dt><dd className="font-semibold tabular-nums">{data.points}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-mute">Scoring</dt><dd className="font-semibold">{data.scoringMode === 'shared_total' ? 'Split total' : 'First to'}</dd></div>
             {data.roundMinutes && <div className="flex justify-between"><dt className="text-ink-mute">Round duration</dt><dd className="font-semibold tabular-nums">{data.roundMinutes} min</dd></div>}
           </dl>
         </div>
@@ -641,6 +666,7 @@ function NewTournamentPage() {
   const venues = useQuery(api.venues.listByOrg, org ? { organizationId: org._id } : 'skip')
   const createTournament = useMutation(api.tournaments.create)
   const addParticipant = useMutation(api.participants.add)
+  const setPairs = useMutation(api.teams.setPairs)
   const { working, error, setError, run } = useAsyncAction()
 
   const now = Date.now()
@@ -653,6 +679,7 @@ function NewTournamentPage() {
     venueId: '',
     courts: 4,
     points: 24,
+    scoringMode: 'first_to',
     roundMinutes: '',
     startsAt: toDatetimeLocal(now + 60 * 60 * 1000),
     endsAt: toDatetimeLocal(now + 4 * 60 * 60 * 1000),
@@ -697,6 +724,7 @@ function NewTournamentPage() {
         courtCount: data.courts,
         roundDurationMs: data.roundMinutes ? Number(data.roundMinutes) * 60_000 : undefined,
         pointsToWin: data.points,
+        scoringMode: data.scoringMode,
         startsAt: new Date(data.startsAt).getTime(),
         endsAt: new Date(data.endsAt).getTime(),
       })
@@ -717,13 +745,24 @@ function NewTournamentPage() {
         orderedPlayers.push(...data.players)
       }
 
+      const insertedIds = new Map<string, Id<'participants'>>()
       for (const player of orderedPlayers) {
-        await addParticipant({
+        const participantId = await addParticipant({
           tournamentId,
           isWalkIn: true,
           walkInName: player.name,
           entryType: 'solo',
         })
+        insertedIds.set(player.id, participantId)
+      }
+
+      if (!AUTO_PAIR.includes(data.format) && data.teams.length > 0) {
+        const pairs = data.teams
+          .filter((team): team is [WizardPlayer, WizardPlayer] => !!team[0] && !!team[1])
+          .map(team => [insertedIds.get(team[0]!.id)!, insertedIds.get(team[1]!.id)!])
+        if (pairs.length > 0) {
+          await setPairs({ tournamentId, pairs })
+        }
       }
 
       setCreated(true)

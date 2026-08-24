@@ -16,7 +16,9 @@ import { OverflowMenu } from '#/features/tournaments/overflow-menu'
 import { ParticipantsTab } from '#/features/tournaments/participants-tab'
 import { ScheduleTab } from '#/features/tournaments/schedule-tab'
 import { StandingsTab } from '#/features/tournaments/standings-tab'
+import { TeamsEditor } from '#/features/tournaments/teams-editor'
 import { formatDate } from '#/lib/format'
+import { FIXED_PAIR_FORMATS } from '#/lib/constants'
 
 export const Route = createFileRoute('/$slug/tournaments/$tournamentId')({
   component: TournamentDetailPage,
@@ -197,13 +199,23 @@ function TournamentDetailPage() {
         />
       )}
       {tab === 'participants' && (
-        <ParticipantsTab
-          participants={participants}
-          tournamentId={tid}
-          format={tournament.format}
-          canAdd={canAddPlayer}
-          onAdd={() => setShowAddPlayer(true)}
-        />
+        <>
+          {FIXED_PAIR_FORMATS.includes(tournament.format) && (
+            <TeamsEditor
+              participants={participants}
+              tournamentId={tid}
+              locked={rounds.length > 0}
+              canEdit={canAddPlayer}
+            />
+          )}
+          <ParticipantsTab
+            participants={participants}
+            tournamentId={tid}
+            format={tournament.format}
+            canAdd={canAddPlayer}
+            onAdd={() => setShowAddPlayer(true)}
+          />
+        </>
       )}
       {tab === 'standings' && <StandingsTab leaderboard={leaderboard} />}
 
