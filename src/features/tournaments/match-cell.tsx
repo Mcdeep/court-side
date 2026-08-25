@@ -4,7 +4,7 @@ import { api } from '#/../convex/_generated/api'
 import { AppDialog } from '#/components/app-dialog'
 import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
-import { lastName, pairNames } from '#/lib/names'
+import { pairNames } from '#/lib/names'
 import { POINTS_TO_WIN } from '#/lib/constants'
 import type { Match } from './types'
 
@@ -71,8 +71,8 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'f
             </div>
           }
         >
-          <NumberGrid label={`${lastName(nameA1)} / ${lastName(nameA2)}`} value={a} onChange={handleChangeA} max={pointsToWin} highlight={a > b} />
-          <NumberGrid label={`${lastName(nameB1)} / ${lastName(nameB2)}`} value={b} onChange={handleChangeB} max={pointsToWin} highlight={b > a} />
+          <NumberGrid label={`${nameA1} / ${nameA2}`} value={a} onChange={handleChangeA} max={pointsToWin} highlight={a > b} />
+          <NumberGrid label={`${nameB1} / ${nameB2}`} value={b} onChange={handleChangeB} max={pointsToWin} highlight={b > a} />
           <div className="flex gap-2">
             <Button variant="ghost" size="lg" className="flex-1" onClick={() => setEditing(false)}>Cancel</Button>
             <Button variant="primary" size="lg" className="flex-[1.4]" icon="check" onClick={handleSave} disabled={saving}>Save</Button>
@@ -93,7 +93,7 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'f
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-2 text-ink">
             <span className="text-[13.5px] truncate font-semibold min-w-0 flex-1">
-              {lastName(nameA1)} <span className="text-zinc-300 font-normal">/</span> {lastName(nameA2)}
+              {nameA1} <span className="text-zinc-300 font-normal">/</span> {nameA2}
             </span>
             <span className={`font-mono tnum text-[15px] shrink-0 font-bold
               ${match.scoreA === undefined ? 'text-zinc-300 font-normal' :
@@ -103,7 +103,7 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'f
           </div>
           <div className="flex items-center justify-between gap-2 text-ink">
             <span className="text-[13.5px] truncate font-semibold min-w-0 flex-1">
-              {lastName(nameB1)} <span className="text-zinc-300 font-normal">/</span> {lastName(nameB2)}
+              {nameB1} <span className="text-zinc-300 font-normal">/</span> {nameB2}
             </span>
             <span className={`font-mono tnum text-[15px] shrink-0 font-bold
               ${match.scoreB === undefined ? 'text-zinc-300 font-normal' :

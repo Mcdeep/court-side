@@ -2,7 +2,6 @@ import { Icon } from '#/components/ui/icon'
 import { participantName } from '#/lib/names'
 import type { Match } from '#/features/tournaments/types'
 import { useAutoScroll } from './hooks'
-import { klast } from './format'
 
 export function TickerMarquee({ matches }: { matches: Match[] }) {
   const ref = useAutoScroll<HTMLDivElement>(
@@ -18,10 +17,10 @@ export function TickerMarquee({ matches }: { matches: Match[] }) {
       <div ref={ref} className="ticker-mask flex-1 min-w-0 overflow-hidden">
         <div className="ticker-track flex items-center gap-10 whitespace-nowrap">
           {matches.map(m => {
-            const a1 = klast(participantName(m.pairA?.participantA))
-            const a2 = klast(participantName(m.pairA?.participantB))
-            const b1 = klast(participantName(m.pairB?.participantA))
-            const b2 = klast(participantName(m.pairB?.participantB))
+            const a1 = participantName(m.pairA?.participantA)
+            const a2 = participantName(m.pairA?.participantB)
+            const b1 = participantName(m.pairB?.participantA)
+            const b2 = participantName(m.pairB?.participantB)
             return (
               <span key={m._id} className="inline-flex items-center gap-3 text-[16px] font-semibold text-paper/80">
                 {a1} / {a2}

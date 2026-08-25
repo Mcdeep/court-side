@@ -29,8 +29,14 @@ function KioskPage() {
   const rounds = useQuery(api.rounds.list, { tournamentId: tournamentId as Id<'tournaments'> })
   const leaderboard = useQuery(api.leaderboard.get, { tournamentId: tournamentId as Id<'tournaments'> })
 
-  const activeRound = rounds?.find(r => r.state === 'in_progress') ?? rounds?.[rounds.length - 1]
-  const matches = useQuery(api.matches.listByRound, activeRound ? { roundId: activeRound._id } : 'skip')
+  const currentRound = rounds?.find(r => r.state === 'in_progress')
+    ?? rounds?.find(r => r.state === 'pending')
+    ?? rounds?.[rounds.length - 1]
+  const nextRound = currentRound
+    ? rounds?.find(r => r.state === 'pending' && r.roundNumber > currentRound.roundNumber)
+    : undefined
+  const matches = useQuery(api.matches.listByRound, currentRound ? { roundId: currentRound._id } : 'skip')
+  const nextMatches = useQuery(api.matches.listByRound, nextRound ? { roundId: nextRound._id } : 'skip')
 
   const isCompleted = tournament?.state === 'completed'
   const history = useQuery(api.matches.historyByTournament, isCompleted ? { tournamentId: tournamentId as Id<'tournaments'> } : 'skip')
@@ -71,9 +77,9 @@ function KioskPage() {
   }
 
   const sortedMatches = matches ? [...matches].sort((a, b) => a.courtNumber - b.courtNumber) : []
-  const pendingMatches = sortedMatches.filter(m => m.state === 'scheduled')
+  const sortedNextMatches = nextMatches ? [...nextMatches].sort((a, b) => a.courtNumber - b.courtNumber) : []
   const totalRounds = rounds?.length ?? 0
-  const roundState = activeRound?.state
+  const roundState = currentRound?.state
   const isPreMatch = tournament.state === 'draft' || tournament.state === 'registration_open'
   const isLive = roundState === 'in_progress'
 
@@ -92,13 +98,13 @@ function KioskPage() {
             <div className="text-[14px] text-paper/45 font-medium mt-1 whitespace-nowrap">
               {isCompleted
                 ? 'Tournament complete'
-                : activeRound
-                  ? `Round ${activeRound.roundNumber}${totalRounds > 1 ? ` of ${totalRounds}` : ''}`
+                : currentRound
+                  ? `Round ${currentRound.roundNumber}${totalRounds > 1 ? ` of ${totalRounds}` : ''}`
                   : 'Setting up…'}
             </div>
           </div>
-          {isLive && tournament.roundDurationMs && activeRound?.startedAt && (
-            <RoundTimer durationMs={tournament.roundDurationMs} startedAt={activeRound.startedAt} />
+          {isLive && tournament.roundDurationMs && currentRound?.startedAt && (
+            <RoundTimer durationMs={tournament.roundDurationMs} startedAt={currentRound.startedAt} />
           )}
         </div>
         <div className="flex items-center gap-5 shrink-0">
@@ -186,7 +192,7 @@ function KioskPage() {
         </div>
       )}
 
-      {!isCompleted && pendingMatches.length > 0 && <TickerMarquee matches={pendingMatches} />}
+      {!isCompleted && sortedNextMatches.length > 0 && <TickerMarquee matches={sortedNextMatches} />}
 
       {isCompleted && !podiumDismissed && leaderboard.length > 0 && (
         <PodiumOverlay
