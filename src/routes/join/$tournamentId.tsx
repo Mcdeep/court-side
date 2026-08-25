@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation } from 'convex/react'
-import { useAuth, SignInButton } from '@clerk/tanstack-start'
+import { useAuth, SignInButton } from '@clerk/tanstack-react-start'
 import { api } from '#/../convex/_generated/api'
 import { useState } from 'react'
 import type { Id } from '#/../convex/_generated/dataModel'

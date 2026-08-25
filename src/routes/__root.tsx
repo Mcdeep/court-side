@@ -6,7 +6,7 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
-import { ClerkProvider, useAuth, useOrganization, useOrganizationList } from '@clerk/tanstack-start'
+import { ClerkProvider, useAuth, useOrganization, useOrganizationList } from '@clerk/tanstack-react-start'
 import { ConvexProviderWithClerk } from 'convex/react-clerk'
 import { ConvexReactClient, useMutation } from 'convex/react'
 import { useEffect } from 'react'

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
-import { useAuth, UserButton } from '@clerk/tanstack-start'
+import { useAuth, UserButton } from '@clerk/tanstack-react-start'
 import { api } from '#/../convex/_generated/api'
 import { useEffect, useState } from 'react'
 import { Icon } from '#/components/ui/icon'
