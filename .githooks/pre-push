@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Blocks direct pushes to main. Netlify auto-deploys prod from main, so
+# pushing straight to it skips review and ships to prod immediately.
+# Best-effort: only active on machines that opted in via
+#   git config core.hooksPath .githooks
+# Bypass (rare, deliberate): git push --no-verify
+
+protected_branch="main"
+remote="$1"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [[ "$remote_ref" == "refs/heads/$protected_branch" ]]; then
+    echo "error: direct push to '$protected_branch' is blocked." >&2
+    echo "Push a branch and open a PR instead:" >&2
+    echo "  git push $remote HEAD:refs/heads/your-branch-name" >&2
+    echo "(deliberate bypass: git push --no-verify)" >&2
+    exit 1
+  fi
+done
+
+exit 0

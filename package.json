@@ -12,7 +12,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "changelog": "node scripts/generate-changelog.mjs",
+    "changelog:release": "node scripts/generate-changelog.mjs --release"
   },
   "overrides": {
     "vinxi": {
