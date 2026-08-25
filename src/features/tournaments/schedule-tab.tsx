@@ -73,7 +73,7 @@ export function ScheduleTab({ tournament, rounds, participants, onGenerate }: {
           <div>
             <div className="font-semibold text-[15px] leading-tight">Round generator</div>
             <div className="text-[12.5px] text-ink-mute capitalize">
-              {tournament.format.replace(/_/g, ' ')} · first to {tournament.pointsToWin ?? POINTS_TO_WIN}
+              {tournament.format.replace(/_/g, ' ')} · {tournament.scoringMode === 'shared_total' ? 'play' : 'first to'} {tournament.pointsToWin ?? POINTS_TO_WIN} points
             </div>
           </div>
         </div>
