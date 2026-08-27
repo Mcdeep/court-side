@@ -9,9 +9,10 @@ import { GeneratorSettingsModal } from './generator-settings-modal'
 import { MatchCell } from './match-cell'
 import type { Participant, Round, Tournament } from './types'
 
-export function ScheduleTab({ tournament, rounds, participants, onGenerate }: {
+export function ScheduleTab({ tournament, rounds, participants, onGenerate, pin }: {
   tournament: Tournament; rounds: Round[]; participants: Participant[]
   onGenerate: () => void
+  pin?: string
 }) {
   const [showSettings, setShowSettings] = useState(false)
   const [showReset, setShowReset] = useState(false)
@@ -91,6 +92,7 @@ export function ScheduleTab({ tournament, rounds, participants, onGenerate }: {
             pointsToWin={tournament.pointsToWin ?? POINTS_TO_WIN}
             scoringMode={tournament.scoringMode ?? 'first_to'}
             blocked={rounds.some(r => r.roundNumber < round.roundNumber && r.state !== 'completed')}
+            pin={pin}
           />
         ))}
       </div>
@@ -118,8 +120,9 @@ export function ScheduleTab({ tournament, rounds, participants, onGenerate }: {
   )
 }
 
-function RoundRow({ round, pointsToWin, scoringMode, blocked }: {
+function RoundRow({ round, pointsToWin, scoringMode, blocked, pin }: {
   round: Round; pointsToWin: number; scoringMode: 'first_to' | 'shared_total'; blocked: boolean
+  pin?: string
 }) {
   const matches = useQuery(api.matches.listByRound, { roundId: round._id })
   const startRound = useMutation(api.rounds.start)
@@ -134,7 +137,7 @@ function RoundRow({ round, pointsToWin, scoringMode, blocked }: {
   async function handleStart() {
     setWorking(true); setError('')
     try {
-      await startRound({ roundId: round._id })
+      await startRound({ roundId: round._id, pin })
     } catch (e) {
       setError((e as { data?: string })?.data ?? 'Score the previous round before starting this one')
     } finally { setWorking(false) }
@@ -143,7 +146,7 @@ function RoundRow({ round, pointsToWin, scoringMode, blocked }: {
   async function handleComplete() {
     setWorking(true); setCompleteError('')
     try {
-      await completeRound({ roundId: round._id })
+      await completeRound({ roundId: round._id, pin })
     } catch {
       setCompleteError('Could not end the round — try again')
     } finally { setWorking(false) }
@@ -209,7 +212,7 @@ function RoundRow({ round, pointsToWin, scoringMode, blocked }: {
       </div>
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
         {matches.map((match) => (
-          <MatchCell key={match._id} match={match} pointsToWin={pointsToWin} scoringMode={scoringMode} />
+          <MatchCell key={match._id} match={match} pointsToWin={pointsToWin} scoringMode={scoringMode} pin={pin} />
         ))}
       </div>
     </div>

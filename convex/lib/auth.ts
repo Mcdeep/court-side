@@ -64,3 +64,21 @@ export async function requireOrgAdmin(
 ) {
   return requireOrgMember(ctx, organizationId);
 }
+
+// Lets a small set of write mutations (round generation/start/complete,
+// score entry) be called either by a signed-in org member, or — for the
+// PIN-gated /manage/:id page, which has no Clerk session — by anyone who
+// supplies the tournament's current managePin.
+export async function requireOrgAdminOrPin(
+  ctx: QueryCtx | MutationCtx,
+  tournament: { organizationId: Id<"organizations">; managePin?: string },
+  pin?: string
+) {
+  if (pin !== undefined) {
+    if (!tournament.managePin || pin !== tournament.managePin) {
+      throw new Error("Invalid PIN");
+    }
+    return;
+  }
+  await requireOrgAdmin(ctx, tournament.organizationId);
+}

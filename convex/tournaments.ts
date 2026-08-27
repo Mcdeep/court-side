@@ -190,6 +190,17 @@ export const getPublic = query({
   },
 });
 
+// Public — deliberately no Clerk auth. Doubles as the PIN check for the
+// /manage/:id page: returns the tournament only if the pin matches.
+export const getForManage = query({
+  args: { tournamentId: v.id("tournaments"), pin: v.string() },
+  handler: async (ctx, args) => {
+    const t = await ctx.db.get(args.tournamentId);
+    if (!t || !t.managePin || t.managePin !== args.pin) return null;
+    return t;
+  },
+});
+
 export const update = mutation({
   args: {
     tournamentId: v.id("tournaments"),

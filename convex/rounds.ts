@@ -1,6 +1,6 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireOrgAdmin } from "./lib/auth";
+import { requireOrgAdmin, requireOrgAdminOrPin } from "./lib/auth";
 import { generateAmericanoRounds } from "./formats/americano";
 import { generateRoundRobinRounds } from "./formats/round_robin";
 import { generateMexicanoRound } from "./formats/mexicano";
@@ -48,11 +48,11 @@ async function orderByTeamPairing(
 }
 
 export const generate = mutation({
-  args: { tournamentId: v.id("tournaments") },
+  args: { tournamentId: v.id("tournaments"), pin: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
-    await requireOrgAdmin(ctx, tournament.organizationId);
+    await requireOrgAdminOrPin(ctx, tournament, args.pin);
 
     let courtCount = tournament.courtCount;
     if (!courtCount) {
@@ -319,7 +319,8 @@ export const generate = mutation({
     }
 
     if (existingRounds.length === 0) {
-      await ctx.db.patch(args.tournamentId, { state: "in_progress" });
+      const managePin = String(Math.floor(1000 + Math.random() * 9000));
+      await ctx.db.patch(args.tournamentId, { state: "in_progress", managePin });
     }
     return roundPlans.length;
   },
@@ -339,13 +340,13 @@ export const list = query({
 });
 
 export const start = mutation({
-  args: { roundId: v.id("rounds") },
+  args: { roundId: v.id("rounds"), pin: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const round = await ctx.db.get(args.roundId);
     if (!round) throw new Error("Round not found");
     const tournament = await ctx.db.get(round.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
-    await requireOrgAdmin(ctx, tournament.organizationId);
+    await requireOrgAdminOrPin(ctx, tournament, args.pin);
     if (round.state !== "pending") throw new Error("Round already started");
 
     const allRounds = await ctx.db
@@ -382,13 +383,13 @@ export const start = mutation({
 });
 
 export const complete = mutation({
-  args: { roundId: v.id("rounds") },
+  args: { roundId: v.id("rounds"), pin: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const round = await ctx.db.get(args.roundId);
     if (!round) throw new Error("Round not found");
     const tournament = await ctx.db.get(round.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
-    await requireOrgAdmin(ctx, tournament.organizationId);
+    await requireOrgAdminOrPin(ctx, tournament, args.pin);
     if (round.state !== "in_progress") throw new Error("Round not in progress");
     await ctx.db.patch(args.roundId, { state: "completed" });
   },

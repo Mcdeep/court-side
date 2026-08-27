@@ -8,8 +8,8 @@ import { pairNames } from '#/lib/names'
 import { POINTS_TO_WIN } from '#/lib/constants'
 import type { Match } from './types'
 
-export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'first_to' }: {
-  match: Match; pointsToWin?: number; scoringMode?: 'first_to' | 'shared_total'
+export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'first_to', pin }: {
+  match: Match; pointsToWin?: number; scoringMode?: 'first_to' | 'shared_total'; pin?: string
 }) {
   const [editing, setEditing] = useState(false)
   const [a, setA] = useState(match.scoreA ?? 0)
@@ -43,7 +43,7 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'f
   async function handleSave() {
     setSaving(true)
     try {
-      await saveResult({ matchId: match._id, scoreA: a, scoreB: b })
+      await saveResult({ matchId: match._id, scoreA: a, scoreB: b, pin })
       setEditing(false)
     } finally {
       setSaving(false)
