@@ -53,6 +53,10 @@ export default defineSchema({
     scoringMode: v.optional(v.union(v.literal("first_to"), v.literal("shared_total"))),
     startsAt: v.number(),
     endsAt: v.number(),
+    // Generated when the tournament starts (first round generated). Lets
+    // courtside staff run the live tournament from /manage/:id without a
+    // Clerk login — see convex/lib/auth.ts requireOrgAdminOrPin.
+    managePin: v.optional(v.string()),
   })
     .index("by_organization", ["organizationId"])
     .index("by_venue", ["venueId"]),

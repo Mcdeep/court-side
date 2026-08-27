@@ -6,6 +6,7 @@ import type { Id } from '#/../convex/_generated/dataModel'
 import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
 import { JoinQRButton } from '#/components/ui/join-qr'
+import { ManagePinButton } from '#/components/ui/manage-pin-button'
 import { SegTabs } from '#/components/ui/seg-tabs'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '#/components/ui/sheet'
 import { StatusChip } from '#/components/ui/status-chip'
@@ -155,6 +156,9 @@ function TournamentDetailPage() {
               <Button variant="outline" size="md" icon="screen" asChild>
                 <a href={`/kiosk/${tournamentId}`} target="_blank" rel="noreferrer">Kiosk</a>
               </Button>
+              {tournament.managePin && (
+                <ManagePinButton tournamentId={tournamentId} pin={tournament.managePin} />
+              )}
               <Button variant="ink" size="md" icon="flag"
                 onClick={() => updateState({ tournamentId: tid, state: 'completed' })}>
                 Finish tournament

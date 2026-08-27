@@ -9,28 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as KioskTournamentIdRouteImport } from './routes/kiosk/$tournamentId'
-import { Route as JoinTournamentIdRouteImport } from './routes/join/$tournamentId'
-import { Route as SlugSettingsRouteImport } from './routes/$slug/settings'
-import { Route as SlugRankingsRouteImport } from './routes/$slug/rankings'
-import { Route as SlugPlayersRouteImport } from './routes/$slug/players'
+import { Route as SlugRouteImport } from './routes/$slug'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as SlugCourtsRouteImport } from './routes/$slug/courts'
+import { Route as SlugPlayersRouteImport } from './routes/$slug/players'
+import { Route as SlugRankingsRouteImport } from './routes/$slug/rankings'
+import { Route as SlugSettingsRouteImport } from './routes/$slug/settings'
+import { Route as JoinTournamentIdRouteImport } from './routes/join/$tournamentId'
+import { Route as KioskTournamentIdRouteImport } from './routes/kiosk/$tournamentId'
+import { Route as ManageTournamentIdRouteImport } from './routes/manage/$tournamentId'
 import { Route as SlugTournamentsIndexRouteImport } from './routes/$slug/tournaments/index'
-import { Route as SlugTournamentsNewRouteImport } from './routes/$slug/tournaments/new'
 import { Route as SlugTournamentsTournamentIdRouteImport } from './routes/$slug/tournaments/$tournamentId'
+import { Route as SlugTournamentsNewRouteImport } from './routes/$slug/tournaments/new'
 
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SlugRoute = SlugRouteImport.update({
@@ -38,29 +34,19 @@ const SlugRoute = SlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const KioskTournamentIdRoute = KioskTournamentIdRouteImport.update({
-  id: '/kiosk/$tournamentId',
-  path: '/kiosk/$tournamentId',
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const JoinTournamentIdRoute = JoinTournamentIdRouteImport.update({
-  id: '/join/$tournamentId',
-  path: '/join/$tournamentId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SlugSettingsRoute = SlugSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => SlugRoute,
-} as any)
-const SlugRankingsRoute = SlugRankingsRouteImport.update({
-  id: '/rankings',
-  path: '/rankings',
+const SlugCourtsRoute = SlugCourtsRouteImport.update({
+  id: '/courts',
+  path: '/courts',
   getParentRoute: () => SlugRoute,
 } as any)
 const SlugPlayersRoute = SlugPlayersRouteImport.update({
@@ -68,19 +54,34 @@ const SlugPlayersRoute = SlugPlayersRouteImport.update({
   path: '/players',
   getParentRoute: () => SlugRoute,
 } as any)
-const SlugCourtsRoute = SlugCourtsRouteImport.update({
-  id: '/courts',
-  path: '/courts',
+const SlugRankingsRoute = SlugRankingsRouteImport.update({
+  id: '/rankings',
+  path: '/rankings',
   getParentRoute: () => SlugRoute,
+} as any)
+const SlugSettingsRoute = SlugSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => SlugRoute,
+} as any)
+const JoinTournamentIdRoute = JoinTournamentIdRouteImport.update({
+  id: '/join/$tournamentId',
+  path: '/join/$tournamentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KioskTournamentIdRoute = KioskTournamentIdRouteImport.update({
+  id: '/kiosk/$tournamentId',
+  path: '/kiosk/$tournamentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManageTournamentIdRoute = ManageTournamentIdRouteImport.update({
+  id: '/manage/$tournamentId',
+  path: '/manage/$tournamentId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const SlugTournamentsIndexRoute = SlugTournamentsIndexRouteImport.update({
   id: '/tournaments/',
   path: '/tournaments/',
-  getParentRoute: () => SlugRoute,
-} as any)
-const SlugTournamentsNewRoute = SlugTournamentsNewRouteImport.update({
-  id: '/tournaments/new',
-  path: '/tournaments/new',
   getParentRoute: () => SlugRoute,
 } as any)
 const SlugTournamentsTournamentIdRoute =
@@ -89,6 +90,11 @@ const SlugTournamentsTournamentIdRoute =
     path: '/tournaments/$tournamentId',
     getParentRoute: () => SlugRoute,
   } as any)
+const SlugTournamentsNewRoute = SlugTournamentsNewRouteImport.update({
+  id: '/tournaments/new',
+  path: '/tournaments/new',
+  getParentRoute: () => SlugRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/$slug/settings': typeof SlugSettingsRoute
   '/join/$tournamentId': typeof JoinTournamentIdRoute
   '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
+  '/manage/$tournamentId': typeof ManageTournamentIdRoute
   '/$slug/tournaments/$tournamentId': typeof SlugTournamentsTournamentIdRoute
   '/$slug/tournaments/new': typeof SlugTournamentsNewRoute
   '/$slug/tournaments/': typeof SlugTournamentsIndexRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/$slug/settings': typeof SlugSettingsRoute
   '/join/$tournamentId': typeof JoinTournamentIdRoute
   '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
+  '/manage/$tournamentId': typeof ManageTournamentIdRoute
   '/$slug/tournaments/$tournamentId': typeof SlugTournamentsTournamentIdRoute
   '/$slug/tournaments/new': typeof SlugTournamentsNewRoute
   '/$slug/tournaments': typeof SlugTournamentsIndexRoute
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/$slug/settings': typeof SlugSettingsRoute
   '/join/$tournamentId': typeof JoinTournamentIdRoute
   '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
+  '/manage/$tournamentId': typeof ManageTournamentIdRoute
   '/$slug/tournaments/$tournamentId': typeof SlugTournamentsTournamentIdRoute
   '/$slug/tournaments/new': typeof SlugTournamentsNewRoute
   '/$slug/tournaments/': typeof SlugTournamentsIndexRoute
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/$slug/settings'
     | '/join/$tournamentId'
     | '/kiosk/$tournamentId'
+    | '/manage/$tournamentId'
     | '/$slug/tournaments/$tournamentId'
     | '/$slug/tournaments/new'
     | '/$slug/tournaments/'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
     | '/$slug/settings'
     | '/join/$tournamentId'
     | '/kiosk/$tournamentId'
+    | '/manage/$tournamentId'
     | '/$slug/tournaments/$tournamentId'
     | '/$slug/tournaments/new'
     | '/$slug/tournaments'
@@ -179,6 +190,7 @@ export interface FileRouteTypes {
     | '/$slug/settings'
     | '/join/$tournamentId'
     | '/kiosk/$tournamentId'
+    | '/manage/$tournamentId'
     | '/$slug/tournaments/$tournamentId'
     | '/$slug/tournaments/new'
     | '/$slug/tournaments/'
@@ -191,22 +203,16 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   JoinTournamentIdRoute: typeof JoinTournamentIdRoute
   KioskTournamentIdRoute: typeof KioskTournamentIdRoute
+  ManageTournamentIdRoute: typeof ManageTournamentIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$slug': {
@@ -216,39 +222,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/kiosk/$tournamentId': {
-      id: '/kiosk/$tournamentId'
-      path: '/kiosk/$tournamentId'
-      fullPath: '/kiosk/$tournamentId'
-      preLoaderRoute: typeof KioskTournamentIdRouteImport
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/join/$tournamentId': {
-      id: '/join/$tournamentId'
-      path: '/join/$tournamentId'
-      fullPath: '/join/$tournamentId'
-      preLoaderRoute: typeof JoinTournamentIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$slug/settings': {
-      id: '/$slug/settings'
-      path: '/settings'
-      fullPath: '/$slug/settings'
-      preLoaderRoute: typeof SlugSettingsRouteImport
-      parentRoute: typeof SlugRoute
-    }
-    '/$slug/rankings': {
-      id: '/$slug/rankings'
-      path: '/rankings'
-      fullPath: '/$slug/rankings'
-      preLoaderRoute: typeof SlugRankingsRouteImport
+    '/$slug/courts': {
+      id: '/$slug/courts'
+      path: '/courts'
+      fullPath: '/$slug/courts'
+      preLoaderRoute: typeof SlugCourtsRouteImport
       parentRoute: typeof SlugRoute
     }
     '/$slug/players': {
@@ -258,12 +250,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SlugPlayersRouteImport
       parentRoute: typeof SlugRoute
     }
-    '/$slug/courts': {
-      id: '/$slug/courts'
-      path: '/courts'
-      fullPath: '/$slug/courts'
-      preLoaderRoute: typeof SlugCourtsRouteImport
+    '/$slug/rankings': {
+      id: '/$slug/rankings'
+      path: '/rankings'
+      fullPath: '/$slug/rankings'
+      preLoaderRoute: typeof SlugRankingsRouteImport
       parentRoute: typeof SlugRoute
+    }
+    '/$slug/settings': {
+      id: '/$slug/settings'
+      path: '/settings'
+      fullPath: '/$slug/settings'
+      preLoaderRoute: typeof SlugSettingsRouteImport
+      parentRoute: typeof SlugRoute
+    }
+    '/join/$tournamentId': {
+      id: '/join/$tournamentId'
+      path: '/join/$tournamentId'
+      fullPath: '/join/$tournamentId'
+      preLoaderRoute: typeof JoinTournamentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kiosk/$tournamentId': {
+      id: '/kiosk/$tournamentId'
+      path: '/kiosk/$tournamentId'
+      fullPath: '/kiosk/$tournamentId'
+      preLoaderRoute: typeof KioskTournamentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manage/$tournamentId': {
+      id: '/manage/$tournamentId'
+      path: '/manage/$tournamentId'
+      fullPath: '/manage/$tournamentId'
+      preLoaderRoute: typeof ManageTournamentIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/$slug/tournaments/': {
       id: '/$slug/tournaments/'
@@ -272,18 +292,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SlugTournamentsIndexRouteImport
       parentRoute: typeof SlugRoute
     }
-    '/$slug/tournaments/new': {
-      id: '/$slug/tournaments/new'
-      path: '/tournaments/new'
-      fullPath: '/$slug/tournaments/new'
-      preLoaderRoute: typeof SlugTournamentsNewRouteImport
-      parentRoute: typeof SlugRoute
-    }
     '/$slug/tournaments/$tournamentId': {
       id: '/$slug/tournaments/$tournamentId'
       path: '/tournaments/$tournamentId'
       fullPath: '/$slug/tournaments/$tournamentId'
       preLoaderRoute: typeof SlugTournamentsTournamentIdRouteImport
+      parentRoute: typeof SlugRoute
+    }
+    '/$slug/tournaments/new': {
+      id: '/$slug/tournaments/new'
+      path: '/tournaments/new'
+      fullPath: '/$slug/tournaments/new'
+      preLoaderRoute: typeof SlugTournamentsNewRouteImport
       parentRoute: typeof SlugRoute
     }
   }
@@ -318,6 +338,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   JoinTournamentIdRoute: JoinTournamentIdRoute,
   KioskTournamentIdRoute: KioskTournamentIdRoute,
+  ManageTournamentIdRoute: ManageTournamentIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

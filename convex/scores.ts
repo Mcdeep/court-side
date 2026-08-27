@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireOrgAdmin, requireOrgMember } from "./lib/auth";
+import { requireOrgAdmin, requireOrgAdminOrPin, requireOrgMember } from "./lib/auth";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 
@@ -126,6 +126,7 @@ export const saveResult = mutation({
     matchId: v.id("matches"),
     scoreA: v.number(),
     scoreB: v.number(),
+    pin: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const match = await ctx.db.get(args.matchId);
@@ -134,7 +135,7 @@ export const saveResult = mutation({
     if (!round) throw new Error("Round not found");
     const tournament = await ctx.db.get(round.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
-    await requireOrgAdmin(ctx, tournament.organizationId);
+    await requireOrgAdminOrPin(ctx, tournament, args.pin);
     assertValidScores(tournament, args.scoreA, args.scoreB);
     const prevScoreA = match.scoreA;
     const prevScoreB = match.scoreB;

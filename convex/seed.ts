@@ -124,7 +124,8 @@ export const devStartRound = mutation({
           })
         }
       }
-      await ctx.db.patch(tournament._id, { state: 'in_progress' })
+      const managePin = String(Math.floor(1000 + Math.random() * 9000))
+      await ctx.db.patch(tournament._id, { state: 'in_progress', managePin })
     }
 
     const rounds = await ctx.db
@@ -144,5 +145,55 @@ export const devStartRound = mutation({
       return { started: pending.roundNumber, tournamentId: tournament._id }
     }
     return { status: 'no pending rounds', tournamentId: tournament._id }
+  },
+})
+
+// Dev-only. Wipes rounds/matches/scores/leaderboard for the seeded
+// tournament and puts it back in registration_open so devStartRound can
+// regenerate a fresh round (with a managePin) for local testing.
+export const devReset = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const org = await ctx.db
+      .query('organizations')
+      .withIndex('by_slug', q => q.eq('slug', 'riverside-padel'))
+      .unique()
+    if (!org) throw new Error('Run devOrg first')
+    const tournaments = await ctx.db
+      .query('tournaments')
+      .withIndex('by_organization', q => q.eq('organizationId', org._id))
+      .take(1)
+    const tournament = tournaments[0]
+    if (!tournament) throw new Error('No tournament found')
+
+    const rounds = await ctx.db
+      .query('rounds')
+      .withIndex('by_tournament', q => q.eq('tournamentId', tournament._id))
+      .take(200)
+    for (const round of rounds) {
+      const matches = await ctx.db
+        .query('matches')
+        .withIndex('by_round', q => q.eq('roundId', round._id))
+        .take(50)
+      for (const match of matches) {
+        const scores = await ctx.db
+          .query('scores')
+          .withIndex('by_match', q => q.eq('matchId', match._id))
+          .take(50)
+        for (const score of scores) await ctx.db.delete(score._id)
+        await ctx.db.delete(match._id)
+        await ctx.db.delete(match.pairAId)
+        await ctx.db.delete(match.pairBId)
+      }
+      await ctx.db.delete(round._id)
+    }
+    const leaderboardEntries = await ctx.db
+      .query('leaderboard')
+      .withIndex('by_tournament', q => q.eq('tournamentId', tournament._id))
+      .take(200)
+    for (const entry of leaderboardEntries) await ctx.db.delete(entry._id)
+
+    await ctx.db.patch(tournament._id, { state: 'registration_open' })
+    return { tournamentId: tournament._id }
   },
 })
