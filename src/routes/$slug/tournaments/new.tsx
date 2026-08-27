@@ -244,7 +244,7 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
             <div className="text-[12px] text-ink-mute/70">Standard padel scoring</div>
           </div>
           <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100">
-            {[16, 21, 24, 32].map(p => (
+            {[16, 20, 24, 32].map(p => (
               <button key={p} onClick={() => set({ points: p })}
                 className={`h-9 px-4 rounded-lg text-[14px] font-bold tabular-nums transition-all
                   ${data.points === p ? 'bg-white text-ink shadow-sm' : 'text-ink-mute hover:text-ink'}`}>{p}</button>
@@ -270,7 +270,7 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
             <button type="button" onClick={() => set({ scoringMode: 'shared_total' })}
               className={`h-9 px-4 rounded-lg text-[14px] font-bold transition-all
                 ${data.scoringMode === 'shared_total' ? 'bg-white text-ink shadow-sm' : 'text-ink-mute hover:text-ink'}`}>
-              Split total
+              Play {data.points} points
             </button>
           </div>
         </div>
@@ -618,7 +618,7 @@ function StepReview({ data, venues }: { data: WizardData; venues: { _id: string;
             <div className="flex justify-between"><dt className="text-ink-mute">Venue</dt><dd className="font-semibold">{venue?.name ?? '—'}</dd></div>
             <div className="flex justify-between"><dt className="text-ink-mute">Courts</dt><dd className="font-semibold tabular-nums">{data.courts}</dd></div>
             <div className="flex justify-between"><dt className="text-ink-mute">Points to win</dt><dd className="font-semibold tabular-nums">{data.points}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-mute">Scoring</dt><dd className="font-semibold">{data.scoringMode === 'shared_total' ? 'Split total' : 'First to'}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-mute">Scoring</dt><dd className="font-semibold">{data.scoringMode === 'shared_total' ? `Play ${data.points} points` : `First to ${data.points}`}</dd></div>
             {data.roundMinutes && <div className="flex justify-between"><dt className="text-ink-mute">Round duration</dt><dd className="font-semibold tabular-nums">{data.roundMinutes} min</dd></div>}
           </dl>
         </div>

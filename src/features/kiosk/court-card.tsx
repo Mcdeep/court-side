@@ -2,7 +2,6 @@ import { participantName } from '#/lib/names'
 import type { Match } from '#/features/tournaments/types'
 import { Avatar } from './avatar'
 import { Marquee } from './marquee'
-import { klast } from './format'
 
 export function CourtCard({ match }: { match: Match }) {
   const nameA1 = participantName(match.pairA?.participantA)
@@ -42,7 +41,7 @@ export function CourtCard({ match }: { match: Match }) {
             {nameA2 && <Avatar name={nameA2} size={36} />}
             <Marquee className="flex-1 min-w-0">
               <span className={`font-display text-[19px] leading-tight ${aLead ? 'text-paper font-bold' : 'text-paper/55 font-semibold'}`}>
-                {klast(nameA1)}{nameA2 ? ` / ${klast(nameA2)}` : ''}
+                {nameA1}{nameA2 ? ` / ${nameA2}` : ''}
               </span>
             </Marquee>
           </div>
@@ -56,7 +55,7 @@ export function CourtCard({ match }: { match: Match }) {
             {nameB2 && <Avatar name={nameB2} size={36} />}
             <Marquee className="flex-1 min-w-0">
               <span className={`font-display text-[19px] leading-tight ${bLead ? 'text-paper font-bold' : 'text-paper/55 font-semibold'}`}>
-                {klast(nameB1)}{nameB2 ? ` / ${klast(nameB2)}` : ''}
+                {nameB1}{nameB2 ? ` / ${nameB2}` : ''}
               </span>
             </Marquee>
           </div>

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { SignedIn, SignedOut, SignInButton, UserButton, useOrganization } from '@clerk/tanstack-start'
+import { Show, SignInButton, UserButton, useOrganization } from '@clerk/tanstack-react-start'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import { useEffect } from 'react'
@@ -17,16 +17,16 @@ function Home() {
           <span className="font-display font-bold text-[19px] tracking-tight">CourtOS</span>
         </div>
         <div>
-          <SignedOut>
+          <Show when="signed-out">
             <SignInButton mode="modal">
               <button className="px-4 py-2 bg-ink text-paper rounded-xl text-sm font-semibold hover:bg-ink/90 transition-colors">
                 Sign in
               </button>
             </SignInButton>
-          </SignedOut>
-          <SignedIn>
+          </Show>
+          <Show when="signed-in">
             <UserButton />
-          </SignedIn>
+          </Show>
         </div>
       </header>
 

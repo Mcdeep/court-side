@@ -1,4 +1,4 @@
-import { useAuth, useUser } from '@clerk/tanstack-start'
+import { useAuth, useUser } from '@clerk/tanstack-react-start'
 
 export type AppRole =
   | 'super_admin'

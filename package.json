@@ -39,7 +39,7 @@
     "nanoid": "^3.3.18"
   },
   "dependencies": {
-    "@clerk/tanstack-start": "^0.11.5",
+    "@clerk/tanstack-react-start": "^1.5.7",
     "@tailwindcss/vite": "^4.3.1",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-router": "latest",

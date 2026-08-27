@@ -47,7 +47,7 @@ export function GeneratorSettingsModal({ tournament, onClose }: {
             <button type="button" onClick={() => setScoringMode('shared_total')}
               className={`flex-1 h-9 rounded-lg text-sm font-semibold ring-1 transition-colors
                 ${scoringMode === 'shared_total' ? 'bg-accent text-ink ring-accent-dark/30' : 'bg-white text-ink-mute ring-zinc-200 hover:bg-zinc-50'}`}>
-              Split total
+              Play {points || POINTS_TO_WIN} points
             </button>
           </div>
         </Field>
