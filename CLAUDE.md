@@ -31,3 +31,32 @@ Known gotchas on this machine:
   and OOM the machine. Watch log size after connecting a browser tab.
 - **Playwright MCP is broken** (FD issue) — use Claude in Chrome +
   native Chromium for browser automation instead.
+
+## Workflow: don't push directly to main
+
+Netlify auto-deploys prod (`npx convex deploy` + site build) on every push
+to `main`. Push a branch and open a PR instead; merge to main only when
+it's ready to ship.
+
+Real GitHub branch protection isn't available (private repo, free plan
+needs GitHub Pro to enable it), so this is enforced locally, best-effort:
+a `pre-push` hook in `.githooks/` blocks direct pushes to `main`. Enable it
+once per clone:
+
+```
+git config core.hooksPath .githooks
+```
+
+Deliberate bypass: `git push --no-verify`.
+
+## Change log
+
+`CHANGELOG.md` is generated from git history (Keep a Changelog format),
+not hand-written. Commit subjects are categorized by leading verb (or a
+conventional-commit prefix like `feat:`/`fix:` if used).
+
+- `npm run changelog` — regenerate the `[Unreleased]` section from commits
+  since the last version tag.
+- `npm run changelog:release <version>` — cut a dated `[version]` section
+  from `[Unreleased]` (e.g. `npm run changelog:release 0.2.0`), then tag
+  the release: `git tag -a v0.2.0 -m "..."`.
