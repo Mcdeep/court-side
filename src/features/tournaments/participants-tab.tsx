@@ -14,7 +14,8 @@ export function ParticipantsTab({ participants, tournamentId, format, canAdd, on
   canAdd: boolean; onAdd: () => void
 }) {
   const removeParticipant = useMutation(api.participants.remove)
-  const setSkillRating = useMutation(api.participants.setSkillRating)
+  const setParticipantSkillRating = useMutation(api.participants.setSkillRating)
+  const setMemberSkillRating = useMutation(api.members.setSkillRating)
   const setCheckedIn = useMutation(api.participants.setCheckedIn)
   const checkInAll = useMutation(api.participants.checkInAll)
   const [removingId, setRemovingId] = useState<string | null>(null)
@@ -36,14 +37,18 @@ export function ParticipantsTab({ participants, tournamentId, format, canAdd, on
     setRatingError('')
   }
 
-  async function saveRating(participantId: Id<'participants'>) {
+  async function saveRating(p: Participant) {
     const value = Number(ratingInput)
     if (!ratingInput.trim() || isNaN(value) || value < 1 || value > 7) {
       setRatingError('1.0 – 7.0')
       return
     }
     try {
-      await setSkillRating({ participantId, skillRating: value })
+      if (p.memberId) {
+        await setMemberSkillRating({ memberId: p.memberId, skillRating: value })
+      } else {
+        await setParticipantSkillRating({ participantId: p._id, skillRating: value })
+      }
       setEditingId(null)
     } catch (e) {
       setRatingError(errorMessage(e))
@@ -112,13 +117,13 @@ export function ParticipantsTab({ participants, tournamentId, format, canAdd, on
                       value={ratingInput}
                       onChange={e => { setRatingInput(e.target.value); setRatingError('') }}
                       onKeyDown={e => {
-                        if (e.key === 'Enter') saveRating(p._id)
+                        if (e.key === 'Enter') saveRating(p)
                         if (e.key === 'Escape') setEditingId(null)
                       }}
                       placeholder="1–7"
                       className="w-14 h-7 px-2 rounded-lg bg-white ring-1 ring-zinc-200 text-xs tnum focus:outline-none focus:ring-2 focus:ring-accent-dark/40"
                     />
-                    <button onClick={() => saveRating(p._id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-accent-dark hover:bg-accent-soft shrink-0">
+                    <button onClick={() => saveRating(p)} className="w-7 h-7 rounded-lg flex items-center justify-center text-accent-dark hover:bg-accent-soft shrink-0">
                       <Icon name="check" className="w-4 h-4" />
                     </button>
                     {ratingError && <span className="text-[11px] text-red-500 whitespace-nowrap">{ratingError}</span>}

@@ -82,27 +82,69 @@ export const setSkillRating = mutation({
   },
 });
 
+// Every roster member shows up here — linked or not — ranked purely by
+// points accumulated in this org's own tournaments (playerRatings.totalPoints
+// for a linked member, member.startingPoints as their running total
+// otherwise; see ratings.awardRatings). Non-roster accounts with real
+// tournament history in this org (added before the roster feature existed)
+// are preserved too, so nobody with genuine history disappears.
 export const getRankings = query({
   args: { organizationId: v.id("organizations") },
   handler: async (ctx, args) => {
+    const members = await ctx.db
+      .query("members")
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+      .take(500);
+
     const ratings = await ctx.db
       .query("playerRatings")
       .withIndex("by_organization_and_points", (q) =>
         q.eq("organizationId", args.organizationId)
       )
-      .order("desc")
       .take(200);
+    const ratingByUserId = new Map(ratings.map((r) => [r.userId as string, r]));
+    const coveredUserIds = new Set<string>();
 
-    return Promise.all(
-      ratings.map(async (r) => {
-        const user = await ctx.db.get(r.userId);
+    const rosterRows = await Promise.all(
+      members.map(async (m) => {
+        if (m.userId) {
+          coveredUserIds.add(m.userId as string);
+          const rating = ratingByUserId.get(m.userId as string);
+          const user = await ctx.db.get(m.userId);
+          return {
+            _id: m._id as string,
+            name: user?.name ?? m.name,
+            email: user?.email ?? "",
+            totalPoints: rating?.totalPoints ?? m.startingPoints ?? 0,
+            tournamentsPlayed: rating?.tournamentsPlayed ?? 0,
+          };
+        }
         return {
-          ...r,
-          name: user?.name ?? "Unknown",
-          email: user?.email ?? "",
+          _id: m._id as string,
+          name: m.name,
+          email: "",
+          totalPoints: m.startingPoints ?? 0,
+          tournamentsPlayed: m.tournamentsPlayed ?? 0,
         };
       })
     );
+
+    const legacyRows = await Promise.all(
+      ratings
+        .filter((r) => !coveredUserIds.has(r.userId as string))
+        .map(async (r) => {
+          const user = await ctx.db.get(r.userId);
+          return {
+            _id: r._id as string,
+            name: user?.name ?? "Unknown",
+            email: user?.email ?? "",
+            totalPoints: r.totalPoints,
+            tournamentsPlayed: r.tournamentsPlayed,
+          };
+        })
+    );
+
+    return [...rosterRows, ...legacyRows].sort((a, b) => b.totalPoints - a.totalPoints);
   },
 });
 
@@ -213,38 +255,60 @@ export const awardRatings = internalMutation({
 
       for (const participantId of group.participantIds) {
         const participant = await ctx.db.get(participantId);
-        if (!participant || !participant.userId) continue;
+        if (!participant) continue;
+        if (!participant.userId && !participant.memberId) continue;
 
         const placement = position + 1;
 
-        await ctx.db.insert("ratingHistory", {
-          organizationId: tournament.organizationId,
-          userId: participant.userId,
-          tournamentId: args.tournamentId,
-          placement,
-          pointsEarned: avgPoints,
-        });
-
-        const existing = await ctx.db
-          .query("playerRatings")
-          .withIndex("by_organization_and_user", (q) =>
-            q
-              .eq("organizationId", tournament.organizationId)
-              .eq("userId", participant.userId!)
-          )
-          .unique();
-
-        if (existing) {
-          await ctx.db.patch(existing._id, {
-            totalPoints: existing.totalPoints + avgPoints,
-            tournamentsPlayed: existing.tournamentsPlayed + 1,
-          });
-        } else {
-          await ctx.db.insert("playerRatings", {
+        if (participant.userId) {
+          await ctx.db.insert("ratingHistory", {
             organizationId: tournament.organizationId,
             userId: participant.userId,
-            totalPoints: avgPoints,
-            tournamentsPlayed: 1,
+            tournamentId: args.tournamentId,
+            placement,
+            pointsEarned: avgPoints,
+          });
+
+          const existing = await ctx.db
+            .query("playerRatings")
+            .withIndex("by_organization_and_user", (q) =>
+              q
+                .eq("organizationId", tournament.organizationId)
+                .eq("userId", participant.userId!)
+            )
+            .unique();
+
+          if (existing) {
+            await ctx.db.patch(existing._id, {
+              totalPoints: existing.totalPoints + avgPoints,
+              tournamentsPlayed: existing.tournamentsPlayed + 1,
+            });
+          } else {
+            await ctx.db.insert("playerRatings", {
+              organizationId: tournament.organizationId,
+              userId: participant.userId,
+              totalPoints: avgPoints,
+              tournamentsPlayed: 1,
+            });
+          }
+        } else {
+          // This participant was entered without a linked account —
+          // accumulate directly on their member row instead of
+          // playerRatings, which requires a linked account.
+          const member = await ctx.db.get(participant.memberId!);
+          if (!member) continue;
+
+          await ctx.db.insert("ratingHistory", {
+            organizationId: tournament.organizationId,
+            memberId: participant.memberId,
+            tournamentId: args.tournamentId,
+            placement,
+            pointsEarned: avgPoints,
+          });
+
+          await ctx.db.patch(member._id, {
+            startingPoints: (member.startingPoints ?? 0) + avgPoints,
+            tournamentsPlayed: (member.tournamentsPlayed ?? 0) + 1,
           });
         }
       }

@@ -19,6 +19,7 @@ import type * as formats_snakes_and_ladders from "../formats/snakes_and_ladders.
 import type * as leaderboard from "../leaderboard.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as matches from "../matches.js";
+import type * as members from "../members.js";
 import type * as organizations from "../organizations.js";
 import type * as participants from "../participants.js";
 import type * as ratings from "../ratings.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   leaderboard: typeof leaderboard;
   "lib/auth": typeof lib_auth;
   matches: typeof matches;
+  members: typeof members;
   organizations: typeof organizations;
   participants: typeof participants;
   ratings: typeof ratings;

@@ -9,64 +9,67 @@ import { Icon } from '#/components/ui/icon'
 import { Input } from '#/components/ui/input'
 import { useAsyncAction } from '#/hooks/use-async-action'
 
-export function AddPlayerModal({ tournamentId, existingIds, onClose }: {
+// Every participant is a roster member — someone with no account is just an
+// unlinked member (see convex/members.ts), not a separate "walk-in" concept.
+// Typing a brand-new name creates that roster row on the spot, so adding
+// someone new still takes exactly the one step it used to.
+export function AddPlayerModal({ tournamentId, organizationId, existingMemberIds, onClose }: {
   tournamentId: Id<'tournaments'>
-  existingIds: Id<'users'>[]
+  organizationId: Id<'organizations'>
+  existingMemberIds: Id<'members'>[]
   onClose: () => void
 }) {
-  const [mode, setMode] = useState<'walkin' | 'member'>('walkin')
-  const [walkInName, setWalkInName] = useState('')
-  const [walkInRating, setWalkInRating] = useState('')
   const [search, setSearch] = useState('')
-  const [selected, setSelected] = useState<Set<Id<'users'>>>(new Set())
+  const [newRating, setNewRating] = useState('')
+  const [selected, setSelected] = useState<Set<Id<'members'>>>(new Set())
   const [addedCount, setAddedCount] = useState(0)
   const { working, error, setError, run } = useAsyncAction()
 
-  const allUsers = useQuery(api.users.list)
+  const roster = useQuery(api.members.listByOrg, { organizationId })
+  const addMember = useMutation(api.members.add)
   const addParticipant = useMutation(api.participants.add)
 
-  const filtered = (allUsers ?? [])
-    .filter(u => !existingIds.includes(u._id))
-    .filter(u => !search || u.name.toLowerCase().includes(search.toLowerCase()))
+  const available = (roster ?? []).filter(m => !existingMemberIds.includes(m._id))
+  const filtered = available.filter(m => !search || m.name.toLowerCase().includes(search.toLowerCase()))
+  const exactMatch = available.some(m => m.name.toLowerCase() === search.trim().toLowerCase())
+  const canCreate = search.trim().length > 0 && !exactMatch
 
-  async function addWalkIn() {
-    if (!walkInName.trim()) { setError('Enter a name'); return }
+  function toggleSelect(memberId: Id<'members'>) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(memberId)) next.delete(memberId)
+      else next.add(memberId)
+      return next
+    })
+  }
+
+  async function createAndSelect() {
+    const name = search.trim()
+    if (!name) return
     let skillRating: number | undefined
-    if (walkInRating.trim()) {
-      skillRating = Number(walkInRating)
+    if (newRating.trim()) {
+      skillRating = Number(newRating)
       if (isNaN(skillRating) || skillRating < 1 || skillRating > 7) {
         setError('Rating must be between 1.0 and 7.0')
         return
       }
     }
     await run(async () => {
-      await addParticipant({
-        tournamentId, isWalkIn: true, walkInName: walkInName.trim(), entryType: 'solo', skillRating,
-      })
-      setWalkInName('')
-      setWalkInRating('')
-      setAddedCount(c => c + 1)
-    })
-  }
-
-  function toggleSelect(userId: Id<'users'>) {
-    setSelected(prev => {
-      const next = new Set(prev)
-      if (next.has(userId)) next.delete(userId)
-      else next.add(userId)
-      return next
+      const memberId = await addMember({ organizationId, name, skillRating })
+      setSelected(prev => new Set(prev).add(memberId))
+      setSearch('')
+      setNewRating('')
     })
   }
 
   async function addSelected() {
     if (selected.size === 0) return
     await run(async () => {
-      for (const userId of selected) {
-        await addParticipant({ tournamentId, userId, isWalkIn: false, entryType: 'solo' })
+      for (const memberId of selected) {
+        await addParticipant({ tournamentId, memberId, entryType: 'solo' })
         setAddedCount(c => c + 1)
       }
       setSelected(new Set())
-      setSearch('')
     })
   }
 
@@ -83,78 +86,64 @@ export function AddPlayerModal({ tournamentId, existingIds, onClose }: {
         )}
       </>}
     >
-      <div className="flex gap-1">
-        {(['walkin', 'member'] as const).map(m => (
-          <button key={m} onClick={() => setMode(m)}
-            className={`flex-1 h-8 rounded-lg text-[13px] font-semibold transition-all
-              ${mode === m ? 'bg-ink text-paper' : 'text-ink-mute hover:text-ink'}`}>
-            {m === 'walkin' ? 'Walk-in' : 'Member'}
-          </button>
-        ))}
-      </div>
-
-      {mode === 'walkin' ? (
-        <div className="space-y-3">
-          <p className="text-[13px] text-ink-mute">Enter the player's name. No account needed.</p>
-          <Input
-            autoFocus
-            value={walkInName}
-            onChange={e => setWalkInName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addWalkIn()}
-            placeholder="Player name"
-          />
-          <Input
-            value={walkInRating}
-            onChange={e => setWalkInRating(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addWalkIn()}
-            placeholder="Skill rating (optional, e.g. Playtomic 3.5)"
-          />
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={onClose}>Done</Button>
-            <Button variant="primary" className="flex-1" onClick={addWalkIn} disabled={working}>
-              {working ? 'Adding…' : 'Add walk-in'}
+      <div className="space-y-3">
+        <Input
+          autoFocus
+          value={search}
+          onChange={e => { setSearch(e.target.value); setError('') }}
+          onKeyDown={e => e.key === 'Enter' && canCreate && createAndSelect()}
+          placeholder="Search or add a new name…"
+        />
+        {canCreate && (
+          <div className="flex items-center gap-2 rounded-xl ring-1 ring-zinc-200 bg-zinc-50 p-2">
+            <Input
+              value={newRating}
+              onChange={e => setNewRating(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && createAndSelect()}
+              placeholder="Rating (optional)"
+              className="flex-1"
+            />
+            <Button variant="outline" size="sm" icon="plus" onClick={createAndSelect} disabled={working}>
+              Add "{search.trim()}"
             </Button>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <Input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search members…" />
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <div className="max-h-60 overflow-y-auto -mx-1 space-y-0.5">
-            {allUsers === undefined ? (
-              <div className="text-center py-6 text-ink-mute text-sm animate-pulse">Loading…</div>
-            ) : filtered.length === 0 ? (
+        )}
+        {error && <p className="text-red-500 text-sm">{error}</p>}
+        <div className="max-h-60 overflow-y-auto -mx-1 space-y-0.5">
+          {roster === undefined ? (
+            <div className="text-center py-6 text-ink-mute text-sm animate-pulse">Loading…</div>
+          ) : filtered.length === 0 ? (
+            !canCreate && (
               <div className="text-center py-6 text-ink-mute text-sm">
                 {search ? 'No members match.' : 'All members already added.'}
               </div>
-            ) : filtered.map(u => {
-              const isSelected = selected.has(u._id)
-              return (
-                <button key={u._id} onClick={() => toggleSelect(u._id)} disabled={working}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors group text-left
-                    ${isSelected ? 'bg-accent-soft' : 'hover:bg-zinc-50'}`}>
-                  <span className={`w-5 h-5 rounded-md ring-1 flex items-center justify-center shrink-0 transition-colors
-                    ${isSelected ? 'bg-accent-dark ring-accent-dark text-white' : 'ring-zinc-300 bg-white'}`}>
-                    {isSelected && <Icon name="check" className="w-3.5 h-3.5" stroke={3} />}
-                  </span>
-                  <Avatar name={u.name} size={32} />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-sm">{u.name}</div>
-                    <div className="text-[12px] text-ink-mute">{u.email}</div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-          <div className="flex gap-2 pt-1">
-            <Button variant="outline" className="flex-1" onClick={onClose}>Done</Button>
-            <Button variant="primary" className="flex-1" onClick={addSelected} disabled={working || selected.size === 0}>
-              {working ? 'Adding…' : selected.size > 0 ? `Add ${selected.size} player${selected.size !== 1 ? 's' : ''}` : 'Add players'}
-            </Button>
-          </div>
+            )
+          ) : filtered.map(m => {
+            const isSelected = selected.has(m._id)
+            return (
+              <button key={m._id} onClick={() => toggleSelect(m._id)} disabled={working}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors group text-left
+                  ${isSelected ? 'bg-accent-soft' : 'hover:bg-zinc-50'}`}>
+                <span className={`w-5 h-5 rounded-md ring-1 flex items-center justify-center shrink-0 transition-colors
+                  ${isSelected ? 'bg-accent-dark ring-accent-dark text-white' : 'ring-zinc-300 bg-white'}`}>
+                  {isSelected && <Icon name="check" className="w-3.5 h-3.5" stroke={3} />}
+                </span>
+                <Avatar name={m.name} size={32} />
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-sm">{m.name}</div>
+                  <div className="text-[12px] text-ink-mute">{m.email ?? 'Not linked to an account'}</div>
+                </div>
+              </button>
+            )
+          })}
         </div>
-      )}
+        <div className="flex gap-2 pt-1">
+          <Button variant="outline" className="flex-1" onClick={onClose}>Done</Button>
+          <Button variant="primary" className="flex-1" onClick={addSelected} disabled={working || selected.size === 0}>
+            {working ? 'Adding…' : selected.size > 0 ? `Add ${selected.size} player${selected.size !== 1 ? 's' : ''}` : 'Add players'}
+          </Button>
+        </div>
+      </div>
     </AppDialog>
   )
 }
