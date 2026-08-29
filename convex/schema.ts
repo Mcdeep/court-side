@@ -78,9 +78,35 @@ export default defineSchema({
     // Opt-in attendance confirmation. Round generation for round-by-round
     // formats only includes checkedIn === true participants.
     checkedIn: v.optional(v.boolean()),
+    // Set when this participant was added from the org's member roster
+    // (linked or not) — see the `members` table. Lets participation
+    // history survive even before/without a linked `users` account.
+    memberId: v.optional(v.id("members")),
   })
     .index("by_tournament", ["tournamentId"])
-    .index("by_user", ["userId"]),
+    .index("by_user", ["userId"])
+    .index("by_member", ["memberId"]),
+
+  // An org's persistent roster of members — registrable/importable ahead
+  // of any tournament, independent of the derived participant-history
+  // report on the Players page. `userId` is set once an admin manually
+  // links a row to a real account; `startingPoints` carries an imported
+  // historical points total that seeds `playerRatings.totalPoints` at
+  // link time (see convex/members.ts `link`).
+  members: defineTable({
+    organizationId: v.id("organizations"),
+    name: v.string(),
+    userId: v.optional(v.id("users")),
+    // Running org-points total for a member with no linked account — seeded
+    // by import, then incremented by ratings.awardRatings the same way
+    // playerRatings.totalPoints is for linked members. Once linked, this
+    // stops updating (playerRatings takes over as source of truth).
+    startingPoints: v.optional(v.number()),
+    tournamentsPlayed: v.optional(v.number()),
+    skillRating: v.optional(v.number()),
+  })
+    .index("by_organization", ["organizationId"])
+    .index("by_organization_and_user", ["organizationId", "userId"]),
 
   pairs: defineTable({
     tournamentId: v.id("tournaments"),
@@ -164,7 +190,10 @@ export default defineSchema({
 
   ratingHistory: defineTable({
     organizationId: v.id("organizations"),
-    userId: v.id("users"),
+    // Exactly one of userId/memberId is set — userId for a linked account,
+    // memberId for an unlinked roster member (see ratings.awardRatings).
+    userId: v.optional(v.id("users")),
+    memberId: v.optional(v.id("members")),
     tournamentId: v.id("tournaments"),
     placement: v.number(),
     pointsEarned: v.number(),

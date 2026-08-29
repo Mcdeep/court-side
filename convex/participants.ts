@@ -6,14 +6,23 @@ import type { Id } from "./_generated/dataModel";
 const MIN_SKILL_RATING = 1;
 const MAX_SKILL_RATING = 7;
 
+function assertValidSkillRating(skillRating: number | undefined) {
+  if (skillRating === undefined) return;
+  if (skillRating < MIN_SKILL_RATING || skillRating > MAX_SKILL_RATING) {
+    throw new Error(`Rating must be between ${MIN_SKILL_RATING} and ${MAX_SKILL_RATING}`);
+  }
+}
+
+// Every admin-added participant comes from the org's member roster — see
+// convex/members.ts. There is no separate "raw walk-in" path any more: a
+// name with no account is just an unlinked roster member, so it gets the
+// same persistence (participation history, accumulating points, and the
+// option to link an account later) a linked member already has.
 export const add = mutation({
   args: {
     tournamentId: v.id("tournaments"),
-    userId: v.optional(v.id("users")),
+    memberId: v.id("members"),
     entryType: v.union(v.literal("solo"), v.literal("pair"), v.literal("team")),
-    isWalkIn: v.boolean(),
-    walkInName: v.optional(v.string()),
-    skillRating: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const tournament = await ctx.db.get(args.tournamentId);
@@ -25,23 +34,29 @@ export const add = mutation({
     ) {
       throw new Error("Tournament is not accepting participants");
     }
-    if (
-      args.skillRating !== undefined &&
-      (args.skillRating < MIN_SKILL_RATING || args.skillRating > MAX_SKILL_RATING)
-    ) {
-      throw new Error(`Rating must be between ${MIN_SKILL_RATING} and ${MAX_SKILL_RATING}`);
+
+    const member = await ctx.db.get(args.memberId);
+    if (!member) throw new Error("Member not found");
+    if (member.organizationId !== tournament.organizationId) {
+      throw new Error("Member does not belong to this organisation");
     }
+
+    const isWalkIn = !member.userId;
     return ctx.db.insert("participants", {
       tournamentId: args.tournamentId,
-      userId: args.userId,
+      userId: member.userId,
+      memberId: args.memberId,
       entryType: args.entryType,
-      isWalkIn: args.isWalkIn,
-      walkInName: args.walkInName,
-      skillRating: args.isWalkIn ? args.skillRating : undefined,
+      isWalkIn,
+      walkInName: isWalkIn ? member.name : undefined,
+      skillRating: isWalkIn ? member.skillRating : undefined,
     });
   },
 });
 
+// Legacy-only: for participants added before the member roster existed
+// (no memberId). Anyone added since should have their rating set via
+// members.setSkillRating instead, so it's reusable across tournaments.
 export const setSkillRating = mutation({
   args: {
     participantId: v.id("participants"),
@@ -56,9 +71,10 @@ export const setSkillRating = mutation({
     if (!participant.isWalkIn) {
       throw new Error("Set ratings for members from the Players page");
     }
-    if (args.skillRating < MIN_SKILL_RATING || args.skillRating > MAX_SKILL_RATING) {
-      throw new Error(`Rating must be between ${MIN_SKILL_RATING} and ${MAX_SKILL_RATING}`);
+    if (participant.memberId) {
+      throw new Error("Set this player's rating from the Players page instead");
     }
+    assertValidSkillRating(args.skillRating);
     await ctx.db.patch(args.participantId, { skillRating: args.skillRating });
   },
 });

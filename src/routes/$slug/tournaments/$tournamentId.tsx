@@ -85,7 +85,8 @@ function TournamentDetailPage() {
       {showAddPlayer && (
         <AddPlayerModal
           tournamentId={tid}
-          existingIds={participants.map(p => p.userId).filter(Boolean) as Id<'users'>[]}
+          organizationId={tournament.organizationId}
+          existingMemberIds={participants.map(p => p.memberId).filter(Boolean) as Id<'members'>[]}
           onClose={() => setShowAddPlayer(false)}
         />
       )}

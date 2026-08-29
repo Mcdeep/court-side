@@ -20,7 +20,7 @@ type TournamentFormat =
   | 'americano' | 'mexicano' | 'round_robin' | 'knockout'
   | 'king_of_the_court' | 'snakes_and_ladders' | 'team_clash'
 
-type WizardPlayer = { id: string; name: string }
+type WizardPlayer = { id: string; name: string; memberId?: Id<'members'> }
 type WizardTeam   = [WizardPlayer | null, WizardPlayer | null]
 
 type WizardData = {
@@ -283,29 +283,23 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
 
 function StepPlayers({ data, set, orgId }: { data: WizardData; set: (p: Partial<WizardData>) => void; orgId: Id<'organizations'> }) {
   const [name, setName] = useState('')
-  const allUsers = useQuery(api.users.list)
-  const orgParticipants = useQuery(api.participants.listByOrg, { organizationId: orgId })
+  const roster = useQuery(api.members.listByOrg, { organizationId: orgId })
 
-  const add = (nm?: string) => {
+  const add = (nm?: string, memberId?: Id<'members'>) => {
     const n = (nm ?? name).trim()
     if (!n) return
-    set({
-      players: data.players.some(p => p.name.toLowerCase() === n.toLowerCase())
-        ? data.players
-        : [...data.players, { id: `p${Date.now()}${Math.random()}`, name: n }],
-    })
+    if (!data.players.some(p => p.name.toLowerCase() === n.toLowerCase())) {
+      const existing = roster?.find(m => m.name.toLowerCase() === n.toLowerCase())
+      set({ players: [...data.players, { id: `p${Date.now()}${Math.random()}`, name: n, memberId: memberId ?? existing?._id }] })
+    }
     if (!nm) setName('')
   }
 
   const remove = (id: string) => set({ players: data.players.filter(p => p.id !== id) })
 
-  const memberSuggestions = (allUsers ?? [])
-    .filter(u => !data.players.some(p => p.name === u.name))
+  const rosterSuggestions = (roster ?? [])
+    .filter(m => !data.players.some(p => p.name === m.name))
     .slice(0, 8)
-
-  const walkInSuggestions = (orgParticipants?.walkIns ?? [])
-    .filter(w => !data.players.some(p => p.name === w.name))
-    .slice(0, 6)
 
   const isOdd = data.players.length % 2 === 1
 
@@ -328,20 +322,14 @@ function StepPlayers({ data, set, orgId }: { data: WizardData; set: (p: Partial<
         </button>
       </div>
 
-      {(memberSuggestions.length > 0 || walkInSuggestions.length > 0) && (
+      {rosterSuggestions.length > 0 && (
         <div className="mt-4">
           <div className="text-[12px] font-semibold text-ink-mute mb-2">Quick-add from club roster</div>
           <div className="flex flex-wrap gap-2">
-            {memberSuggestions.map(u => (
-              <button key={u._id} onClick={() => add(u.name)}
+            {rosterSuggestions.map(m => (
+              <button key={m._id} onClick={() => add(m.name, m._id)}
                 className="inline-flex items-center gap-1.5 h-8 pl-1.5 pr-3 rounded-full bg-white ring-1 ring-zinc-200 hover:ring-accent-dark/40 hover:bg-accent-soft/50 transition-all text-[13px] font-semibold whitespace-nowrap">
-                <Avatar name={u.name} size={22} /> {u.name} <Icon name="plus" className="w-3.5 h-3.5 text-zinc-400" stroke={2.6} />
-              </button>
-            ))}
-            {walkInSuggestions.map(w => (
-              <button key={w.name} onClick={() => add(w.name)}
-                className="inline-flex items-center gap-1.5 h-8 pl-1.5 pr-3 rounded-full bg-white ring-1 ring-zinc-200 hover:ring-accent-dark/40 hover:bg-accent-soft/50 transition-all text-[13px] font-semibold whitespace-nowrap">
-                <Avatar name={w.name} size={22} /> {w.name} <Icon name="plus" className="w-3.5 h-3.5 text-zinc-400" stroke={2.6} />
+                <Avatar name={m.name} size={22} /> {m.name} <Icon name="plus" className="w-3.5 h-3.5 text-zinc-400" stroke={2.6} />
               </button>
             ))}
           </div>
@@ -665,6 +653,7 @@ function NewTournamentPage() {
   const org = useQuery(api.organizations.getBySlug, { slug })
   const venues = useQuery(api.venues.listByOrg, org ? { organizationId: org._id } : 'skip')
   const createTournament = useMutation(api.tournaments.create)
+  const addMember = useMutation(api.members.add)
   const addParticipant = useMutation(api.participants.add)
   const setPairs = useMutation(api.teams.setPairs)
   const { working, error, setError, run } = useAsyncAction()
@@ -747,12 +736,8 @@ function NewTournamentPage() {
 
       const insertedIds = new Map<string, Id<'participants'>>()
       for (const player of orderedPlayers) {
-        const participantId = await addParticipant({
-          tournamentId,
-          isWalkIn: true,
-          walkInName: player.name,
-          entryType: 'solo',
-        })
+        const memberId = player.memberId ?? await addMember({ organizationId: org._id, name: player.name })
+        const participantId = await addParticipant({ tournamentId, memberId, entryType: 'solo' })
         insertedIds.set(player.id, participantId)
       }
 
