@@ -7,7 +7,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Add a mobile-first schedule view for /manage (0fe9af9)
+- Add a Finish tournament action to /manage (b224745)
+- Add a mobile-first schedule view for /manage (85538e9)
 - Add time-based scoring as a match win condition (d1086c0)
 - Add an org-scoped member roster and fold walk-ins into it (c1cc4c6)
 - Add a PIN-gated mobile page to run a live tournament without Clerk auth (45026ee)
@@ -15,6 +16,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Regenerate changelog to include mobile-first manage schedule (dedf86e)
 - Regenerate changelog to include court-shuffling fix (047a9ed)
 - Shuffle Round Robin court assignments so the anchor team isn't stuck on one court (22a2a1e)
 - Regenerate changelog to include round-robin scheduling fix (8bba590)
