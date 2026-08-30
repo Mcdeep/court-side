@@ -1,6 +1,13 @@
 import { describe, expect, test } from 'vitest'
 import { countRoundRobinRounds, generateRoundRobinRounds } from './round_robin'
 
+function seededRandom(seed: number) {
+  return () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0
+    return seed / 2 ** 32
+  }
+}
+
 describe('generateRoundRobinRounds', () => {
   test('every team plays every other team exactly once', () => {
     const participants = Array.from({ length: 16 }, (_, index) => `player-${index + 1}`)
@@ -45,6 +52,22 @@ describe('generateRoundRobinRounds', () => {
     // 8 teams (even) -> 7 legs, 4 matches/leg, 2 waves/leg -> 14 physical rounds.
     expect(rounds.length).toBe(14)
     expect(rounds.length).toBe(countRoundRobinRounds(8, courtCount))
+  })
+
+  test('does not park the circle-method anchor team on the same court every leg', () => {
+    // Regression test: the anchor team (sched[0], never rotated by the
+    // circle method) used to always land in the first matchup of every
+    // leg, and therefore always court 1.
+    const participants = Array.from({ length: 16 }, (_, index) => `player-${index + 1}`) // 8 teams
+    const anchorPlayer = participants[0]
+    const rounds = generateRoundRobinRounds(participants, 4, seededRandom(7))
+
+    const anchorCourts = rounds
+      .flatMap(round => round.filter(m => m.pairA.includes(anchorPlayer) || m.pairB.includes(anchorPlayer)))
+      .map(m => m.courtNumber)
+
+    expect(anchorCourts.length).toBe(7) // plays once per leg, 7 legs for 8 teams
+    expect(new Set(anchorCourts).size).toBeGreaterThan(1)
   })
 })
 
