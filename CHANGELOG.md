@@ -7,18 +7,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Add time-based scoring as a match win condition (30eb8b0)
+- Add time-based scoring as a match win condition (d1086c0)
 - Add an org-scoped member roster and fold walk-ins into it (c1cc4c6)
 - Add a PIN-gated mobile page to run a live tournament without Clerk auth (45026ee)
 - Add auto-generated changelog and a local main-push guard (c153b95)
 
 ### Changed
 
+- Regenerate changelog to include time-based scoring (a01ecae)
 - Regenerate package-lock.json to fix corrupted entries (de54292)
 - Clarify fixed-total tournament scoring (850aed5)
 - Show current and upcoming kiosk rounds (a3dd5d9)
 - Balance Americano matchups (1e943f3)
 - Migrate Clerk TanStack integration (69631da)
+
+### Fixed
+
+- Fix Round Robin court double-booking and auto-suggest round duration (0548d3e)
 
 ## [0.1.0] - 2026-08-25
 
