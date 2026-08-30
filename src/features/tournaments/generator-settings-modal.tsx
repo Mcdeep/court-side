@@ -13,16 +13,17 @@ export function GeneratorSettingsModal({ tournament, onClose }: {
   tournament: Tournament; onClose: () => void
 }) {
   const [points, setPoints] = useState(String(tournament.pointsToWin ?? POINTS_TO_WIN))
-  const [scoringMode, setScoringMode] = useState<'first_to' | 'shared_total'>(tournament.scoringMode ?? 'first_to')
+  const [scoringMode, setScoringMode] = useState<'first_to' | 'shared_total' | 'time_based'>(tournament.scoringMode ?? 'first_to')
+  const timeBased = scoringMode === 'time_based'
   const { working, error, setError, run } = useAsyncAction()
   const updateTournament = useMutation(api.tournaments.update)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     const parsed = Number(points)
-    if (!Number.isInteger(parsed) || parsed < 1) { setError('Enter a positive whole number'); return }
+    if (!timeBased && (!Number.isInteger(parsed) || parsed < 1)) { setError('Enter a positive whole number'); return }
     await run(async () => {
-      await updateTournament({ tournamentId: tournament._id, pointsToWin: parsed, scoringMode })
+      await updateTournament({ tournamentId: tournament._id, pointsToWin: timeBased ? undefined : parsed, scoringMode })
       onClose()
     })
   }
@@ -30,13 +31,15 @@ export function GeneratorSettingsModal({ tournament, onClose }: {
   return (
     <AppDialog open onOpenChange={o => !o && onClose()} title="Generator settings">
       <form onSubmit={submit} className="space-y-4">
-        <Field label="Points target">
-          <Input
-            autoFocus type="number" min={1} max={99}
-            value={points}
-            onChange={e => setPoints(e.target.value)}
-          />
-        </Field>
+        {!timeBased && (
+          <Field label="Points target">
+            <Input
+              autoFocus type="number" min={1} max={99}
+              value={points}
+              onChange={e => setPoints(e.target.value)}
+            />
+          </Field>
+        )}
         <Field label="Scoring">
           <div className="flex gap-2">
             <button type="button" onClick={() => setScoringMode('first_to')}
@@ -49,11 +52,18 @@ export function GeneratorSettingsModal({ tournament, onClose }: {
                 ${scoringMode === 'shared_total' ? 'bg-accent text-ink ring-accent-dark/30' : 'bg-white text-ink-mute ring-zinc-200 hover:bg-zinc-50'}`}>
               Play {points || POINTS_TO_WIN} points
             </button>
+            <button type="button" onClick={() => setScoringMode('time_based')}
+              className={`flex-1 h-9 rounded-lg text-sm font-semibold ring-1 transition-colors
+                ${scoringMode === 'time_based' ? 'bg-accent text-ink ring-accent-dark/30' : 'bg-white text-ink-mute ring-zinc-200 hover:bg-zinc-50'}`}>
+              Time-based
+            </button>
           </div>
         </Field>
         <p className="text-[12.5px] text-ink-mute">
           {scoringMode === 'shared_total'
             ? 'Points are shared between both teams — this is the total per match. Setting one side fills the other with the remainder.'
+            : scoringMode === 'time_based'
+            ? 'Match ends when the round timer runs out — whichever team has the most points wins. Set the round duration in the tournament settings.'
             : 'First team to reach this score wins the match. Applies to new and edited scores.'}
         </p>
         {error && <p className="text-red-500 text-sm">{error}</p>}

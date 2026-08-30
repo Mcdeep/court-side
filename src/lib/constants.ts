@@ -1,4 +1,6 @@
 export const POINTS_TO_WIN = 24
+// Score-entry grid cap for time-based matches, which have no fixed target.
+export const TIME_BASED_MAX_SCORE = 40
 export const PRE_GENERATED_FORMATS = ['americano', 'round_robin']
 // Formats where partners are fixed manually (not auto-paired by ranking)
 // and persist as a "team" — round_robin/knockout play the same partner

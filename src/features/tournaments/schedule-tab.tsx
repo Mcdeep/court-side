@@ -74,7 +74,10 @@ export function ScheduleTab({ tournament, rounds, participants, onGenerate, pin 
           <div>
             <div className="font-semibold text-[15px] leading-tight">Round generator</div>
             <div className="text-[12.5px] text-ink-mute capitalize">
-              {tournament.format.replace(/_/g, ' ')} · {tournament.scoringMode === 'shared_total' ? 'play' : 'first to'} {tournament.pointsToWin ?? POINTS_TO_WIN} points
+              {tournament.format.replace(/_/g, ' ')} ·{' '}
+              {tournament.scoringMode === 'time_based'
+                ? 'most points when time runs out'
+                : `${tournament.scoringMode === 'shared_total' ? 'play' : 'first to'} ${tournament.pointsToWin ?? POINTS_TO_WIN} points`}
             </div>
           </div>
         </div>
@@ -121,7 +124,7 @@ export function ScheduleTab({ tournament, rounds, participants, onGenerate, pin 
 }
 
 function RoundRow({ round, pointsToWin, scoringMode, blocked, pin }: {
-  round: Round; pointsToWin: number; scoringMode: 'first_to' | 'shared_total'; blocked: boolean
+  round: Round; pointsToWin: number; scoringMode: 'first_to' | 'shared_total' | 'time_based'; blocked: boolean
   pin?: string
 }) {
   const matches = useQuery(api.matches.listByRound, { roundId: round._id })

@@ -29,7 +29,7 @@ type WizardData = {
   venueId: string
   courts: number
   points: number
-  scoringMode: 'first_to' | 'shared_total'
+  scoringMode: 'first_to' | 'shared_total' | 'time_based'
   roundMinutes: string
   startsAt: string
   endsAt: string
@@ -238,19 +238,21 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
           </label>
         </div>
 
-        <div className="mt-5 pt-5 border-t border-zinc-100 flex items-center justify-between">
-          <div>
-            <div className="text-[13px] font-semibold text-ink-mute">Points to win a match</div>
-            <div className="text-[12px] text-ink-mute/70">Standard padel scoring</div>
+        {data.scoringMode !== 'time_based' && (
+          <div className="mt-5 pt-5 border-t border-zinc-100 flex items-center justify-between">
+            <div>
+              <div className="text-[13px] font-semibold text-ink-mute">Points to win a match</div>
+              <div className="text-[12px] text-ink-mute/70">Standard padel scoring</div>
+            </div>
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100">
+              {[16, 20, 24, 32].map(p => (
+                <button key={p} onClick={() => set({ points: p })}
+                  className={`h-9 px-4 rounded-lg text-[14px] font-bold tabular-nums transition-all
+                    ${data.points === p ? 'bg-white text-ink shadow-sm' : 'text-ink-mute hover:text-ink'}`}>{p}</button>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100">
-            {[16, 20, 24, 32].map(p => (
-              <button key={p} onClick={() => set({ points: p })}
-                className={`h-9 px-4 rounded-lg text-[14px] font-bold tabular-nums transition-all
-                  ${data.points === p ? 'bg-white text-ink shadow-sm' : 'text-ink-mute hover:text-ink'}`}>{p}</button>
-            ))}
-          </div>
-        </div>
+        )}
 
         <div className="mt-5 pt-5 border-t border-zinc-100 flex items-center justify-between">
           <div>
@@ -258,6 +260,8 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
             <div className="text-[12px] text-ink-mute/70">
               {data.scoringMode === 'shared_total'
                 ? 'Points are shared — both teams’ scores add up to the target'
+                : data.scoringMode === 'time_based'
+                ? 'Match ends when the round timer runs out — most points wins'
                 : 'First team to reach the target wins'}
             </div>
           </div>
@@ -272,8 +276,16 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
                 ${data.scoringMode === 'shared_total' ? 'bg-white text-ink shadow-sm' : 'text-ink-mute hover:text-ink'}`}>
               Play {data.points} points
             </button>
+            <button type="button" onClick={() => set({ scoringMode: 'time_based' })}
+              className={`h-9 px-4 rounded-lg text-[14px] font-bold transition-all
+                ${data.scoringMode === 'time_based' ? 'bg-white text-ink shadow-sm' : 'text-ink-mute hover:text-ink'}`}>
+              Time-based
+            </button>
           </div>
         </div>
+        {data.scoringMode === 'time_based' && !data.roundMinutes && (
+          <p className="mt-3 text-[12px] text-amber-600">Set a round duration above so matches know when time's up.</p>
+        )}
       </div>
     </div>
   )
@@ -605,8 +617,14 @@ function StepReview({ data, venues }: { data: WizardData; venues: { _id: string;
           <dl className="space-y-2 text-[13.5px]">
             <div className="flex justify-between"><dt className="text-ink-mute">Venue</dt><dd className="font-semibold">{venue?.name ?? '—'}</dd></div>
             <div className="flex justify-between"><dt className="text-ink-mute">Courts</dt><dd className="font-semibold tabular-nums">{data.courts}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-mute">Points to win</dt><dd className="font-semibold tabular-nums">{data.points}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-mute">Scoring</dt><dd className="font-semibold">{data.scoringMode === 'shared_total' ? `Play ${data.points} points` : `First to ${data.points}`}</dd></div>
+            {data.scoringMode !== 'time_based' && (
+              <div className="flex justify-between"><dt className="text-ink-mute">Points to win</dt><dd className="font-semibold tabular-nums">{data.points}</dd></div>
+            )}
+            <div className="flex justify-between"><dt className="text-ink-mute">Scoring</dt><dd className="font-semibold">
+              {data.scoringMode === 'shared_total' ? `Play ${data.points} points`
+                : data.scoringMode === 'time_based' ? 'Most points when time runs out'
+                : `First to ${data.points}`}
+            </dd></div>
             {data.roundMinutes && <div className="flex justify-between"><dt className="text-ink-mute">Round duration</dt><dd className="font-semibold tabular-nums">{data.roundMinutes} min</dd></div>}
           </dl>
         </div>
