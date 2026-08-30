@@ -16,6 +16,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Regenerate changelog to include manage-page Finish tournament action (d260ecc)
 - Regenerate changelog to include mobile-first manage schedule (dedf86e)
 - Regenerate changelog to include court-shuffling fix (047a9ed)
 - Shuffle Round Robin court assignments so the anchor team isn't stuck on one court (22a2a1e)
@@ -29,6 +30,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Fix /manage PIN gate title and stale round status (97a2af1)
 - Fix Round Robin court double-booking and auto-suggest round duration (de9eeec)
 
 ## [0.1.0] - 2026-08-25
