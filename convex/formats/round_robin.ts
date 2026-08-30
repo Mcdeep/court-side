@@ -1,5 +1,14 @@
 import type { RoundPlan } from "./americano";
 
+function shuffled<T>(items: T[], random: () => number): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 // Fixed-pair round robin (circle method).
 // Participants are split into P=N/2 fixed pairs.
 // Each pair plays every other pair exactly once.
@@ -7,9 +16,15 @@ import type { RoundPlan } from "./americano";
 // Each leg has up to floor(P/2) simultaneous matchups; when that exceeds
 // courtCount, the leg is split into consecutive court-capped waves so no
 // two matches in the same physical round ever share a court.
+//
+// The circle method fixes one team (sched[0]) as the rotation anchor, so
+// without reshuffling it would always land in the leg's first matchup —
+// and therefore always the same court. Matchups within each leg are
+// shuffled before court numbers are assigned so courts vary leg to leg.
 export function generateRoundRobinRounds(
   participantIds: string[],
   courtCount: number,
+  random: () => number = Math.random,
 ): RoundPlan[] {
   const n = participantIds.length;
   if (n < 4) throw new Error("Round Robin requires at least 4 participants");
@@ -49,10 +64,14 @@ export function generateRoundRobinRounds(
       }
     }
 
+    // Shuffle so the circle method's fixed anchor team doesn't always land
+    // in the first matchup (and therefore always the same court).
+    const shuffledMatchups = shuffled(matchups, random);
+
     // Split this leg into court-capped waves so no two matches in the
     // same round are assigned the same court at the same time.
-    for (let i = 0; i < matchups.length; i += courtCount) {
-      const wave = matchups.slice(i, i + courtCount);
+    for (let i = 0; i < shuffledMatchups.length; i += courtCount) {
+      const wave = shuffledMatchups.slice(i, i + courtCount);
       const round: RoundPlan = wave.map((m, idx) => ({
         pairA: m.pairA,
         pairB: m.pairB,
