@@ -21,38 +21,61 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, p
 }) {
   const [showSettings, setShowSettings] = useState(false)
   const [showReset, setShowReset] = useState(false)
+  const [showFinish, setShowFinish] = useState(false)
   const resetSchedule = useMutation(api.rounds.resetSchedule)
+  const finishTournament = useMutation(api.tournaments.finish)
   const isPreGenerated = PRE_GENERATED_FORMATS.includes(tournament.format)
   const checkedInCount = participants.filter(p => p.checkedIn === true).length
   const lastRound = rounds[rounds.length - 1]
   const lastRoundScored = !lastRound || lastRound.state === 'completed'
   const canGenerate = isPreGenerated || (checkedInCount >= 4 && lastRoundScored)
 
+  const finishDialog = showFinish && (
+    <ConfirmDialog
+      title="Finish tournament?"
+      body="Scores will be locked and final standings calculated. This cannot be undone."
+      confirmLabel="Finish"
+      danger
+      onConfirm={async () => {
+        await finishTournament({ tournamentId: tournament._id, pin })
+        setShowFinish(false)
+      }}
+      onCancel={() => setShowFinish(false)}
+    />
+  )
+
   if (rounds.length === 0) {
     return (
-      <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-8 flex flex-col items-center text-center">
-        <span className="w-14 h-14 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center mb-4">
-          <Icon name="shuffle" className="w-7 h-7" stroke={1.8} />
-        </span>
-        <h3 className="font-display font-bold text-[18px]">No rounds yet</h3>
-        <p className="text-ink-mute text-sm mt-1">
-          Generate the first round to auto-assign teams across courts.
-        </p>
-        {!isPreGenerated && (
-          <p className="text-ink-mute text-[12.5px] mt-2 tnum">{checkedInCount} checked in</p>
-        )}
-        <Button variant="primary" size="lg" icon="bolt" className="w-full mt-5" onClick={onGenerate} disabled={!canGenerate}>
-          Generate round 1
+      <div>
+        {finishDialog}
+        <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-8 flex flex-col items-center text-center">
+          <span className="w-14 h-14 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center mb-4">
+            <Icon name="shuffle" className="w-7 h-7" stroke={1.8} />
+          </span>
+          <h3 className="font-display font-bold text-[18px]">No rounds yet</h3>
+          <p className="text-ink-mute text-sm mt-1">
+            Generate the first round to auto-assign teams across courts.
+          </p>
+          {!isPreGenerated && (
+            <p className="text-ink-mute text-[12.5px] mt-2 tnum">{checkedInCount} checked in</p>
+          )}
+          <Button variant="primary" size="lg" icon="bolt" className="w-full mt-5" onClick={onGenerate} disabled={!canGenerate}>
+            Generate round 1
+          </Button>
+          {!canGenerate && (
+            <p className="text-[12.5px] text-red-500 mt-2">Check in at least 4 players first</p>
+          )}
+        </div>
+        <Button variant="outline" size="lg" icon="flag" className="w-full mt-4" onClick={() => setShowFinish(true)}>
+          Finish tournament
         </Button>
-        {!canGenerate && (
-          <p className="text-[12.5px] text-red-500 mt-2">Check in at least 4 players first</p>
-        )}
       </div>
     )
   }
 
   return (
     <div>
+      {finishDialog}
       {showSettings && (
         <GeneratorSettingsModal tournament={tournament} onClose={() => setShowSettings(false)} />
       )}
@@ -124,6 +147,10 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, p
           All {rounds.length} rounds scheduled
         </div>
       )}
+
+      <Button variant="outline" size="lg" icon="flag" className="w-full mt-6" onClick={() => setShowFinish(true)}>
+        Finish tournament
+      </Button>
     </div>
   )
 }

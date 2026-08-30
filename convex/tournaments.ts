@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireOrgAdmin } from "./lib/auth";
+import { requireOrgAdmin, requireOrgAdminOrPin } from "./lib/auth";
 import { internal } from "./_generated/api";
 
 const formatValidator = v.union(
@@ -282,6 +282,27 @@ export const deleteTournament = mutation({
       .take(100);
     for (const p of participants) await ctx.db.delete(p._id);
     await ctx.db.delete(args.tournamentId);
+  },
+});
+
+// Scoped in_progress -> completed transition, callable by an org admin or
+// by the tournament's manage PIN (courtside staff running /manage have no
+// Clerk session) -- unlike updateState, which only allows an org admin and
+// can move a tournament through any state.
+export const finish = mutation({
+  args: {
+    tournamentId: v.id("tournaments"),
+    pin: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const tournament = await ctx.db.get(args.tournamentId);
+    if (!tournament) throw new Error("Tournament not found");
+    await requireOrgAdminOrPin(ctx, tournament, args.pin);
+    if (tournament.state !== "in_progress") throw new Error("Tournament is not in progress");
+    await ctx.db.patch(args.tournamentId, { state: "completed" });
+    await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, {
+      tournamentId: args.tournamentId,
+    });
   },
 });
 
