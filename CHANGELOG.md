@@ -7,6 +7,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Add Schedule/Standings tabs to /manage, auto-switch on finish (6d5045d)
 - Add a Finish tournament action to /manage (b224745)
 - Add a mobile-first schedule view for /manage (85538e9)
 - Add time-based scoring as a match win condition (d1086c0)
@@ -16,6 +17,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Regenerate changelog to include manage-page title and status fixes (ba70e96)
 - Regenerate changelog to include manage-page Finish tournament action (d260ecc)
 - Regenerate changelog to include mobile-first manage schedule (dedf86e)
 - Regenerate changelog to include court-shuffling fix (047a9ed)
