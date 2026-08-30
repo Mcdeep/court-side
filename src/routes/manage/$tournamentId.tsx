@@ -84,6 +84,7 @@ function ManagePage() {
   }
 
   const currentRound = rounds.find(r => r.state === 'in_progress') ?? rounds.find(r => r.state === 'pending')
+  const allRoundsDone = rounds.length > 0 && rounds.every(r => r.state === 'completed')
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -91,7 +92,7 @@ function ManagePage() {
         <div className="min-w-0">
           <div className="font-display font-bold text-[17px] leading-tight truncate">{tournament.name}</div>
           <div className="text-[12.5px] text-ink-mute font-medium">
-            {currentRound ? `Round ${currentRound.roundNumber}` : 'Setting up…'}
+            {currentRound ? `Round ${currentRound.roundNumber}` : allRoundsDone ? 'All rounds complete' : 'Setting up…'}
           </div>
         </div>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/15 ring-1 ring-accent/30 text-accent px-3 h-7 text-[12px] font-bold uppercase tracking-wide shrink-0">
@@ -123,6 +124,7 @@ function PinGate({ tournamentId, wrongPin, onUnlocked }: {
   const [value, setValue] = useState('')
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState(wrongPin ? 'Incorrect PIN — try again' : '')
+  const publicInfo = useQuery(api.tournaments.getPublic, { tournamentId: tournamentId as Id<'tournaments'> })
 
   async function handleSubmit() {
     if (value.length !== 4) return
@@ -153,7 +155,7 @@ function PinGate({ tournamentId, wrongPin, onUnlocked }: {
           <span className="inline-flex w-12 h-12 rounded-2xl bg-accent text-ink items-center justify-center mb-3">
             <Icon name="gear" className="w-6 h-6" />
           </span>
-          <h1 className="text-lg font-bold text-zinc-900">Manage tournament</h1>
+          <h1 className="text-lg font-bold text-zinc-900 truncate">{publicInfo?.name ?? 'Manage tournament'}</h1>
           <p className="text-sm text-zinc-500 mt-1">Enter the 4-digit PIN from the organiser</p>
         </div>
         <input
