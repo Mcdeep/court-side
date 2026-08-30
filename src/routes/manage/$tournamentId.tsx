@@ -5,7 +5,7 @@ import { api } from '#/../convex/_generated/api'
 import type { Id } from '#/../convex/_generated/dataModel'
 import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
-import { ScheduleTab } from '#/features/tournaments/schedule-tab'
+import { ManageSchedule } from '#/features/tournaments/manage-schedule'
 import { errorMessage } from '#/lib/utils'
 
 export const Route = createFileRoute('/manage/$tournamentId')({
@@ -101,8 +101,8 @@ function ManagePage() {
           Live
         </span>
       </header>
-      <main className="p-4">
-        <ScheduleTab
+      <main className="p-3">
+        <ManageSchedule
           tournament={tournament}
           rounds={rounds}
           participants={participants}
