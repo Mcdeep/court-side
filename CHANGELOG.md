@@ -7,8 +7,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Add Schedule/Standings tabs to /manage, auto-switch on finish (6d5045d)
-- Add a Finish tournament action to /manage (b224745)
+- Add Schedule/Standings tabs to /manage, auto-switch on finish (0042c13)
+- Add a Finish tournament action to /manage (03b359d)
 - Add a mobile-first schedule view for /manage (85538e9)
 - Add time-based scoring as a match win condition (d1086c0)
 - Add an org-scoped member roster and fold walk-ins into it (c1cc4c6)
@@ -17,8 +17,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Regenerate changelog to include manage-page title and status fixes (ba70e96)
-- Regenerate changelog to include manage-page Finish tournament action (d260ecc)
+- Make dialogs scrollable so tall content doesn't hide the footer buttons (df3ec0f)
+- Group team-format standings by team instead of by player (1913d56)
+- Regenerate changelog to include manage-page tabs (13330a4)
+- Regenerate changelog to include manage-page title and status fixes (f5de1be)
+- Regenerate changelog to include manage-page Finish tournament action (ce2de70)
 - Regenerate changelog to include mobile-first manage schedule (dedf86e)
 - Regenerate changelog to include court-shuffling fix (047a9ed)
 - Shuffle Round Robin court assignments so the anchor team isn't stuck on one court (22a2a1e)
@@ -32,7 +35,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- Fix /manage PIN gate title and stale round status (97a2af1)
+- Fix rating tiers to award one tier slot per team, not per player (c45d531)
+- Fix /manage PIN gate title and stale round status (f5da404)
 - Fix Round Robin court double-booking and auto-suggest round duration (de9eeec)
 
 ## [0.1.0] - 2026-08-25

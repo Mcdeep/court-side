@@ -45,9 +45,13 @@ export function PodiumOverlay({ tournamentName, top3, onDismiss }: {
               key={entry._id}
               className={`flex flex-col items-center gap-3 transition-all duration-500 ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
             >
-              <Avatar name={entry.displayName} size={rank === 1 ? 64 : 52} />
+              <div className="flex items-center">
+                {entry.players.map((p, pi) => (
+                  <Avatar key={pi} name={p.displayName} size={rank === 1 ? 64 : 52} className={pi > 0 ? '-ml-3' : ''} />
+                ))}
+              </div>
               <div className="text-center">
-                <div className="font-display font-bold text-[18px] leading-tight">{entry.displayName}</div>
+                <div className="font-display font-bold text-[18px] leading-tight">{entry.players.map(p => p.displayName).join(' / ')}</div>
                 <div className="font-mono tnum text-[14px] text-paper/50">{entry.points} pts</div>
               </div>
               <div

@@ -45,7 +45,7 @@ export function StandingsTab({ leaderboard }: { leaderboard: LeaderboardEntry[] 
         <SortHeader label="Pts" field="points" sortField={sortField} sortDir={sortDir} onClick={toggleSort} />
       </div>
       {sorted.map((entry, i) => {
-        const name = entry.user?.name ?? entry.participant?.walkInName ?? 'Unknown'
+        const name = entry.players.map(p => p.displayName).join(' / ')
         return (
           <div key={entry._id}
             className={`grid grid-cols-[48px_1fr_60px_60px_60px_70px] gap-2 px-5 py-2.5 items-center border-b border-zinc-100 last:border-0 ${i < 3 ? 'bg-accent-soft/40' : ''}`}>
@@ -56,7 +56,11 @@ export function StandingsTab({ leaderboard }: { leaderboard: LeaderboardEntry[] 
               </span>
             </div>
             <div className="flex items-center gap-2.5 min-w-0">
-              <Avatar name={name} size={28} />
+              <div className="flex items-center shrink-0">
+                {entry.players.map((p, pi) => (
+                  <Avatar key={pi} name={p.displayName} size={28} className={pi > 0 ? '-ml-2 ring-2 ring-white' : ''} />
+                ))}
+              </div>
               <span className="font-semibold text-sm truncate">{name}</span>
             </div>
             <div className="text-right tnum text-sm text-ink-mute">{entry.wins + entry.losses}</div>

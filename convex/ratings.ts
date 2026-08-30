@@ -5,6 +5,11 @@ import type { Id } from "./_generated/dataModel";
 
 const DEFAULT_TIERS = [10, 8, 6, 4, 3, 2];
 
+// Formats where partners are fixed for the whole tournament (mirrors
+// convex/rounds.ts and src/lib/constants.ts) -- a team occupies one
+// placement/tier slot, not one per player.
+const FIXED_PAIR_FORMATS = ["round_robin", "knockout", "king_of_the_court", "snakes_and_ladders"];
+
 export const getTiers = query({
   args: { organizationId: v.id("organizations") },
   handler: async (ctx, args) => {
@@ -231,21 +236,48 @@ export const awardRatings = internalMutation({
 
     if (standings.length === 0) return;
 
-    // Group by points to handle ties
-    const groups: { points: number; participantIds: Id<"participants">[] }[] = [];
-    for (const entry of standings) {
+    // In team formats, both partners always have identical points (they
+    // always play together) -- collapse them into one placement "unit" so
+    // a team occupies a single tier slot instead of two. Keyed by team so
+    // partners don't need to be adjacent in `standings`.
+    const isTeamFormat = FIXED_PAIR_FORMATS.includes(tournament.format);
+    type Unit = { points: number; participantIds: Id<"participants">[] };
+    const units: Unit[] = [];
+    if (isTeamFormat) {
+      const unitByTeam = new Map<string, Unit>();
+      for (const entry of standings) {
+        const participant = await ctx.db.get(entry.participantId);
+        const teamId = participant?.teamId as string | undefined;
+        const existingUnit = teamId ? unitByTeam.get(teamId) : undefined;
+        if (existingUnit) {
+          existingUnit.participantIds.push(entry.participantId);
+          continue;
+        }
+        const unit: Unit = { points: entry.points, participantIds: [entry.participantId] };
+        if (teamId) unitByTeam.set(teamId, unit);
+        units.push(unit);
+      }
+    } else {
+      for (const entry of standings) {
+        units.push({ points: entry.points, participantIds: [entry.participantId] });
+      }
+    }
+
+    // Group units by points to handle ties
+    const groups: { points: number; units: Unit[] }[] = [];
+    for (const unit of units) {
       const last = groups[groups.length - 1];
-      if (last && last.points === entry.points) {
-        last.participantIds.push(entry.participantId);
+      if (last && last.points === unit.points) {
+        last.units.push(unit);
       } else {
-        groups.push({ points: entry.points, participantIds: [entry.participantId] });
+        groups.push({ points: unit.points, units: [unit] });
       }
     }
 
     // Assign tier points with tie averaging
     let position = 0;
     for (const group of groups) {
-      const count = group.participantIds.length;
+      const count = group.units.length;
       let totalTierPoints = 0;
       for (let i = 0; i < count; i++) {
         const tierIdx = position + i;
@@ -253,7 +285,7 @@ export const awardRatings = internalMutation({
       }
       const avgPoints = totalTierPoints / count;
 
-      for (const participantId of group.participantIds) {
+      for (const participantId of group.units.flatMap((u) => u.participantIds)) {
         const participant = await ctx.db.get(participantId);
         if (!participant) continue;
         if (!participant.userId && !participant.memberId) continue;

@@ -7,14 +7,19 @@ function BoardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
     rank === 1 ? 'bg-accent text-ink' :
     rank === 2 ? 'bg-paper/25 text-paper' :
     rank === 3 ? 'bg-paper/15 text-paper' : ''
+  const name = entry.players.map(p => p.displayName).join(' / ')
   return (
     <div className="grid grid-cols-[36px_1fr_54px] items-center gap-3 py-1.5 border-b border-white/6 last:border-0">
       <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-display font-bold text-[15px] tnum ${medal || 'text-paper/40'}`}>
         {rank}
       </span>
       <div className="flex items-center gap-2.5 min-w-0">
-        <Avatar name={entry.displayName} size={30} />
-        <span className="font-semibold text-[16px] truncate">{entry.displayName}</span>
+        <div className="flex items-center shrink-0">
+          {entry.players.map((p, pi) => (
+            <Avatar key={pi} name={p.displayName} size={30} className={pi > 0 ? '-ml-2' : ''} />
+          ))}
+        </div>
+        <span className="font-semibold text-[16px] truncate">{name}</span>
       </div>
       <span className="font-mono tnum font-bold text-[18px] text-right">{entry.points}</span>
     </div>
