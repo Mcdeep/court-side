@@ -13,7 +13,7 @@ const formatValidator = v.union(
   v.literal("team_clash"),
 );
 
-const scoringModeValidator = v.union(v.literal("first_to"), v.literal("shared_total"));
+const scoringModeValidator = v.union(v.literal("first_to"), v.literal("shared_total"), v.literal("time_based"));
 
 const stateValidator = v.union(
   v.literal("draft"),

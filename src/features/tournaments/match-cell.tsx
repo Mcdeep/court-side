@@ -5,11 +5,11 @@ import { AppDialog } from '#/components/app-dialog'
 import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
 import { pairNames } from '#/lib/names'
-import { POINTS_TO_WIN } from '#/lib/constants'
+import { POINTS_TO_WIN, TIME_BASED_MAX_SCORE } from '#/lib/constants'
 import type { Match } from './types'
 
 export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'first_to', pin }: {
-  match: Match; pointsToWin?: number; scoringMode?: 'first_to' | 'shared_total'; pin?: string
+  match: Match; pointsToWin?: number; scoringMode?: 'first_to' | 'shared_total' | 'time_based'; pin?: string
 }) {
   const [editing, setEditing] = useState(false)
   const [a, setA] = useState(match.scoreA ?? 0)
@@ -17,6 +17,8 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'f
   const [saving, setSaving] = useState(false)
   const saveResult = useMutation(api.scores.saveResult)
   const shared = scoringMode === 'shared_total'
+  const timeBased = scoringMode === 'time_based'
+  const entryMax = timeBased ? TIME_BASED_MAX_SCORE : pointsToWin
 
   function handleChangeA(n: number) {
     setA(n)
@@ -65,14 +67,15 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'f
               <div>
                 <div className="font-display font-bold text-[16px] leading-tight">Court {match.courtNumber} · Score</div>
                 <div className="text-[12px] text-ink-mute font-normal">
-                  {shared ? `Tap one side — the other fills to ${pointsToWin}` : "Tap each side's score"}
+                  {shared ? `Tap one side — the other fills to ${pointsToWin}` :
+                    timeBased ? "Time's up — enter each side's points, most wins" : "Tap each side's score"}
                 </div>
               </div>
             </div>
           }
         >
-          <NumberGrid label={`${nameA1} / ${nameA2}`} value={a} onChange={handleChangeA} max={pointsToWin} highlight={a > b} />
-          <NumberGrid label={`${nameB1} / ${nameB2}`} value={b} onChange={handleChangeB} max={pointsToWin} highlight={b > a} />
+          <NumberGrid label={`${nameA1} / ${nameA2}`} value={a} onChange={handleChangeA} max={entryMax} highlight={a > b} />
+          <NumberGrid label={`${nameB1} / ${nameB2}`} value={b} onChange={handleChangeB} max={entryMax} highlight={b > a} />
           <div className="flex gap-2">
             <Button variant="ghost" size="lg" className="flex-1" onClick={() => setEditing(false)}>Cancel</Button>
             <Button variant="primary" size="lg" className="flex-[1.4]" icon="check" onClick={handleSave} disabled={saving}>Save</Button>

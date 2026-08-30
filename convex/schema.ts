@@ -50,7 +50,8 @@ export default defineSchema({
     pointsToWin: v.optional(v.number()),
     // "first_to" (default): first team to reach pointsToWin wins, scores are independent.
     // "shared_total": each match splits a fixed pool of pointsToWin points between the two teams.
-    scoringMode: v.optional(v.union(v.literal("first_to"), v.literal("shared_total"))),
+    // "time_based": match ends when the round timer runs out; whichever team has more points wins.
+    scoringMode: v.optional(v.union(v.literal("first_to"), v.literal("shared_total"), v.literal("time_based"))),
     startsAt: v.number(),
     endsAt: v.number(),
     // Generated when the tournament starts (first round generated). Lets
