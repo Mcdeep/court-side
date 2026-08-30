@@ -17,8 +17,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Make dialogs scrollable so tall content doesn't hide the footer buttons (df3ec0f)
-- Group team-format standings by team instead of by player (1913d56)
+- Make the mobile score number grid a 2-row horizontal scroller (adfec3b)
+- Group team standings/podium and fix rating tiers per team (#11) (ccc4bfd)
 - Regenerate changelog to include manage-page tabs (13330a4)
 - Regenerate changelog to include manage-page title and status fixes (f5de1be)
 - Regenerate changelog to include manage-page Finish tournament action (ce2de70)
@@ -35,7 +35,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- Fix rating tiers to award one tier slot per team, not per player (c45d531)
 - Fix /manage PIN gate title and stale round status (f5da404)
 - Fix Round Robin court double-booking and auto-suggest round duration (de9eeec)
 
