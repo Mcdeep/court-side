@@ -14,9 +14,10 @@ import type { Participant, Round, Tournament } from './types'
 // dashboard), everything here is a single fluid column with no fixed
 // pixel minimums, so it never overflows horizontally, and actions are
 // full-width buttons sized for a thumb rather than a mouse.
-export function ManageSchedule({ tournament, rounds, participants, onGenerate, pin }: {
+export function ManageSchedule({ tournament, rounds, participants, onGenerate, onFinished, pin }: {
   tournament: Tournament; rounds: Round[]; participants: Participant[]
   onGenerate: () => void
+  onFinished?: () => void
   pin?: string
 }) {
   const [showSettings, setShowSettings] = useState(false)
@@ -29,6 +30,9 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, p
   const lastRound = rounds[rounds.length - 1]
   const lastRoundScored = !lastRound || lastRound.state === 'completed'
   const canGenerate = isPreGenerated || (checkedInCount >= 4 && lastRoundScored)
+  // Once the tournament isn't in_progress (already finished), hide the
+  // admin-only controls -- settings/reset/finish/generate no longer apply.
+  const locked = tournament.state !== 'in_progress'
 
   const finishDialog = showFinish && (
     <ConfirmDialog
@@ -39,6 +43,7 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, p
       onConfirm={async () => {
         await finishTournament({ tournamentId: tournament._id, pin })
         setShowFinish(false)
+        onFinished?.()
       }}
       onCancel={() => setShowFinish(false)}
     />
@@ -66,9 +71,11 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, p
             <p className="text-[12.5px] text-red-500 mt-2">Check in at least 4 players first</p>
           )}
         </div>
-        <Button variant="outline" size="lg" icon="flag" className="w-full mt-4" onClick={() => setShowFinish(true)}>
-          Finish tournament
-        </Button>
+        {!locked && (
+          <Button variant="outline" size="lg" icon="flag" className="w-full mt-4" onClick={() => setShowFinish(true)}>
+            Finish tournament
+          </Button>
+        )}
       </div>
     )
   }
@@ -105,14 +112,16 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, p
               : `${tournament.scoringMode === 'shared_total' ? 'play' : 'first to'} ${tournament.pointsToWin ?? POINTS_TO_WIN} points`}
           </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Button variant="outline" size="icon" aria-label="Generator settings" onClick={() => setShowSettings(true)}>
-            <Icon name="gear" className="w-4.5 h-4.5" stroke={2.2} />
-          </Button>
-          <Button variant="ghost" size="icon" aria-label="Reset schedule" onClick={() => setShowReset(true)}>
-            <Icon name="reset" className="w-4.5 h-4.5" stroke={2.2} />
-          </Button>
-        </div>
+        {!locked && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button variant="outline" size="icon" aria-label="Generator settings" onClick={() => setShowSettings(true)}>
+              <Icon name="gear" className="w-4.5 h-4.5" stroke={2.2} />
+            </Button>
+            <Button variant="ghost" size="icon" aria-label="Reset schedule" onClick={() => setShowReset(true)}>
+              <Icon name="reset" className="w-4.5 h-4.5" stroke={2.2} />
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="space-y-6">
@@ -128,7 +137,7 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, p
         ))}
       </div>
 
-      {!isPreGenerated && (
+      {!isPreGenerated && !locked && (
         <div className="flex flex-col items-center gap-2 mt-6 rounded-2xl border-2 border-dashed border-zinc-300 p-5">
           <Button variant="primary" size="lg" icon="plus" className="w-full" onClick={onGenerate} disabled={!canGenerate}>
             Generate round {rounds.length + 1}
@@ -148,9 +157,11 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, p
         </div>
       )}
 
-      <Button variant="outline" size="lg" icon="flag" className="w-full mt-6" onClick={() => setShowFinish(true)}>
-        Finish tournament
-      </Button>
+      {!locked && (
+        <Button variant="outline" size="lg" icon="flag" className="w-full mt-6" onClick={() => setShowFinish(true)}>
+          Finish tournament
+        </Button>
+      )}
     </div>
   )
 }

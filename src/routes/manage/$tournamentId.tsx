@@ -5,7 +5,9 @@ import { api } from '#/../convex/_generated/api'
 import type { Id } from '#/../convex/_generated/dataModel'
 import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
+import { SegTabs } from '#/components/ui/seg-tabs'
 import { ManageSchedule } from '#/features/tournaments/manage-schedule'
+import { StandingsTab } from '#/features/tournaments/standings-tab'
 import { errorMessage } from '#/lib/utils'
 
 export const Route = createFileRoute('/manage/$tournamentId')({
@@ -24,6 +26,7 @@ function ManagePage() {
     if (typeof window === 'undefined') return null
     return localStorage.getItem(pinStorageKey(tournamentId))
   })
+  const [tab, setTab] = useState<'schedule' | 'standings'>('schedule')
 
   const tournament = useQuery(
     api.tournaments.getForManage,
@@ -31,6 +34,7 @@ function ManagePage() {
   )
   const rounds = useQuery(api.rounds.list, tournament ? { tournamentId: tid } : 'skip')
   const participants = useQuery(api.participants.list, tournament ? { tournamentId: tid } : 'skip')
+  const leaderboard = useQuery(api.leaderboard.get, tournament ? { tournamentId: tid } : 'skip')
   const generateRounds = useMutation(api.rounds.generate)
 
   const invalidPin = pin !== null && tournament === null
@@ -50,68 +54,85 @@ function ManagePage() {
     return <PinGate tournamentId={tournamentId} wrongPin={invalidPin} onUnlocked={handleUnlocked} />
   }
 
-  if (tournament === undefined || rounds === undefined || participants === undefined) {
+  if (tournament === undefined || rounds === undefined || participants === undefined || leaderboard === undefined) {
     return (
       <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
         <div className="w-10 h-10 rounded-full border-2 border-zinc-200 border-t-zinc-600 animate-spin" />
       </div>
     )
   }
+  if (!tournament) {
+    // Unreachable in practice: pin === null or invalidPin (tournament === null)
+    // already redirected to PinGate above. This just narrows the type below.
+    return null
+  }
 
-  if (tournament.state !== 'in_progress') {
-    const ended = tournament.state === 'completed' || tournament.state === 'archived'
+  const notStarted = tournament.state === 'draft' || tournament.state === 'published' || tournament.state === 'registration_open'
+  if (notStarted) {
     return (
       <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-lg p-8 max-w-sm w-full text-center">
-          <div className="text-4xl mb-3">{ended ? '🏆' : '⏳'}</div>
-          <h1 className="text-lg font-bold text-zinc-900 mb-2">
-            {ended ? 'Tournament has ended' : "Tournament hasn't started yet"}
-          </h1>
-          <p className="text-sm text-zinc-500 mb-5">
-            {ended
-              ? 'Scores are locked. You can still view final results.'
-              : 'Come back once the organiser starts the tournament.'}
-          </p>
-          {ended && (
-            <a href={`/kiosk/${tournamentId}`}
-              className="inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-zinc-900 text-white font-semibold text-sm hover:bg-zinc-800 transition-colors">
-              View results
-            </a>
-          )}
+          <div className="text-4xl mb-3">⏳</div>
+          <h1 className="text-lg font-bold text-zinc-900 mb-2">Tournament hasn't started yet</h1>
+          <p className="text-sm text-zinc-500 mb-5">Come back once the organiser starts the tournament.</p>
         </div>
       </div>
     )
   }
 
+  const ended = tournament.state === 'completed' || tournament.state === 'archived'
   const currentRound = rounds.find(r => r.state === 'in_progress') ?? rounds.find(r => r.state === 'pending')
   const allRoundsDone = rounds.length > 0 && rounds.every(r => r.state === 'completed')
 
   return (
     <div className="min-h-screen bg-zinc-50">
-      <header className="sticky top-0 z-10 bg-white border-b border-zinc-200/80 px-4 py-3 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-display font-bold text-[17px] leading-tight truncate">{tournament.name}</div>
-          <div className="text-[12.5px] text-ink-mute font-medium">
-            {currentRound ? `Round ${currentRound.roundNumber}` : allRoundsDone ? 'All rounds complete' : 'Setting up…'}
+      <header className="sticky top-0 z-10 bg-white border-b border-zinc-200/80 px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="font-display font-bold text-[17px] leading-tight truncate">{tournament.name}</div>
+            <div className="text-[12.5px] text-ink-mute font-medium">
+              {ended ? 'Tournament ended'
+                : currentRound ? `Round ${currentRound.roundNumber}`
+                : allRoundsDone ? 'All rounds complete' : 'Setting up…'}
+            </div>
           </div>
+          {ended ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 text-zinc-500 px-3 h-7 text-[12px] font-bold uppercase tracking-wide shrink-0">
+              <Icon name="check" className="w-3.5 h-3.5" stroke={3} />
+              Completed
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/15 ring-1 ring-accent/30 text-accent px-3 h-7 text-[12px] font-bold uppercase tracking-wide shrink-0">
+              <span className="relative inline-flex w-2 h-2 rounded-full bg-accent">
+                <span className="absolute inset-0 rounded-full bg-accent animate-ping" />
+              </span>
+              Live
+            </span>
+          )}
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/15 ring-1 ring-accent/30 text-accent px-3 h-7 text-[12px] font-bold uppercase tracking-wide shrink-0">
-          <span className="relative inline-flex w-2 h-2 rounded-full bg-accent">
-            <span className="absolute inset-0 rounded-full bg-accent animate-ping" />
-          </span>
-          Live
-        </span>
+        <div className="mt-3">
+          <SegTabs
+            value={tab}
+            onChange={id => setTab(id as 'schedule' | 'standings')}
+            tabs={[{ id: 'schedule', label: 'Schedule' }, { id: 'standings', label: 'Standings' }]}
+          />
+        </div>
       </header>
       <main className="p-3">
-        <ManageSchedule
-          tournament={tournament}
-          rounds={rounds}
-          participants={participants}
-          pin={pin}
-          onGenerate={async () => {
-            await generateRounds({ tournamentId: tid, pin })
-          }}
-        />
+        {tab === 'schedule' ? (
+          <ManageSchedule
+            tournament={tournament}
+            rounds={rounds}
+            participants={participants}
+            pin={pin}
+            onGenerate={async () => {
+              await generateRounds({ tournamentId: tid, pin })
+            }}
+            onFinished={() => setTab('standings')}
+          />
+        ) : (
+          <StandingsTab leaderboard={leaderboard} />
+        )}
       </main>
     </div>
   )
