@@ -3,8 +3,10 @@ import type { RoundPlan } from "./americano";
 // Fixed-pair round robin (circle method).
 // Participants are split into P=N/2 fixed pairs.
 // Each pair plays every other pair exactly once.
-// Rounds: P-1 (P even) or P (P odd, one bye per round).
-// Court numbers cycle through 1..courtCount when matches > courts.
+// Circle-method "legs": P-1 (P even) or P (P odd, one bye per leg).
+// Each leg has up to floor(P/2) simultaneous matchups; when that exceeds
+// courtCount, the leg is split into consecutive court-capped waves so no
+// two matches in the same physical round ever share a court.
 export function generateRoundRobinRounds(
   participantIds: string[],
   courtCount: number,
@@ -27,32 +29,50 @@ export function generateRoundRobinRounds(
     ? [...teams]
     : [...teams, null];
   const S = sched.length; // always even
-  const numRounds = P % 2 === 0 ? P - 1 : P;
+  const numLegs = P % 2 === 0 ? P - 1 : P;
 
   const rounds: RoundPlan[] = [];
 
-  for (let r = 0; r < numRounds; r++) {
+  for (let leg = 0; leg < numLegs; leg++) {
     // Circle method: fix sched[0], rotate sched[1..S-1]
     const rotated: ([string, string] | null)[] = [sched[0]];
     for (let i = 1; i < S; i++) {
-      rotated.push(sched[((i - 1 + r) % (S - 1)) + 1]);
+      rotated.push(sched[((i - 1 + leg) % (S - 1)) + 1]);
     }
 
-    const round: RoundPlan = [];
+    const matchups: { pairA: [string, string]; pairB: [string, string] }[] = [];
     for (let i = 0; i < S / 2; i++) {
       const a = rotated[i];
       const b = rotated[S - 1 - i];
       if (a !== null && b !== null) {
-        round.push({
-          pairA: a,
-          pairB: b,
-          courtNumber: (round.length % courtCount) + 1,
-        });
+        matchups.push({ pairA: a, pairB: b });
       }
     }
 
-    if (round.length > 0) rounds.push(round);
+    // Split this leg into court-capped waves so no two matches in the
+    // same round are assigned the same court at the same time.
+    for (let i = 0; i < matchups.length; i += courtCount) {
+      const wave = matchups.slice(i, i + courtCount);
+      const round: RoundPlan = wave.map((m, idx) => ({
+        pairA: m.pairA,
+        pairB: m.pairB,
+        courtNumber: idx + 1,
+      }));
+      rounds.push(round);
+    }
   }
 
   return rounds;
+}
+
+// Pure round-count estimate (no participant IDs needed) — used by the
+// tournament wizard to suggest a default round duration before players
+// have been assigned to teams.
+export function countRoundRobinRounds(teamCount: number, courtCount: number): number {
+  const P = Math.floor(teamCount);
+  if (P < 2 || courtCount < 1) return 0;
+  const numLegs = P % 2 === 0 ? P - 1 : P;
+  const matchesPerLeg = Math.floor(P / 2);
+  const wavesPerLeg = Math.max(1, Math.ceil(matchesPerLeg / courtCount));
+  return numLegs * wavesPerLeg;
 }

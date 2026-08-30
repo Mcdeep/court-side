@@ -2,13 +2,14 @@ import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
 import type { Id } from '#/../convex/_generated/dataModel'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Icon } from '#/components/ui/icon'
 import { Avatar } from '#/components/ui/avatar'
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '#/components/ui/carousel'
 import { ToggleGroup, ToggleGroupItem } from '#/components/ui/toggle-group'
 import { toDatetimeLocal } from '#/lib/format'
 import { useAsyncAction } from '#/hooks/use-async-action'
+import { countRoundRobinRounds } from '#/../convex/formats/round_robin'
 
 export const Route = createFileRoute('/$slug/tournaments/new')({
   component: NewTournamentPage,
@@ -31,6 +32,9 @@ type WizardData = {
   points: number
   scoringMode: 'first_to' | 'shared_total' | 'time_based'
   roundMinutes: string
+  // False once the organizer manually edits round duration — stops the
+  // Round Robin auto-suggestion from overwriting their choice.
+  roundMinutesAuto: boolean
   startsAt: string
   endsAt: string
   duration: DurationPreset
@@ -232,9 +236,12 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
           <label className="block">
             <span className="text-[13px] font-semibold text-ink-mute mb-1.5 block">Round duration (min)</span>
             <input type="number" min={1} max={60} value={data.roundMinutes}
-              onChange={e => set({ roundMinutes: e.target.value })}
-              placeholder="e.g. 4 (leave empty for no timer)"
+              onChange={e => set({ roundMinutes: e.target.value, roundMinutesAuto: false })}
+              placeholder={data.format === 'round_robin' ? 'Set after pairing teams' : 'e.g. 4 (leave empty for no timer)'}
               className={INPUT_CLS} />
+            {data.format === 'round_robin' && (
+              <p className="text-[11.5px] text-ink-mute/70 mt-1">Auto-calculated once teams are paired, based on courts and tournament duration.</p>
+            )}
           </label>
         </div>
 
@@ -392,6 +399,21 @@ function StepPairing({ data, set }: { data: WizardData; set: (p: Partial<WizardD
   const [overPool, setOverPool] = useState(false)
   const [selected, setSelected] = useState<DragRef | null>(null)
 
+  const isRoundRobin = data.format === 'round_robin'
+  const rrTeamCount = Math.floor(data.players.length / 2)
+  const rrRoundsNeeded = isRoundRobin ? countRoundRobinRounds(rrTeamCount, data.courts) : 0
+  const rrTotalMinutes = Math.round((new Date(data.endsAt).getTime() - new Date(data.startsAt).getTime()) / 60_000)
+  const rrSuggestedMinutes = rrRoundsNeeded > 0 ? Math.max(1, Math.floor(rrTotalMinutes / rrRoundsNeeded)) : undefined
+
+  // Keep the round duration in sync with the computed schedule until the
+  // organizer manually overrides it (see roundMinutesAuto).
+  useEffect(() => {
+    if (!isRoundRobin || !data.roundMinutesAuto || rrSuggestedMinutes === undefined) return
+    if (data.roundMinutes === String(rrSuggestedMinutes)) return
+    set({ roundMinutes: String(rrSuggestedMinutes) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRoundRobin, rrSuggestedMinutes, data.roundMinutesAuto])
+
   if (AUTO_PAIR.includes(data.format)) {
     const fmtObj = FORMATS.find(f => f.id === data.format)!
     return (
@@ -515,6 +537,27 @@ function StepPairing({ data, set }: { data: WizardData; set: (p: Partial<WizardD
         <span className="tabular-nums whitespace-nowrap">{pairedCount} of {nTeams} teams paired</span>
       </div>
 
+      {isRoundRobin && (
+        <div className="mt-4 rounded-2xl bg-accent-soft/60 ring-1 ring-accent-dark/20 p-4 text-[13px]">
+          {rrRoundsNeeded > 0 ? (
+            <>
+              <span className="font-bold">{nTeams} teams</span> need{' '}
+              <span className="font-bold">{rrRoundsNeeded} round{rrRoundsNeeded === 1 ? '' : 's'}</span>{' '}
+              for everyone to play each other once, across {data.courts} court{data.courts === 1 ? '' : 's'}.
+              {rrSuggestedMinutes !== undefined && (
+                <>
+                  {' '}At {rrTotalMinutes} min total, that's{' '}
+                  <span className="font-bold">~{rrSuggestedMinutes} min/round</span>
+                  {data.roundMinutesAuto ? ' — set as the default round duration.' : ' — your round duration is set manually, adjust it in Format & rules if needed.'}
+                </>
+              )}
+            </>
+          ) : (
+            'Add at least 4 players to calculate the round-robin schedule.'
+          )}
+        </div>
+      )}
+
       <div className="mt-5 grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-5 items-start">
         {/* Pool */}
         <div
@@ -625,6 +668,9 @@ function StepReview({ data, venues }: { data: WizardData; venues: { _id: string;
                 : data.scoringMode === 'time_based' ? 'Most points when time runs out'
                 : `First to ${data.points}`}
             </dd></div>
+            {data.format === 'round_robin' && (
+              <div className="flex justify-between"><dt className="text-ink-mute">Rounds</dt><dd className="font-semibold tabular-nums">{countRoundRobinRounds(Math.floor(data.players.length / 2), data.courts)}</dd></div>
+            )}
             {data.roundMinutes && <div className="flex justify-between"><dt className="text-ink-mute">Round duration</dt><dd className="font-semibold tabular-nums">{data.roundMinutes} min</dd></div>}
           </dl>
         </div>
@@ -688,6 +734,7 @@ function NewTournamentPage() {
     points: 24,
     scoringMode: 'first_to',
     roundMinutes: '',
+    roundMinutesAuto: true,
     startsAt: toDatetimeLocal(now + 60 * 60 * 1000),
     endsAt: toDatetimeLocal(now + 4 * 60 * 60 * 1000),
     duration: '2',
