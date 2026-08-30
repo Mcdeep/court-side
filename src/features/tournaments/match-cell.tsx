@@ -124,12 +124,12 @@ function NumberGrid({ label, value, onChange, max, highlight }: {
   label: string; value: number; onChange: (n: number) => void; max: number; highlight: boolean
 }) {
   return (
-    <div className={`rounded-2xl p-3 ring-1 ${highlight ? 'bg-accent-soft ring-accent-dark/30' : 'bg-zinc-50 ring-zinc-200'}`}>
+    <div className={`rounded-2xl p-3 ring-1 min-w-0 ${highlight ? 'bg-accent-soft ring-accent-dark/30' : 'bg-zinc-50 ring-zinc-200'}`}>
       <div className="text-[13px] font-bold text-ink-mute mb-2 truncate">{label}</div>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5 max-[450px]:grid max-[450px]:grid-rows-2 max-[450px]:grid-flow-col max-[450px]:auto-cols-[36px] max-[450px]:overflow-x-auto max-[450px]:scrollbar-none max-[450px]:w-full max-[450px]:min-w-0 max-[450px]:-mx-3 max-[450px]:px-3 max-[450px]:pb-0.5">
         {Array.from({ length: max + 1 }, (_, n) => (
           <button key={n} onClick={() => onChange(n)}
-            className={`w-9 h-9 rounded-lg text-[14px] font-bold tnum flex items-center justify-center transition-all active:scale-95
+            className={`w-9 h-9 rounded-lg text-[14px] font-bold tnum flex items-center justify-center transition-all active:scale-95 shrink-0
               ${value === n ? 'bg-accent text-ink' : 'bg-white text-ink-mute ring-1 ring-zinc-200 hover:bg-zinc-100'}`}>
             {n}
           </button>
