@@ -14,6 +14,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Shuffle Round Robin court assignments so the anchor team isn't stuck on one court (4536819)
+- Regenerate changelog to include round-robin scheduling fix (8bba590)
 - Regenerate changelog to include time-based scoring (a01ecae)
 - Regenerate package-lock.json to fix corrupted entries (de54292)
 - Clarify fixed-total tournament scoring (850aed5)
@@ -23,7 +25,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- Fix Round Robin court double-booking and auto-suggest round duration (0548d3e)
+- Fix Round Robin court double-booking and auto-suggest round duration (de9eeec)
 
 ## [0.1.0] - 2026-08-25
 
