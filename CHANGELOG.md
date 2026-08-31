@@ -17,6 +17,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Regenerate changelog to include multi-org sign-in picker (831ba7a)
 - Let users pick which organisation to sign in to when they belong to several (d8c6f71)
 - Mobile score grid: 2-row horizontal scroll (#12) (0552344)
 - Group team standings/podium and fix rating tiers per team (#11) (ccc4bfd)
@@ -36,6 +37,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Fix import-members placeholder line break; add offline-manage design doc (b860b20)
 - Fix /manage PIN gate title and stale round status (f5da404)
 - Fix Round Robin court double-booking and auto-suggest round duration (de9eeec)
 
