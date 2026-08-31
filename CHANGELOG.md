@@ -17,7 +17,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Make the mobile score number grid a 2-row horizontal scroller (adfec3b)
+- Let users pick which organisation to sign in to when they belong to several (d8c6f71)
+- Mobile score grid: 2-row horizontal scroll (#12) (0552344)
 - Group team standings/podium and fix rating tiers per team (#11) (ccc4bfd)
 - Regenerate changelog to include manage-page tabs (13330a4)
 - Regenerate changelog to include manage-page title and status fixes (f5de1be)
