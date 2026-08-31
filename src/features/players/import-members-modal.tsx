@@ -53,7 +53,7 @@ export function ImportMembersModal({ organizationId, existingNames, onClose }: {
           autoFocus
           value={text}
           onChange={e => { setText(e.target.value); setExcluded(new Set()) }}
-          placeholder={'Maurice Lau    74\nMarais Bothma    71\n...'}
+          placeholder={'John Doe    74\nAlice Wonders    71\n...'}
           rows={6}
           className="w-full rounded-xl ring-1 ring-zinc-200 bg-white px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent-dark/40"
         />
