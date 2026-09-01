@@ -135,6 +135,7 @@ Each format implements two functions:
 - [ ] View tournament leaderboard
 - [ ] View personal history across all organisations (player profile)
 - [ ] PWA manifest + service worker (installable, offline-capable schedule view)
+- [ ] Offline write support for `/manage/:tournamentId` (score entry, round start/complete) — see [docs/offline-manage-plan.md](docs/offline-manage-plan.md)
 
 ---
 

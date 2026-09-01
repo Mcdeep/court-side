@@ -1,8 +1,11 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Show, SignInButton, UserButton, useOrganization } from '@clerk/tanstack-react-start'
+import { Show, SignInButton, UserButton, useOrganizationList } from '@clerk/tanstack-react-start'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
-import { useEffect } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
+import type { FunctionReturnType } from 'convex/server'
+
+type Org = FunctionReturnType<typeof api.organizations.list>[number]
 
 export const Route = createFileRoute('/')({ component: Home })
 
@@ -64,36 +67,86 @@ function SmartRedirect() {
   const navigate = useNavigate()
   const me = useQuery(api.users.me)
   const allOrgs = useQuery(api.organizations.list)
-  const { organization, isLoaded: orgLoaded } = useOrganization()
+  const { setActive, userMemberships, isLoaded: listLoaded } = useOrganizationList({ userMemberships: true })
+  // Guards against a race where Clerk's org-membership data reshapes while
+  // setActive() is resolving (e.g. after a picker click), which could
+  // otherwise re-fire the auto-redirect effect below and navigate to a
+  // stale/wrong org out from under the user's actual selection.
+  const navigatedRef = useRef(false)
+
+  const myOrgs = useMemo(() => {
+    if (!allOrgs || !userMemberships.data) return undefined
+    const clerkOrgIds = new Set(userMemberships.data.map(m => m.organization.id))
+    return allOrgs.filter(o => clerkOrgIds.has(o.clerkOrgId))
+  }, [allOrgs, userMemberships.data])
+
+  function enterOrg(org: Org) {
+    if (navigatedRef.current) return
+    navigatedRef.current = true
+    void setActive?.({ organization: org.clerkOrgId }).then(() => {
+      navigate({ to: `/${org.slug}/tournaments` as any })
+    })
+  }
 
   useEffect(() => {
-    if (me === undefined || allOrgs === undefined || !orgLoaded) return
+    if (navigatedRef.current) return
+    if (me === undefined || allOrgs === undefined || !listLoaded || myOrgs === undefined || userMemberships.isLoading) return
 
     if (me?.isSuperAdmin) {
+      navigatedRef.current = true
       const firstOrg = allOrgs[0]
-      if (firstOrg) {
-        navigate({ to: `/${firstOrg.slug}/tournaments` as any })
-      } else {
-        navigate({ to: '/admin' })
-      }
+      navigate({ to: firstOrg ? `/${firstOrg.slug}/tournaments` as any : '/admin' })
       return
     }
 
-    if (organization) {
-      const org = allOrgs.find(o => o.clerkOrgId === organization.id)
-      if (org) {
-        navigate({ to: `/${org.slug}/tournaments` as any })
-        return
-      }
+    if (myOrgs.length === 0) {
+      navigatedRef.current = true
+      navigate({ to: '/dashboard' })
+      return
     }
 
-    navigate({ to: '/dashboard' })
-  }, [me, allOrgs, orgLoaded, organization, navigate])
+    if (myOrgs.length === 1) {
+      enterOrg(myOrgs[0])
+      return
+    }
+
+    // Belongs to multiple orgs — fall through and let the picker below render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me, allOrgs, listLoaded, myOrgs, navigate])
+
+  if (myOrgs && myOrgs.length > 1) {
+    return <OrgPicker orgs={myOrgs} onSelect={enterOrg} />
+  }
 
   return (
     <div className="animate-pulse">
       <div className="h-8 w-48 bg-zinc-100 rounded-xl mb-4" />
       <div className="h-32 bg-zinc-100 rounded-2xl" />
+    </div>
+  )
+}
+
+function OrgPicker({ orgs, onSelect }: { orgs: Org[]; onSelect: (org: Org) => void }) {
+  return (
+    <div>
+      <h1 className="font-display text-[26px] font-bold tracking-tight mb-1">Choose an organisation</h1>
+      <p className="text-ink-mute text-sm mb-6">You're a member of more than one club — pick which one to sign in to.</p>
+      <div className="space-y-2.5">
+        {orgs.map(org => (
+          <button key={org._id} onClick={() => onSelect(org)}
+            className="w-full flex items-center gap-4 p-4 bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card hover:ring-zinc-300 transition-all text-left">
+            <div className="w-11 h-11 shrink-0 rounded-xl bg-ink text-paper flex items-center justify-center font-display font-bold text-lg">
+              {org.name.slice(0, 1).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-[15px] truncate">{org.name}</div>
+              {org.status === 'suspended' && (
+                <div className="text-[12px] text-red-500 font-medium">Suspended</div>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
