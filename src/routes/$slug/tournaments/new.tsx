@@ -318,6 +318,7 @@ function StepPlayers({ data, set, orgId }: { data: WizardData; set: (p: Partial<
 
   const rosterSuggestions = (roster ?? [])
     .filter(m => !data.players.some(p => p.name === m.name))
+    .filter(m => !name.trim() || m.name.toLowerCase().includes(name.trim().toLowerCase()))
     .slice(0, 8)
 
   const isOdd = data.players.length % 2 === 1
