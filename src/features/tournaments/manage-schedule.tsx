@@ -27,10 +27,16 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, o
   const resetSchedule = useMutation(api.rounds.resetSchedule)
   const finishTournament = useMutation(api.tournaments.finish)
   const isPreGenerated = PRE_GENERATED_FORMATS.includes(tournament.format)
+  const isDouble = tournament.format === 'americano' && tournament.americanoVariant === 'double'
   const checkedInCount = participants.filter(p => p.checkedIn === true).length
   const lastRound = rounds[rounds.length - 1]
   const lastRoundScored = !lastRound || lastRound.state === 'completed'
-  const canGenerate = isPreGenerated || (checkedInCount >= 4 && lastRoundScored)
+  const groupRounds = rounds.filter(round => round.stage !== 'final')
+  const finals = rounds.filter(round => round.stage === 'final')
+  const groupPhaseComplete = groupRounds.length > 0 && groupRounds.every(round => round.state === 'completed')
+  const groupsReady = participants.filter(p => p.group === 1).length === 8 && participants.filter(p => p.group === 2).length === 8
+  const canGenerate = isDouble ? (rounds.length === 0 ? groupsReady : groupPhaseComplete && finals.length === 0) : isPreGenerated || (checkedInCount >= 4 && lastRoundScored)
+  const canFinish = !isDouble || (finals.length > 0 && finals.every(round => round.state === 'completed'))
   // Once the tournament isn't in_progress (already finished), hide the
   // admin-only controls -- settings/reset/finish/generate no longer apply.
   const locked = tournament.state !== 'in_progress'
@@ -60,20 +66,20 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, o
           </span>
           <h3 className="font-display font-bold text-[18px]">No rounds yet</h3>
           <p className="text-ink-mute text-sm mt-1">
-            Generate the first round to auto-assign teams across courts.
+            {isDouble ? 'The organiser must assign two groups of eight before the group stage can be generated.' : 'Generate the first round to auto-assign teams across courts.'}
           </p>
           {!isPreGenerated && (
             <p className="text-ink-mute text-[12.5px] mt-2 tnum">{checkedInCount} checked in</p>
           )}
           <GenerateRoundsButton size="lg" icon="bolt" className="w-full mt-5" onGenerate={onGenerate} disabled={!canGenerate}>
-            Generate round 1
+            {isDouble ? 'Generate group stage' : 'Generate round 1'}
           </GenerateRoundsButton>
           {!canGenerate && (
-            <p className="text-[12.5px] text-red-500 mt-2">Check in at least 4 players first</p>
+            <p className="text-[12.5px] text-red-500 mt-2">{isDouble ? 'Ask the organiser to assign both groups' : 'Check in at least 4 players first'}</p>
           )}
         </div>
         {!locked && (
-          <Button variant="outline" size="lg" icon="flag" className="w-full mt-4" onClick={() => setShowFinish(true)}>
+          <Button variant="outline" size="lg" icon="flag" className="w-full mt-4" onClick={() => setShowFinish(true)} disabled={!canFinish}>
             Finish tournament
           </Button>
         )}
@@ -138,20 +144,20 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, o
         ))}
       </div>
 
-      {!isPreGenerated && !locked && (
+      {(!isPreGenerated || (isDouble && finals.length === 0)) && !locked && (
         <div className="flex flex-col items-center gap-2 mt-6 rounded-2xl border-2 border-dashed border-zinc-300 p-5">
           <GenerateRoundsButton size="lg" icon="plus" className="w-full" onGenerate={onGenerate} disabled={!canGenerate}>
-            Generate round {rounds.length + 1}
+            {isDouble ? 'Generate crossover finals' : `Generate round ${rounds.length + 1}`}
           </GenerateRoundsButton>
-          {checkedInCount < 4 && (
+          {!isDouble && checkedInCount < 4 && (
             <p className="text-[12.5px] text-ink-mute text-center">Check in at least 4 players before generating the next round</p>
           )}
-          {checkedInCount >= 4 && !lastRoundScored && (
+          {!isDouble && checkedInCount >= 4 && !lastRoundScored && (
             <p className="text-[12.5px] text-ink-mute text-center">Score and end round {lastRound?.roundNumber} before generating the next</p>
           )}
         </div>
       )}
-      {isPreGenerated && (
+      {isPreGenerated && (!isDouble || finals.length > 0) && (
         <div className="flex items-center justify-center gap-1.5 mt-6 text-[12.5px] text-ink-mute font-medium">
           <Icon name="check" className="w-4 h-4 text-zinc-400" stroke={2.5} />
           All {rounds.length} rounds scheduled
@@ -159,7 +165,7 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, o
       )}
 
       {!locked && (
-        <Button variant="outline" size="lg" icon="flag" className="w-full mt-6" onClick={() => setShowFinish(true)}>
+        <Button variant="outline" size="lg" icon="flag" className="w-full mt-6" onClick={() => setShowFinish(true)} disabled={!canFinish} title={!canFinish ? 'Complete all crossover finals first' : undefined}>
           Finish tournament
         </Button>
       )}
@@ -211,7 +217,7 @@ function ManageRoundCard({ round, pointsToWin, scoringMode, blocked, pin }: {
   return (
     <div>
       <div className="flex items-center gap-2.5 mb-1">
-        <span className="font-display font-bold text-[15px]">Round {round.roundNumber}</span>
+        <span className="font-display font-bold text-[15px]">{round.stage === 'final' ? `Crossover finals · Round ${round.roundNumber}` : round.stage === 'group' ? `Group stage · Round ${round.roundNumber}` : `Round ${round.roundNumber}`}</span>
         <span className={`text-[10px] font-bold uppercase tracking-wide px-2 h-5 inline-flex items-center rounded-full
           ${round.state === 'in_progress' ? 'bg-accent text-ink' : 'bg-zinc-100 text-zinc-400'}`}>
           {round.state === 'in_progress' ? 'Playing' : round.state === 'completed' ? 'Done' : 'Queued'}

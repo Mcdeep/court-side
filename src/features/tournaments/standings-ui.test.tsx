@@ -16,6 +16,27 @@ const entry = (name: string, rank: number, tied = false, wins = 1): LeaderboardE
   tiebreaksUnavailable: false,
 })
 
+test('shows Double Americano groups separately using group ranks', () => {
+  render(<StandingsTab leaderboard={[
+    { ...entry('A', 9), group: 1, groupRank: 1, groupTied: false },
+    { ...entry('B', 10), group: 2, groupRank: 1, groupTied: true },
+  ]} />)
+  expect(screen.getByRole('table', { name: 'Group 1 standings' })).toBeTruthy()
+  expect(screen.getByRole('table', { name: 'Group 2 standings' })).toBeTruthy()
+  expect(screen.getAllByLabelText('Position 1')).toHaveLength(1)
+  expect(screen.getByLabelText('Tied for position 1')).toBeTruthy()
+})
+
+test('shows shared final placements while keeping group statistics', () => {
+  render(<StandingsTab leaderboard={[
+    { ...entry('A', 1), group: 1, groupRank: 1, groupTied: false, finalPlacement: 1 },
+    { ...entry('B', 1), group: 2, groupRank: 1, groupTied: false, finalPlacement: 1 },
+  ]} />)
+  expect(screen.getByRole('table', { name: 'Final placements' })).toBeTruthy()
+  expect(screen.getByText(/Finals decide shared placements/)).toBeTruthy()
+  expect(screen.getAllByText('=1')).toHaveLength(2)
+})
+
 test('lets the organiser change the priority using accessible buttons', () => {
   function Settings() {
     const [value, onChange] = useState(DEFAULT_TIEBREAK_ORDER)

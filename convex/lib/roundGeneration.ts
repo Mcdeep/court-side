@@ -3,6 +3,9 @@ import type { Infer } from "convex/values";
 import type { Doc, Id, TableNames } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
 import { requireOrgAdminOrPin } from "./auth";
+import { generateDoubleAmericanoRounds, generateDoubleAmericanoFinals } from "../formats/double_americano";
+import { getTournamentStandings } from "./tournamentStandings";
+import { isDoubleAmericano } from "./doubleAmericano";
 import { generateAmericanoRounds } from "../formats/americano";
 import { generateRoundRobinRounds } from "../formats/round_robin";
 import { generateMexicanoRound } from "../formats/mexicano";
@@ -12,7 +15,10 @@ import { generateSnakesFirstRound, generateSnakesNextRound } from "../formats/sn
 
 const pairValidator = v.array(v.id("participants"));
 const initialFields = { participantIds: v.array(v.id("participants")), courtCount: v.number() };
+const seedValidator = v.object({ id: v.id("participants"), rank: v.number() });
 const generationInputsValidator = v.union(
+  v.object({ kind: v.literal("double_group"), group1: pairValidator, group2: pairValidator, courtCount: v.number() }),
+  v.object({ kind: v.literal("double_final"), group1: v.array(seedValidator), group2: v.array(seedValidator), courtCount: v.number() }),
   v.object({ kind: v.literal("americano"), ...initialFields }),
   v.object({ kind: v.literal("round_robin"), ...initialFields }),
   v.object({ kind: v.literal("mexicano"), ...initialFields }),
@@ -26,7 +32,7 @@ const generationInputsValidator = v.union(
 type GenerationInputs = Infer<typeof generationInputsValidator>;
 export const generationArgs = { tournamentId: v.id("tournaments"), pin: v.optional(v.string()) };
 export const generationSnapshotValidator = v.object({ inputs: generationInputsValidator, snapshot: v.string(), roundCount: v.number() });
-export const roundPlansValidator = v.array(v.array(v.object({ courtNumber: v.number(), pairA: pairValidator, pairB: pairValidator })));
+export const roundPlansValidator = v.array(v.array(v.object({ courtNumber: v.number(), pairA: pairValidator, pairB: pairValidator, finalMatchIndex: v.optional(v.number()) })));
 
 export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId: Id<"tournaments">; pin?: string }): Promise<Infer<typeof generationSnapshotValidator>> {
   const sources = new Map<string, Doc<TableNames>>();
@@ -98,7 +104,8 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
     .order("asc")
     .take(200));
 
-  if (PRE_GENERATED.includes(tournament.format) && existingRounds.length > 0) {
+  const double = isDoubleAmericano(tournament);
+  if (!double && PRE_GENERATED.includes(tournament.format) && existingRounds.length > 0) {
     throw new Error("Rounds already generated for this tournament");
   }
   if (["mexicano", "knockout", "king_of_the_court", "snakes_and_ladders"].includes(tournament.format) && existingRounds.length > 0) {
@@ -133,7 +140,32 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
   }
 
   let inputs: GenerationInputs;
-  if (tournament.format === "round_robin") {
+  if (double) {
+    if (!Number.isInteger(courtCount) || courtCount < 2) throw new Error("Double Americano needs at least two courts");
+    const group1 = participants.filter(p => p.group === 1).map(p => p._id);
+    const group2 = participants.filter(p => p.group === 2).map(p => p._id);
+    if (participants.length !== 16 || group1.length !== 8 || group2.length !== 8) throw new Error("Assign exactly 16 players to two groups of eight before generating");
+    if (existingRounds.length === 0) {
+      inputs = { kind: "double_group", group1, group2, courtCount };
+    } else {
+      if (existingRounds.some(round => round.stage === "final")) throw new Error("Crossover finals already generated");
+      if (existingRounds.some(round => round.state !== "completed")) throw new Error("Complete all group rounds before generating the final");
+      for (const round of existingRounds) {
+        const matches = await read(ctx.db.query("matches").withIndex("by_round", q => q.eq("roundId", round._id)).take(50));
+        for (const match of matches) {
+          if (match.state !== "completed" || match.scoreA === undefined || match.scoreB === undefined) throw new Error("Record all group scores before generating the final");
+          await read(ctx.db.get(match.pairAId));
+          await read(ctx.db.get(match.pairBId));
+        }
+      }
+      const standings = await getTournamentStandings(ctx, tournament);
+      if (standings.length !== 16 || standings.some(row => row.tiebreaksUnavailable)) throw new Error("Complete all group results before generating the final");
+      inputs = { kind: "double_final", courtCount,
+        group1: standings.filter(row => row.group === 1).map(row => ({ id: row.participantId, rank: row.rank })),
+        group2: standings.filter(row => row.group === 2).map(row => ({ id: row.participantId, rank: row.rank })),
+      };
+    }
+  } else if (tournament.format === "round_robin") {
     inputs = { kind: "round_robin", participantIds, courtCount };
   } else if (tournament.format === "mexicano") {
     const leaderboard = await read(ctx.db
@@ -323,8 +355,18 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
 export function generateRoundPlans(inputs: GenerationInputs): Infer<typeof roundPlansValidator> {
   const pair = (ids: Id<"participants">[]): [string, string] => [ids[0], ids[1]];
   const courts = inputs.courtCount;
+  const seeded = (entries: {id: Id<"participants">; rank: number}[]) => {
+    const shuffled = [...entries];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.sort((a, b) => a.rank - b.rank).map(entry => entry.id);
+  };
   const compute = () => {
     switch (inputs.kind) {
+      case "double_group": return generateDoubleAmericanoRounds(inputs.group1, inputs.group2, courts);
+      case "double_final": return generateDoubleAmericanoFinals(seeded(inputs.group1), seeded(inputs.group2), courts);
       case "americano": return generateAmericanoRounds(inputs.participantIds, courts);
       case "round_robin": return generateRoundRobinRounds(inputs.participantIds, courts);
       case "mexicano": return [generateMexicanoRound(inputs.participantIds, courts)];
@@ -338,6 +380,7 @@ export function generateRoundPlans(inputs: GenerationInputs): Infer<typeof round
   };
   return compute().map(round => round.map(match => ({
     courtNumber: match.courtNumber,
+    ...("finalMatchIndex" in match ? { finalMatchIndex: match.finalMatchIndex as number } : {}),
     pairA: match.pairA.map(id => id as Id<"participants">),
     pairB: match.pairB.map(id => id as Id<"participants">),
   })));

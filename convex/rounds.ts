@@ -2,6 +2,9 @@ import { action, internalMutation, internalQuery, mutation, query } from "./_gen
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { requireOrgAdmin, requireOrgAdminOrPin } from "./lib/auth";
+import { isDoubleAmericano } from "./lib/doubleAmericano";
+import { hasRatingAwards } from "./lib/tournamentStandings";
+import { getRankingOrder } from "./lib/tiebreaks";
 import { generationArgs, generationSnapshotValidator, roundPlansValidator, prepareRoundGeneration, generateRoundPlans } from "./lib/roundGeneration";
 
 export const prepareGeneration = internalQuery({
@@ -28,6 +31,7 @@ export const commitRoundPlans = internalMutation({
     if (prepared.snapshot !== args.snapshot) {
       throw new Error("Tournament inputs changed while generating. Please generate again.");
     }
+    const stage = prepared.inputs.kind === "double_group" ? "group" : prepared.inputs.kind === "double_final" ? "final" : undefined;
     const baseRoundNumber = prepared.roundCount;
     const roundPlans = args.roundPlans;
     for (let r = 0; r < roundPlans.length; r++) {
@@ -35,6 +39,7 @@ export const commitRoundPlans = internalMutation({
         tournamentId: args.tournamentId,
         roundNumber: baseRoundNumber + r + 1,
         state: "pending",
+        stage,
       });
 
       for (const match of roundPlans[r]) {
@@ -53,6 +58,7 @@ export const commitRoundPlans = internalMutation({
         await ctx.db.insert("matches", {
           roundId,
           courtNumber: match.courtNumber,
+          finalMatchIndex: match.finalMatchIndex,
           pairAId,
           pairBId,
           state: "scheduled",
@@ -60,6 +66,10 @@ export const commitRoundPlans = internalMutation({
       }
     }
 
+    if (stage === "final") {
+      const tournament = await ctx.db.get(args.tournamentId);
+      await ctx.db.patch(args.tournamentId, { tiebreakOrderLocked: true, tiebreakOrder: getRankingOrder(tournament!.tiebreakOrder) });
+    }
     if (prepared.roundCount === 0) {
       const managePin = String(Math.floor(1000 + Math.random() * 9000));
       await ctx.db.patch(args.tournamentId, { state: "in_progress", managePin });
@@ -173,9 +183,14 @@ export const resetSchedule = mutation({
       .take(200);
     for (const entry of leaderboardEntries) await ctx.db.delete(entry._id);
 
+    const finished = tournament.state === "completed" || tournament.state === "archived";
     await ctx.db.patch(args.tournamentId, {
       state: "registration_open",
-      tiebreakOrderLocked: tournament.tiebreakOrderLocked || tournament.state === "completed" || tournament.state === "archived",
+      // A Double Americano locks its order when finals are generated; with every
+      // round deleted that lock only stands if the event finished or was rated.
+      tiebreakOrderLocked: isDoubleAmericano(tournament)
+        ? finished || await hasRatingAwards(ctx, tournament)
+        : tournament.tiebreakOrderLocked || finished,
     });
   },
 });
@@ -191,5 +206,31 @@ export const updateState = internalMutation({
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.roundId, { state: args.state });
+  },
+});
+
+export const resetFinals = mutation({
+  args: { tournamentId: v.id("tournaments") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const tournament = await ctx.db.get(args.tournamentId);
+    if (!tournament) throw new Error("Tournament not found");
+    await requireOrgAdmin(ctx, tournament.organizationId);
+    if (!isDoubleAmericano(tournament)) throw new Error("Crossover finals are only available for Double Americano");
+    if (tournament.state === "completed" || tournament.state === "archived" || await hasRatingAwards(ctx, tournament)) throw new Error("Cannot reset finals after the tournament has finished");
+    const rounds = await ctx.db.query("rounds").withIndex("by_tournament", q => q.eq("tournamentId", args.tournamentId)).take(200);
+    for (const round of rounds.filter(candidate => candidate.stage === "final")) {
+      const matches = await ctx.db.query("matches").withIndex("by_round", q => q.eq("roundId", round._id)).take(50);
+      for (const match of matches) {
+        const scores = await ctx.db.query("scores").withIndex("by_match", q => q.eq("matchId", match._id)).take(50);
+        for (const score of scores) await ctx.db.delete(score._id);
+        await ctx.db.delete(match._id);
+        await ctx.db.delete(match.pairAId);
+        await ctx.db.delete(match.pairBId);
+      }
+      await ctx.db.delete(round._id);
+    }
+    await ctx.db.patch(args.tournamentId, { tiebreakOrderLocked: false });
+    return null;
   },
 });

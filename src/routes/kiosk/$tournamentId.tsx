@@ -12,6 +12,7 @@ import { RoundTimer } from '#/features/kiosk/round-timer'
 import { PodiumOverlay } from '#/features/kiosk/podium-overlay'
 import { FinishedView } from '#/features/kiosk/finished-view'
 import { computeKioskStats } from '#/features/kiosk/stats'
+import { DoubleStandings } from '#/features/kiosk/double-standings'
 
 export const Route = createFileRoute('/kiosk/$tournamentId')({
   component: KioskPage,
@@ -158,12 +159,12 @@ function KioskPage() {
             <section className="rounded-[28px] bg-white/[0.04] ring-1 ring-white/10 p-6 flex flex-col h-full min-h-0">
               <h2 className="font-display font-bold text-[19px] tracking-tight flex items-center gap-2 mb-2 shrink-0 whitespace-nowrap">
                 <Icon name="trophy" className="w-5 h-5 text-accent shrink-0" />
-                Leaderboard · Top 10
+                {tournament.americanoVariant === 'double' ? 'Double Americano standings' : 'Leaderboard · Top 10'}
               </h2>
               {leaderboard.length === 0 ? (
                 <div className="flex-1 flex items-center justify-center text-paper/30 text-lg">No scores yet</div>
               ) : (
-                <BoardList rows={leaderboard.filter(entry => entry.rank <= 10)} />
+                tournament.americanoVariant === 'double' ? <DoubleStandings rows={leaderboard} /> : <BoardList rows={leaderboard.filter(entry => entry.rank <= 10)} />
               )}
             </section>
           </aside>
@@ -185,7 +186,7 @@ function KioskPage() {
               {leaderboard.length === 0 ? (
                 <div className="flex-1 flex items-center justify-center text-paper/30 text-lg">No scores yet</div>
               ) : (
-                <BoardList rows={leaderboard} />
+                tournament.americanoVariant === 'double' ? <DoubleStandings rows={leaderboard} /> : <BoardList rows={leaderboard} />
               )}
             </div>
           )}
