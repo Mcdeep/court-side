@@ -183,9 +183,14 @@ export const resetSchedule = mutation({
       .take(200);
     for (const entry of leaderboardEntries) await ctx.db.delete(entry._id);
 
+    const finished = tournament.state === "completed" || tournament.state === "archived";
     await ctx.db.patch(args.tournamentId, {
       state: "registration_open",
-      tiebreakOrderLocked: tournament.tiebreakOrderLocked || tournament.state === "completed" || tournament.state === "archived",
+      // A Double Americano locks its order when finals are generated; with every
+      // round deleted that lock only stands if the event finished or was rated.
+      tiebreakOrderLocked: isDoubleAmericano(tournament)
+        ? finished || await hasRatingAwards(ctx, tournament)
+        : tournament.tiebreakOrderLocked || finished,
     });
   },
 });

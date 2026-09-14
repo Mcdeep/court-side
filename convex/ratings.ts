@@ -1,7 +1,7 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireOrgAdmin } from "./lib/auth";
-import { assertDoubleFinalsComplete } from "./lib/doubleAmericano";
+import { doubleFinalsComplete } from "./lib/doubleAmericano";
 import { getTournamentStandings } from "./lib/tournamentStandings";
 
 const DEFAULT_TIERS = [10, 8, 6, 4, 3, 2];
@@ -223,7 +223,9 @@ export const awardRatings = internalMutation({
       .unique();
     const tiers = tournament.awardedRatingTiers ?? config?.tiers ?? DEFAULT_TIERS;
 
-    await assertDoubleFinalsComplete(ctx, tournament);
+    // An archived Double Americano may never have played its finals; score
+    // corrections still schedule this job, so skip rather than fail it.
+    if (!await doubleFinalsComplete(ctx, tournament)) return null;
     const standings = await getTournamentStandings(ctx, tournament);
     if (!tournament.awardedRatingTiers) await ctx.db.patch(tournament._id, { awardedRatingTiers: tiers });
     const groups: { rank: number; units: typeof standings }[] = [];

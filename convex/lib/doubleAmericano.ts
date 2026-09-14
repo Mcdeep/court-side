@@ -17,14 +17,18 @@ export async function participantSkillRating(ctx: Pick<QueryCtx, "db">, particip
   return member ? member.skillRating : participant.skillRating;
 }
 
-export async function assertDoubleFinalsComplete(ctx: Pick<QueryCtx, "db">, tournament: Doc<"tournaments">) {
-  if (!isDoubleAmericano(tournament)) return;
+export async function doubleFinalsComplete(ctx: Pick<QueryCtx, "db">, tournament: Doc<"tournaments">) {
+  if (!isDoubleAmericano(tournament)) return true;
   const rounds = await ctx.db.query("rounds").withIndex("by_tournament", q => q.eq("tournamentId", tournament._id)).take(200);
   const finals = rounds.filter(round => round.stage === "final");
   const matches = (await Promise.all(finals.map(round => ctx.db.query("matches").withIndex("by_round", q => q.eq("roundId", round._id)).take(50)))).flat();
-  if (!finals.length || rounds.some(round => round.state !== "completed") || matches.length !== 4 ||
+  return !(!finals.length || rounds.some(round => round.state !== "completed") || matches.length !== 4 ||
     new Set(matches.map(match => match.finalMatchIndex)).size !== 4 ||
-    matches.some(match => match.finalMatchIndex === undefined || match.finalMatchIndex < 0 || match.finalMatchIndex > 3 || match.state !== "completed" || match.scoreA === undefined || match.scoreB === undefined || match.scoreA === match.scoreB)) {
+    matches.some(match => match.finalMatchIndex === undefined || match.finalMatchIndex < 0 || match.finalMatchIndex > 3 || match.state !== "completed" || match.scoreA === undefined || match.scoreB === undefined || match.scoreA === match.scoreB));
+}
+
+export async function assertDoubleFinalsComplete(ctx: Pick<QueryCtx, "db">, tournament: Doc<"tournaments">) {
+  if (!await doubleFinalsComplete(ctx, tournament)) {
     throw new Error("Complete and score all crossover finals before finishing the tournament");
   }
 }

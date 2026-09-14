@@ -360,7 +360,7 @@ export const updateState = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
-    if (args.state === "completed" || args.state === "archived") await assertDoubleFinalsComplete(ctx, tournament);
+    if (args.state === "completed") await assertDoubleFinalsComplete(ctx, tournament);
     const tiebreakOrder = args.state === "completed" && tournament.format === "americano" && !await usesLegacyStandings(ctx, tournament)
       ? getRankingOrder(tournament.tiebreakOrder) : tournament.tiebreakOrder;
     const tiebreakOrderLocked = args.state === "completed" || args.state === "archived" || (await withTiebreakLock(ctx, tournament)).tiebreakOrderLocked;

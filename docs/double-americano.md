@@ -39,7 +39,9 @@ Finals can be generated only after every group round is completed and every grou
 
 The final number is stored independently of its physical court, so placements are unchanged when finals span multiple waves. Finals use the tournament's scoring settings and require a winner. Final scores never contribute to group points, wins, losses, point difference or games played.
 
-Group results and ranking settings lock while finals exist. Before the tournament is finished, an organiser can reset just the finals and their scores, correct group results, then generate finals again. Group rounds and results are retained. Final scores can be corrected through the existing score editor, including after completion.
+Group results and ranking settings lock while finals exist. Before the tournament is finished, an organiser can reset just the finals and their scores, correct group results, then generate finals again. Group rounds and results are retained. Final scores can be corrected through the existing score editor, including after completion. A full schedule reset also unlocks the ranking order, unless the tournament was already finished or rated.
+
+An abandoned tournament can be archived without playing its finals. It is never rated: rating awards are skipped until all four finals have decisive results.
 
 Completion requires all final rounds to be completed and all four matches to have decisive results. Both partners share their final placement. Rating awards average the two occupied individual award tiers for each pair; for example tiers of 100 and 80 award 90 to each winner. Correcting a final reconciles existing rating awards without counting the tournament twice.
 

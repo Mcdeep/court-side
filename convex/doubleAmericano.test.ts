@@ -264,6 +264,46 @@ test('final reset is refused after awards even if an administrator reopens the t
   await expect(organizer.mutation(api.rounds.resetFinals,{tournamentId})).rejects.toThrow(/finished/i)
 })
 
+test('an abandoned tournament can be archived before its finals are played',async()=>{
+  const {t,organizer,tournamentId}=await setup()
+  await organizer.mutation(api.participants.assignGroups,{tournamentId,mode:'top_bottom'})
+  await organizer.action(api.rounds.generate,{tournamentId})
+  await organizer.mutation(api.tournaments.updateState,{tournamentId,state:'archived'})
+  expect(await t.query(api.tournaments.get,{tournamentId})).toMatchObject({state:'archived'})
+  await expect(organizer.mutation(api.tournaments.updateState,{tournamentId,state:'completed'})).rejects.toThrow(/final/)
+})
+
+test('rating awards skip an archived tournament whose finals were never played',async()=>{
+  const {t,organizer,tournamentId}=await completedGroups()
+  await organizer.mutation(api.tournaments.updateState,{tournamentId,state:'archived'})
+  expect(await t.mutation(internal.ratings.awardRatings,{tournamentId})).toBeNull()
+  expect(await t.run(ctx=>ctx.db.query('ratingHistory').withIndex('by_tournament',q=>q.eq('tournamentId',tournamentId)).collect())).toHaveLength(0)
+})
+
+test('a full schedule reset after finals were generated unlocks the ranking order',async()=>{
+  const {t,organizer,tournamentId}=await completedGroups()
+  await organizer.action(api.rounds.generate,{tournamentId})
+  expect(await t.query(api.tournaments.get,{tournamentId})).toMatchObject({tiebreakOrderLocked:true})
+  await organizer.mutation(api.rounds.resetSchedule,{tournamentId})
+  expect(await t.query(api.tournaments.get,{tournamentId})).toMatchObject({tiebreakOrderLocked:false})
+  await organizer.mutation(api.tournaments.update,{tournamentId,tiebreakOrder:['points','wins','point_diff','head_to_head']})
+  expect(await t.query(api.tournaments.get,{tournamentId})).toMatchObject({tiebreakOrder:['points','wins','point_diff','head_to_head']})
+})
+
+test('a full schedule reset keeps the ranking order locked once ratings were awarded',async()=>{
+  const {t,organizer,tournamentId}=await completedGroups()
+  await organizer.action(api.rounds.generate,{tournamentId})
+  const rounds=await t.query(api.rounds.list,{tournamentId})
+  const matches=await t.query(api.matches.listByRound,{roundId:rounds[7]._id})
+  for(const match of matches) await organizer.mutation(api.scores.saveResult,{matchId:match._id,scoreA:24,scoreB:16})
+  await t.run(ctx=>ctx.db.patch(rounds[7]._id,{state:'completed'}))
+  await organizer.mutation(api.tournaments.finish,{tournamentId})
+  await t.mutation(internal.ratings.awardRatings,{tournamentId})
+  await organizer.mutation(api.tournaments.updateState,{tournamentId,state:'in_progress'})
+  await organizer.mutation(api.rounds.resetSchedule,{tournamentId})
+  expect(await t.query(api.tournaments.get,{tournamentId})).toMatchObject({tiebreakOrderLocked:true})
+})
+
 test('roster ratings follow accounts linked after tournament registration',async()=>{
   const {t,organizer,tournamentId,participants,organizationId}=await setup()
   const userId=await t.run(async ctx=>{
