@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { requireOrgAdmin, requireOrgAdminOrPin } from "./lib/auth";
 import { internal } from "./_generated/api";
 import { DEFAULT_TIEBREAK_ORDER, getRankingOrder, tiebreakValidator, validateTiebreakOrder } from "./lib/tiebreaks";
+import { americanoVariantValidator, groupSplitModeValidator, isDoubleAmericano, assertDoubleFinalsComplete } from "./lib/doubleAmericano";
 import { hasRatingAwards, usesLegacyStandings, withTiebreakLock } from "./lib/tournamentStandings";
 
 const formatValidator = v.union(
@@ -36,6 +37,8 @@ export const create = mutation({
     roundDurationMs: v.optional(v.number()),
     pointsToWin: v.optional(v.number()),
     scoringMode: v.optional(scoringModeValidator),
+    americanoVariant: v.optional(americanoVariantValidator),
+    groupSplitMode: v.optional(groupSplitModeValidator),
     tiebreakOrder: v.optional(v.array(tiebreakValidator)),
     startsAt: v.number(),
     endsAt: v.number(),
@@ -48,11 +51,14 @@ export const create = mutation({
     const courtCount = args.courtCount ?? venue.courtCount;
     if (courtCount < 1) throw new Error("Need at least 1 court");
     if (courtCount > venue.courtCount) throw new Error(`Venue only has ${venue.courtCount} courts`);
+    if (args.americanoVariant === "double" && (args.format !== "americano" || !Number.isInteger(courtCount) || courtCount < 2)) throw new Error("Double Americano needs the Americano format and at least two courts");
     return ctx.db.insert("tournaments", {
       organizationId: args.organizationId,
       venueId: args.venueId,
       name: args.name,
       format: args.format,
+      americanoVariant: args.format === "americano" ? args.americanoVariant : undefined,
+      groupSplitMode: args.americanoVariant === "double" ? args.groupSplitMode ?? "random" : undefined,
       courtCount,
       roundDurationMs: args.roundDurationMs,
       pointsToWin: args.pointsToWin,
@@ -215,6 +221,8 @@ export const update = mutation({
     roundDurationMs: v.optional(v.number()),
     pointsToWin: v.optional(v.number()),
     scoringMode: v.optional(scoringModeValidator),
+    americanoVariant: v.optional(americanoVariantValidator),
+    groupSplitMode: v.optional(groupSplitModeValidator),
     tiebreakOrder: v.optional(v.array(tiebreakValidator)),
     startsAt: v.optional(v.number()),
     endsAt: v.optional(v.number()),
@@ -223,6 +231,15 @@ export const update = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
+    if (args.americanoVariant !== undefined || args.groupSplitMode !== undefined) {
+      if (tournament.format !== "americano") throw new Error("Variant settings are only available for Americano");
+      const rounds = await ctx.db.query("rounds").withIndex("by_tournament", q => q.eq("tournamentId", tournament._id)).take(1);
+      if (rounds.length) throw new Error("Cannot change variant or split mode after rounds are generated");
+      if (!["draft", "published", "registration_open"].includes(tournament.state)) throw new Error("Tournament is not accepting variant changes");
+      const venue = await ctx.db.get(tournament.venueId);
+      const courts = args.courtCount ?? tournament.courtCount ?? venue?.courtCount ?? 0;
+      if ((args.americanoVariant ?? tournament.americanoVariant) === "double" && (!Number.isInteger(courts) || courts < 2)) throw new Error("Double Americano needs at least two courts");
+    }
     if (args.tiebreakOrder) {
       validateTiebreakOrder(args.tiebreakOrder);
       if (tournament.format !== "americano") throw new Error("Tiebreak settings are only available for Americano");
@@ -242,6 +259,7 @@ export const update = mutation({
         .take(1);
       if (hasRounds.length > 0) throw new Error("Cannot change court count after rounds are generated");
       const venue = await ctx.db.get(tournament.venueId);
+      if (isDoubleAmericano(tournament) && args.americanoVariant !== "single" && (!Number.isInteger(args.courtCount) || args.courtCount < 2)) throw new Error("Double Americano needs at least two courts");
       if (args.courtCount < 1) throw new Error("Need at least 1 court");
       if (venue && args.courtCount > venue.courtCount) {
         throw new Error(`Venue only has ${venue.courtCount} courts`);
@@ -252,6 +270,11 @@ export const update = mutation({
       Object.entries(patch).filter(([, v]) => v !== undefined)
     );
     await ctx.db.patch(args.tournamentId, filteredPatch);
+    if ((args.americanoVariant !== undefined && args.americanoVariant !== tournament.americanoVariant) ||
+      (args.groupSplitMode !== undefined && args.groupSplitMode !== tournament.groupSplitMode)) {
+      const participants = await ctx.db.query("participants").withIndex("by_tournament", q => q.eq("tournamentId", tournament._id)).take(200);
+      for (const participant of participants) if (participant.group !== undefined) await ctx.db.patch(participant._id, { group: undefined });
+    }
   },
 });
 
@@ -269,6 +292,8 @@ export const duplicate = mutation({
       venueId: source.venueId,
       name: `${source.name} (Copy)`,
       format: source.format,
+      americanoVariant: source.americanoVariant,
+      groupSplitMode: source.groupSplitMode,
       courtCount: source.courtCount,
       roundDurationMs: source.roundDurationMs,
       pointsToWin: source.pointsToWin,
@@ -318,6 +343,7 @@ export const finish = mutation({
     if (tournament.state !== "in_progress") throw new Error("Tournament is not in progress");
     const tiebreakOrder = tournament.format === "americano" && !await usesLegacyStandings(ctx, tournament)
       ? getRankingOrder(tournament.tiebreakOrder) : tournament.tiebreakOrder;
+    await assertDoubleFinalsComplete(ctx, tournament);
     await ctx.db.patch(args.tournamentId, { state: "completed", tiebreakOrder, tiebreakOrderLocked: true });
     await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, {
       tournamentId: args.tournamentId,
@@ -334,6 +360,7 @@ export const updateState = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
+    if (args.state === "completed" || args.state === "archived") await assertDoubleFinalsComplete(ctx, tournament);
     const tiebreakOrder = args.state === "completed" && tournament.format === "americano" && !await usesLegacyStandings(ctx, tournament)
       ? getRankingOrder(tournament.tiebreakOrder) : tournament.tiebreakOrder;
     const tiebreakOrderLocked = args.state === "completed" || args.state === "archived" || (await withTiebreakLock(ctx, tournament)).tiebreakOrderLocked;

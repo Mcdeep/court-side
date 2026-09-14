@@ -9,6 +9,7 @@ import { POINTS_TO_WIN, TIME_BASED_MAX_SCORE } from '#/lib/constants'
 import type { Match, PreviousScore } from './types'
 import { PreviousScoreForm } from './previous-score-form'
 import { useAsyncAction } from '#/hooks/use-async-action'
+import { finalPlacementLabel } from './final-label'
 
 export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'first_to', pin }: {
   match: Match; pointsToWin?: number; scoringMode?: 'first_to' | 'shared_total' | 'time_based'; pin?: string
@@ -22,6 +23,7 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'f
   const shared = scoringMode === 'shared_total'
   const timeBased = scoringMode === 'time_based'
   const entryMax = timeBased ? TIME_BASED_MAX_SCORE : pointsToWin
+  const placementLabel = finalPlacementLabel(match.finalMatchIndex)
 
   function handleChangeA(n: number) {
     setA(n)
@@ -68,7 +70,7 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'f
                 <Icon name="court" className="w-5 h-5" />
               </span>
               <div>
-                <div className="font-display font-bold text-[16px] leading-tight">Court {match.courtNumber} · Score</div>
+                <div className="font-display font-bold text-[16px] leading-tight">{placementLabel ? `${placementLabel} · Court ${match.courtNumber}` : `Court ${match.courtNumber}`} · Score</div>
                 <div className="text-[12px] text-ink-mute font-normal">
                   {shared ? `Tap one side — the other fills to ${pointsToWin}` :
                     timeBased ? "Time's up — enter each side's points, most wins" : "Tap each side's score"}
@@ -85,6 +87,7 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'f
             }} />
           ) : <>
             {previousScore && <p className="text-sm text-ink-mute">The previous result is filled in below. Save it unchanged to restore it, or select the corrected scores.</p>}
+            {match.finalMatchIndex !== undefined && <p className="text-sm text-ink-mute">Finals require a winner, so tied scores are not accepted. Final points do not change group standings.</p>}
             {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
             <NumberGrid label={`${nameA1} / ${nameA2}`} value={a} onChange={handleChangeA} max={entryMax} highlight={a > b} />
             <NumberGrid label={`${nameB1} / ${nameB2}`} value={b} onChange={handleChangeB} max={entryMax} highlight={b > a} />
@@ -101,7 +104,7 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'f
             final ? 'bg-white ring-zinc-200' :
                     'bg-zinc-50 ring-zinc-200'}`}>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">Court {match.courtNumber}</span>
+          <span className="text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">{placementLabel ? `${placementLabel} · Court ${match.courtNumber}` : `Court ${match.courtNumber}`}</span>
           {live  && <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-ink"><span className="relative inline-block w-1.5 h-1.5 rounded-full bg-ink live-ping" style={{ color: 'oklch(0.19 0.012 264)' }} />Live</span>}
           {final && <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400"><Icon name="check" className="w-3 h-3" stroke={3} />Final</span>}
           {!live && !final && <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-300">Scheduled</span>}

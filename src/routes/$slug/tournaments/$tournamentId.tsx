@@ -19,6 +19,7 @@ import { ParticipantsTab } from '#/features/tournaments/participants-tab'
 import { ScheduleTab } from '#/features/tournaments/schedule-tab'
 import { StandingsTab } from '#/features/tournaments/standings-tab'
 import { TeamsEditor } from '#/features/tournaments/teams-editor'
+import { DoubleAmericanoGroups } from '#/features/tournaments/double-americano-groups'
 import { formatDate } from '#/lib/format'
 import { FIXED_PAIR_FORMATS } from '#/lib/constants'
 
@@ -45,6 +46,7 @@ function TournamentDetailPage() {
   const updateState = useMutation(api.tournaments.updateState)
   const deleteTournament = useMutation(api.tournaments.deleteTournament)
   const duplicateTournament = useMutation(api.tournaments.duplicate)
+  const finishTournament = useMutation(api.tournaments.finish)
 
   if (!tournament || !participants || !rounds || !leaderboard) {
     return <div className="p-10 animate-pulse"><div className="h-8 w-64 bg-zinc-100 rounded-xl" /></div>
@@ -65,6 +67,8 @@ function TournamentDetailPage() {
   const canEdit = ['draft', 'published', 'registration_open'].includes(tournament.state)
   const canDelete = tournament.state === 'draft' && rounds.length === 0
   const canArchive = tournament.state !== 'archived'
+  const isDouble = tournament.format === 'americano' && tournament.americanoVariant === 'double'
+  const finalsComplete = !isDouble || (rounds.some(round => round.stage === 'final') && rounds.filter(round => round.stage === 'final').every(round => round.state === 'completed'))
 
   const handleDuplicate = async () => {
     setMenuOpen(false)
@@ -170,8 +174,9 @@ function TournamentDetailPage() {
               {tournament.managePin && (
                 <ManagePinButton tournamentId={tournamentId} pin={tournament.managePin} />
               )}
-              <Button variant="ink" size="md" icon="flag"
-                onClick={() => updateState({ tournamentId: tid, state: 'completed' })}>
+              <Button variant="ink" size="md" icon="flag" disabled={!finalsComplete}
+                title={!finalsComplete ? 'Complete all crossover finals first' : undefined}
+                onClick={() => finishTournament({ tournamentId: tid })}>
                 Finish tournament
               </Button>
             </>
@@ -215,6 +220,7 @@ function TournamentDetailPage() {
       )}
       {tab === 'participants' && (
         <>
+          {isDouble && <DoubleAmericanoGroups tournamentId={tid} participants={participants} mode={tournament.groupSplitMode} canEdit={canAddPlayer && rounds.length === 0} />}
           {FIXED_PAIR_FORMATS.includes(tournament.format) && (
             <TeamsEditor
               participants={participants}
@@ -226,6 +232,7 @@ function TournamentDetailPage() {
           <ParticipantsTab
             participants={participants}
             tournamentId={tid}
+            organizationId={tournament.organizationId}
             format={tournament.format}
             canAdd={canAddPlayer}
             onAdd={() => setShowAddPlayer(true)}

@@ -52,3 +52,11 @@ test('keeps a failed save open and shows its error', async () => {
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Score could not be saved'))
   expect(screen.getByRole('dialog')).toBeTruthy()
 })
+
+test('explains that a finals match requires a winner', () => {
+  render(<MatchCell match={{ ...match, state: 'in_progress', finalMatchIndex: 0 }} />)
+  fireEvent.click(screen.getByRole('button', { name: /Court 1/ }))
+  expect(screen.getByText(/Finals require a winner/)).toBeTruthy()
+  expect(screen.getByText(/do not change group standings/)).toBeTruthy()
+  expect(screen.getByText(/1st \/ 2nd place · Court 1 · Score/)).toBeTruthy()
+})

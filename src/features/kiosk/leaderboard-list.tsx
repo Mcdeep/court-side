@@ -3,7 +3,8 @@ import { Avatar } from './avatar'
 import { useAutoScroll } from './hooks'
 
 function BoardRow({ entry }: { entry: LeaderboardEntry }) {
-  const rank = entry.rank
+  const rank = entry.finalPlacement ?? entry.groupRank ?? entry.rank
+  const tied = entry.finalPlacement !== undefined || (entry.groupRank !== undefined ? entry.groupTied : entry.tied)
   const medal =
     rank === 1 ? 'bg-accent text-ink' :
     rank === 2 ? 'bg-paper/25 text-paper' :
@@ -12,7 +13,7 @@ function BoardRow({ entry }: { entry: LeaderboardEntry }) {
   return (
     <div className="grid grid-cols-[36px_1fr_54px] items-center gap-3 py-1.5 border-b border-white/6 last:border-0">
       <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-display font-bold text-[15px] tnum ${medal || 'text-paper/40'}`}>
-        {entry.tied ? '=' : ''}{rank}
+        {tied ? '=' : ''}{rank}
       </span>
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="flex items-center shrink-0">

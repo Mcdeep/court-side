@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { americanoVariantValidator, groupSplitModeValidator, groupValidator } from "./lib/doubleAmericano";
 import { tiebreakValidator } from "./lib/tiebreaks";
 
 export default defineSchema({
@@ -53,6 +54,8 @@ export default defineSchema({
     // "shared_total": each match splits a fixed pool of pointsToWin points between the two teams.
     // "time_based": match ends when the round timer runs out; whichever team has more points wins.
     scoringMode: v.optional(v.union(v.literal("first_to"), v.literal("shared_total"), v.literal("time_based"))),
+    americanoVariant: v.optional(americanoVariantValidator),
+    groupSplitMode: v.optional(groupSplitModeValidator),
     tiebreakOrder: v.optional(v.array(tiebreakValidator)),
     awardedRatingTiers: v.optional(v.array(v.number())),
     tiebreakOrderLocked: v.optional(v.boolean()),
@@ -75,6 +78,7 @@ export default defineSchema({
       v.literal("team"),
     ),
     teamId: v.optional(v.id("teams")),
+    group: v.optional(groupValidator),
     isWalkIn: v.boolean(),
     walkInName: v.optional(v.string()),
     // Manually entered by an admin (e.g. from the player's Playtomic level).
@@ -127,6 +131,7 @@ export default defineSchema({
   rounds: defineTable({
     tournamentId: v.id("tournaments"),
     roundNumber: v.number(),
+    stage: v.optional(v.union(v.literal("group"), v.literal("final"))),
     state: v.union(
       v.literal("pending"),
       v.literal("in_progress"),
@@ -138,6 +143,7 @@ export default defineSchema({
   matches: defineTable({
     roundId: v.id("rounds"),
     courtNumber: v.number(),
+    finalMatchIndex: v.optional(v.number()),
     pairAId: v.id("pairs"),
     pairBId: v.id("pairs"),
     state: v.union(

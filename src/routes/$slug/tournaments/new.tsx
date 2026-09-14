@@ -35,6 +35,8 @@ type WizardData = {
   points: number
   scoringMode: 'first_to' | 'shared_total' | 'time_based'
   tiebreakOrder: Tiebreak[]
+  americanoVariant: 'single' | 'double'
+  groupSplitMode: 'random' | 'top_bottom' | 'balanced'
   roundMinutes: string
   // False once the organizer manually edits round duration — stops the
   // Round Robin auto-suggestion from overwriting their choice.
@@ -429,14 +431,20 @@ function StepPairing({ data, set }: { data: WizardData; set: (p: Partial<WizardD
     return (
       <div>
         <h2 className="font-display font-bold text-[26px] tracking-tight">Pairing</h2>
-        <p className="text-ink-mute text-[15px] mt-1.5">{fmtObj.name} manages partners automatically — nothing to configure here.</p>
+        <p className="text-ink-mute text-[15px] mt-1.5">{fmtObj.name} manages partners automatically.</p>
+        {data.format === 'americano' && (data.players.length === 16 || data.americanoVariant === 'double') && <div className="mt-6 bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-5 space-y-4">
+          <div><div className="font-bold text-[15px]">Americano variant</div><p className="text-sm text-ink-mute mt-1">Double Americano splits 16 players into two groups of eight, then runs crossover finals.</p></div>
+          <ToggleGroup type="single" value={data.americanoVariant} onValueChange={value => value && set({ americanoVariant: value as WizardData['americanoVariant'] })} className="justify-start"><ToggleGroupItem value="single">Single</ToggleGroupItem><ToggleGroupItem value="double">Double</ToggleGroupItem></ToggleGroup>
+          {data.players.length !== 16 && <p className="text-sm text-red-500">Double Americano requires exactly 16 players. Choose Single or return to Players.</p>}
+          {data.americanoVariant === 'double' && <><div><div className="font-bold text-[15px]">Initial group split</div><p className="text-sm text-ink-mute mt-1">Rated splits require every player to have a current skill rating from 1 to 7.</p></div><ToggleGroup type="single" value={data.groupSplitMode} onValueChange={value => value && set({ groupSplitMode: value as WizardData['groupSplitMode'] })} className="justify-start flex-wrap"><ToggleGroupItem value="random">Random</ToggleGroupItem><ToggleGroupItem value="top_bottom">Top / bottom</ToggleGroupItem><ToggleGroupItem value="balanced">Balanced</ToggleGroupItem></ToggleGroup>{data.courts < 2 && <p className="text-sm text-red-500">Double Americano requires at least 2 courts.</p>}</>}
+        </div>}
         <div className="mt-6 bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-10 flex flex-col items-center text-center">
           <span className="w-14 h-14 rounded-2xl bg-accent text-ink flex items-center justify-center mb-4">
             <Icon name={fmtObj.icon} className="w-7 h-7" stroke={2} />
           </span>
           <div className="font-bold text-[16px]">Partners assigned automatically</div>
           <p className="text-ink-mute text-sm mt-1 max-w-sm">
-            All {data.players.length} players will be paired by the round generator — you'll see this on the tournament's Schedule tab.
+            {data.americanoVariant === 'double' && data.format === 'americano' ? 'After creation, review ratings and group membership on the Participants tab before generating the group stage.' : `All ${data.players.length} players will be paired by the round generator — you'll see this on the tournament's Schedule tab.`}
           </p>
         </div>
       </div>
@@ -681,6 +689,11 @@ function StepReview({ data, venues }: { data: WizardData; venues: { _id: string;
             {data.format === 'americano' && (
               <div><dt className="text-ink-mute">Ranking order</dt><dd className="mt-1 font-semibold">{data.tiebreakOrder.map(rule => TIEBREAK_LABELS[rule]).join(' → ')}</dd></div>
             )}
+            {data.format === 'americano' && data.americanoVariant === 'double' && <>
+              <div className="flex justify-between"><dt className="text-ink-mute">Variant</dt><dd className="font-semibold">Double Americano</dd></div>
+              <div className="flex justify-between"><dt className="text-ink-mute">Group split</dt><dd className="font-semibold capitalize">{data.groupSplitMode.replace('_', ' / ')}</dd></div>
+              <p className="text-xs text-ink-mute pt-2">After creation, review player ratings and group membership on the Participants tab before generating the schedule.</p>
+            </>}
             {data.format === 'round_robin' && (
               <div className="flex justify-between"><dt className="text-ink-mute">Rounds</dt><dd className="font-semibold tabular-nums">{countRoundRobinRounds(Math.floor(data.players.length / 2), data.courts)}</dd></div>
             )}
@@ -747,6 +760,8 @@ function NewTournamentPage() {
     points: 24,
     scoringMode: 'first_to',
     tiebreakOrder: DEFAULT_TIEBREAK_ORDER,
+    americanoVariant: 'single',
+    groupSplitMode: 'random',
     roundMinutes: '',
     roundMinutesAuto: true,
     startsAt: toDatetimeLocal(now + 60 * 60 * 1000),
@@ -762,7 +777,7 @@ function NewTournamentPage() {
   const canNext = [
     !!data.format && !!data.name.trim(),
     data.players.length >= 4 && !isOdd,
-    true,
+    !(data.format === 'americano' && data.americanoVariant === 'double') || (data.players.length === 16 && data.courts >= 2),
     true,
   ][step] ?? false
 
@@ -782,6 +797,7 @@ function NewTournamentPage() {
     const resolvedVenueId = (data.venueId || venues?.[0]?._id) as Id<'venues'> | undefined
     if (!resolvedVenueId) { setError('Select a venue'); return }
     if (!data.name.trim()) { setError('Tournament name is required'); return }
+    if (data.format === 'americano' && data.americanoVariant === 'double' && (data.players.length !== 16 || data.courts < 2)) { setError('Double Americano requires exactly 16 players and at least 2 courts'); return }
 
     await run(async () => {
       const tournamentId = await createTournament({
@@ -794,6 +810,8 @@ function NewTournamentPage() {
         pointsToWin: data.points,
         scoringMode: data.scoringMode,
         tiebreakOrder: data.format === 'americano' ? data.tiebreakOrder : undefined,
+        americanoVariant: data.format === 'americano' ? data.americanoVariant : undefined,
+        groupSplitMode: data.format === 'americano' && data.americanoVariant === 'double' ? data.groupSplitMode : undefined,
         startsAt: new Date(data.startsAt).getTime(),
         endsAt: new Date(data.endsAt).getTime(),
       })

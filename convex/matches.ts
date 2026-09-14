@@ -1,3 +1,4 @@
+import { assertGroupResultsEditable } from "./lib/doubleAmericano";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireOrgAdmin } from "./lib/auth";
@@ -119,6 +120,7 @@ export const updateState = mutation({
     const tournament = await ctx.db.get(round.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
+    await assertGroupResultsEditable(ctx, tournament, round);
     await ctx.db.patch(args.matchId, { state: args.state });
   },
 });

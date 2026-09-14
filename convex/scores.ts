@@ -1,3 +1,4 @@
+import { assertGroupResultsEditable } from "./lib/doubleAmericano";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireOrgAdmin, requireOrgAdminOrPin, requireOrgMember } from "./lib/auth";
@@ -19,7 +20,11 @@ function previousResult(match: Doc<"matches">, restored?: NonNullable<ReturnType
   return result;
 }
 
-function assertValidScores(tournament: Doc<"tournaments">, scoreA: number, scoreB: number) {
+function assertValidScores(tournament: Doc<"tournaments">, scoreA: number, scoreB: number, round: Doc<"rounds">) {
+  if (tournament.americanoVariant === "double" && round.stage === "final") {
+    if (![scoreA, scoreB].every(score => Number.isInteger(score) && score >= 0)) throw new Error("Final scores must be non-negative whole numbers");
+    if (scoreA === scoreB) throw new Error("Crossover finals need a winner; play a deciding point before recording the result");
+  }
   if (tournament.scoringMode === "shared_total" && tournament.pointsToWin !== undefined) {
     if (scoreA + scoreB !== tournament.pointsToWin) {
       throw new Error(`Scores must add up to ${tournament.pointsToWin}`);
@@ -42,7 +47,8 @@ export const submit = mutation({
     const tournament = await ctx.db.get(round.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgMember(ctx, tournament.organizationId);
-    assertValidScores(tournament, args.scoreA, args.scoreB);
+    await assertGroupResultsEditable(ctx, tournament, round);
+    assertValidScores(tournament, args.scoreA, args.scoreB, round);
 
     if (match.state === "completed") throw new Error("Match already completed");
 
@@ -111,7 +117,8 @@ export const resolve = mutation({
     const tournament = await ctx.db.get(round.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
-    assertValidScores(tournament, args.scoreA, args.scoreB);
+    await assertGroupResultsEditable(ctx, tournament, round);
+    assertValidScores(tournament, args.scoreA, args.scoreB, round);
     const previous = previousResult(match, args.previousScore);
 
     const scores = await ctx.db
@@ -165,7 +172,8 @@ export const saveResult = mutation({
     const tournament = await ctx.db.get(round.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdminOrPin(ctx, tournament, args.pin);
-    assertValidScores(tournament, args.scoreA, args.scoreB);
+    await assertGroupResultsEditable(ctx, tournament, round);
+    assertValidScores(tournament, args.scoreA, args.scoreB, round);
     const previous = previousResult(match, args.previousScore);
     const prevScoreA = previous?.scoreA;
     const prevScoreB = previous?.scoreB;

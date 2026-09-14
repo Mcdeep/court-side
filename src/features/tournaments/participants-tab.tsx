@@ -5,23 +5,25 @@ import { Avatar } from '#/components/ui/avatar'
 import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
 import { Switch } from '#/components/ui/switch'
+import { Input } from '#/components/ui/input'
 import { PRE_GENERATED_FORMATS } from '#/lib/constants'
-import { errorMessage } from '#/lib/utils'
+import { useAsyncAction } from '#/hooks/use-async-action'
 import type { Id, Participant, TournamentFormat } from './types'
 
-export function ParticipantsTab({ participants, tournamentId, format, canAdd, onAdd, onCopyRoster }: {
+export function ParticipantsTab({ participants, tournamentId, organizationId, format, canAdd, onAdd, onCopyRoster }: {
   participants: Participant[]; tournamentId: Id<'tournaments'>; format: TournamentFormat
-  canAdd: boolean; onAdd: () => void; onCopyRoster: () => void
+  organizationId: Id<'organizations'>; canAdd: boolean; onAdd: () => void; onCopyRoster: () => void
 }) {
   const removeParticipant = useMutation(api.participants.remove)
   const setParticipantSkillRating = useMutation(api.participants.setSkillRating)
   const setMemberSkillRating = useMutation(api.members.setSkillRating)
+  const setLinkedSkillRating = useMutation(api.ratings.setSkillRating)
   const setCheckedIn = useMutation(api.participants.setCheckedIn)
   const checkInAll = useMutation(api.participants.checkInAll)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [ratingInput, setRatingInput] = useState('')
-  const [ratingError, setRatingError] = useState('')
+  const { working: ratingWorking, error: ratingError, setError: setRatingError, run: runRating } = useAsyncAction()
 
   const showCheckIn = !PRE_GENERATED_FORMATS.includes(format)
   const checkedInCount = participants.filter(p => p.checkedIn === true).length
@@ -43,16 +45,17 @@ export function ParticipantsTab({ participants, tournamentId, format, canAdd, on
       setRatingError('1.0 – 7.0')
       return
     }
-    try {
-      if (p.memberId) {
+    await runRating(async () => {
+      const resolvedUserId = p.resolvedUserId ?? p.userId
+      if (resolvedUserId) {
+        await setLinkedSkillRating({ organizationId, userId: resolvedUserId, skillRating: value })
+      } else if (p.memberId) {
         await setMemberSkillRating({ memberId: p.memberId, skillRating: value })
       } else {
         await setParticipantSkillRating({ participantId: p._id, skillRating: value })
       }
       setEditingId(null)
-    } catch (e) {
-      setRatingError(errorMessage(e))
-    }
+    })
   }
 
   return (
@@ -115,8 +118,9 @@ export function ParticipantsTab({ participants, tournamentId, format, canAdd, on
                 )}
                 {editingId === p._id ? (
                   <div className="flex items-center gap-1 shrink-0">
-                    <input
+                    <Input
                       autoFocus
+                      disabled={ratingWorking}
                       value={ratingInput}
                       onChange={e => { setRatingInput(e.target.value); setRatingError('') }}
                       onKeyDown={e => {
@@ -124,17 +128,16 @@ export function ParticipantsTab({ participants, tournamentId, format, canAdd, on
                         if (e.key === 'Escape') setEditingId(null)
                       }}
                       placeholder="1–7"
-                      className="w-14 h-7 px-2 rounded-lg bg-white ring-1 ring-zinc-200 text-xs tnum focus:outline-none focus:ring-2 focus:ring-accent-dark/40"
+                      className="w-14 h-7 px-2 text-xs tnum"
                     />
-                    <button onClick={() => saveRating(p)} className="w-7 h-7 rounded-lg flex items-center justify-center text-accent-dark hover:bg-accent-soft shrink-0">
-                      <Icon name="check" className="w-4 h-4" />
-                    </button>
+                    <Button type="button" variant="ghost" size="sm" icon="check" aria-label="Save rating" disabled={ratingWorking} onClick={() => saveRating(p)} className="w-7 h-7 p-0 text-accent-dark" />
                     {ratingError && <span className="text-[11px] text-red-500 whitespace-nowrap">{ratingError}</span>}
                   </div>
-                ) : p.isWalkIn && canAdd ? (
+                ) : canAdd ? (
                   <button
                     onClick={() => startEditRating(p)}
                     title="Set skill rating"
+                    disabled={ratingWorking}
                     className="shrink-0 px-2 h-7 rounded-lg text-xs font-semibold tnum ring-1 ring-zinc-200 text-ink-mute hover:bg-zinc-50 transition-colors">
                     {p.rating !== undefined ? p.rating.toFixed(1) : 'Set rating'}
                   </button>

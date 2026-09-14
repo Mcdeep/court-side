@@ -10,6 +10,8 @@ export const get = query({
     points: v.number(), wins: v.number(), losses: v.number(), played: v.number(),
     pointDiff: v.union(v.number(), v.null()), rank: v.number(), tied: v.boolean(),
     tiebreaksUnavailable: v.boolean(),
+    group: v.optional(v.union(v.literal(1), v.literal(2))),
+    groupRank: v.optional(v.number()), groupTied: v.optional(v.boolean()), finalPlacement: v.optional(v.number()),
     players: v.array(v.object({ displayName: v.string() })),
   })),
   handler: async (ctx, args) => {
@@ -36,6 +38,7 @@ export const recalculate = internalMutation({
     if (!round) return;
 
     const tournament = await ctx.db.get(round.tournamentId);
+    if (tournament?.americanoVariant === "double" && round.stage === "final") return;
     if (tournament?.format === "snakes_and_ladders" && match.courtNumber !== 1) return;
 
     const pairA = await ctx.db.get(match.pairAId);

@@ -2,6 +2,7 @@ import { participantName } from '#/lib/names'
 import type { Match } from '#/features/tournaments/types'
 import { Avatar } from './avatar'
 import { Marquee } from './marquee'
+import { finalPlacementLabel } from '#/features/tournaments/final-label'
 
 export function CourtCard({ match }: { match: Match }) {
   const nameA1 = participantName(match.pairA?.participantA)
@@ -12,6 +13,7 @@ export function CourtCard({ match }: { match: Match }) {
   const isLive = match.state === 'in_progress'
   const aLead = hasScore && (match.scoreA ?? 0) > (match.scoreB ?? 0)
   const bLead = hasScore && (match.scoreB ?? 0) > (match.scoreA ?? 0)
+  const placementLabel = finalPlacementLabel(match.finalMatchIndex)
 
   return (
     <div className="rounded-[28px] bg-white/[0.04] ring-1 ring-white/10 p-6 flex flex-col gap-4 relative overflow-hidden">
@@ -22,7 +24,7 @@ export function CourtCard({ match }: { match: Match }) {
             {match.courtNumber}
           </span>
           <span className="font-display font-bold text-[15px] uppercase tracking-wider text-paper/50 whitespace-nowrap">
-            Court {match.courtNumber}
+            {placementLabel ? `${placementLabel} · Court ${match.courtNumber}` : `Court ${match.courtNumber}`}
           </span>
         </div>
         {isLive && (
