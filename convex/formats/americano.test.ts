@@ -25,7 +25,8 @@ function fixtures(rounds: RoundPlan[]) {
   ).sort()
 }
 
-describe('generateAmericanoRounds', () => {
+// Stress cases generate multiple schedules; attempt-count assertions bound work independently of host speed.
+describe('generateAmericanoRounds', { timeout: 15_000 }, () => {
   test.each([
     { players: 8, courts: 2, spread: 5 },
     { players: 12, courts: 3, spread: 2 },

@@ -23,10 +23,12 @@ spread. One-court schedules bypass it.
 
 ## Runtime and quality tradeoffs
 
-The court pass runs inside `rounds.generate`, which is a Convex mutation.
-[Convex limits mutation execution to one second of user code](https://docs.convex.dev/production/state/limits#execution-time-and-scheduling).
-The reduced budget bounds the added court-search work; it does not guarantee
-the entire generator fits that limit.
+The court pass runs inside the `rounds.generate` action, alongside the unchanged
+fixture and opponent algorithms. [Convex limits mutation execution to one second
+of user code](https://docs.convex.dev/production/state/limits#execution-time-and-scheduling),
+so an internal query prepares the inputs and a separate internal mutation validates
+and saves the computed schedule. The reduced search budget still bounds the
+court pass; moving computation into an action avoids the mutation execution limit.
 
 On 2026-09-14, a temporary internal mutation timed only court balancing on
 identical saved fixtures in the local `anonymous-court-side` backend
@@ -57,9 +59,41 @@ seeds 0 and 42. Both `main` (`9cf6c06`) and both PR versions timed out for
 24 / 4, 36 / 4, and 40 / 6. All three versions completed 20 / 5. This exposes
 an existing generator execution-limit problem: reducing the new court pass
 alone does not fix larger tournaments. The existing fixture/opponent search
-needs a separate performance change or computation in an action followed by
-a mutation that validates and persists the schedule. The temporary benchmark
-functions were removed after measurement.
+now runs in the action, followed by a mutation that validates and persists the
+schedule. The temporary benchmark functions were removed after measurement.
+
+## Generation transactions
+
+Both the preparation query and commit mutation enforce the existing organisation
+or management-PIN permissions and round-generation prerequisites. Preparation
+records the source documents used for tournament settings, participants, teams,
+rounds, scores, standings and skill ratings as relevant to the format. Commit
+reads those inputs again in its own transaction and rejects the plan if its
+snapshot changed. It never reruns the scheduling algorithms inside the mutation.
+
+This prevents a removed player, changed court count, edited prior result, or
+another completed generation from leaving a stale schedule. A score correction
+is detected even if the winner is unchanged. The write transaction inserts all
+rounds, pairs and matches together and initializes the tournament PIN only for
+the first generation. A rejected plan writes nothing; the generation button
+shows the error and allows another attempt. Buttons are disabled while generating.
+
+On 2026-09-14, the public action was exercised against temporary tournaments in
+the local anonymous Convex backend, including the database writes. Each case
+completed, each player received exactly player-count minus one games, and every
+wave used valid distinct courts without player duplication. These are single-run
+client-observed durations, not compute-only timings or production guarantees.
+
+| Players / courts | Full action, including writes | Rounds / waves | Matches |
+| --- | --- | --- | --- |
+| 24 / 4 | 9824 ms | 46 | 138 |
+| 24 / 6 | 9613 ms | 23 | 138 |
+| 36 / 4 | 11354 ms | 105 | 315 |
+| 40 / 6 | 11350 ms | 78 | 390 |
+
+All temporary tournaments and verification functions were removed afterward.
+The dev-only seed.devStartRound helper still computes its default 16-player
+sample inside a mutation; it is separate from the application generation path.
 
 ## Proven limits of the fixed templates
 

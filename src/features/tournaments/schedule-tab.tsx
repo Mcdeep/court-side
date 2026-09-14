@@ -1,3 +1,4 @@
+import { GenerateRoundsButton } from './generate-rounds-button'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
@@ -11,7 +12,7 @@ import type { Participant, Round, Tournament } from './types'
 
 export function ScheduleTab({ tournament, rounds, participants, onGenerate, pin }: {
   tournament: Tournament; rounds: Round[]; participants: Participant[]
-  onGenerate: () => void
+  onGenerate: () => Promise<void>
   pin?: string
 }) {
   const [showSettings, setShowSettings] = useState(false)
@@ -37,9 +38,9 @@ export function ScheduleTab({ tournament, rounds, participants, onGenerate, pin 
           <p className="text-ink-mute text-[12.5px] mt-2 tnum">{checkedInCount} checked in</p>
         )}
         <div className="mt-5">
-          <Button variant="primary" size="lg" icon="bolt" onClick={onGenerate} disabled={!canGenerate}>
+          <GenerateRoundsButton size="lg" icon="bolt" onGenerate={onGenerate} disabled={!canGenerate}>
             Generate round 1
-          </Button>
+          </GenerateRoundsButton>
         </div>
         {!canGenerate && (
           <p className="text-[12.5px] text-red-500 mt-2">Check in at least 4 players first</p>
@@ -102,9 +103,9 @@ export function ScheduleTab({ tournament, rounds, participants, onGenerate, pin 
 
       {!isPreGenerated && (
         <div className="flex flex-col items-center justify-center gap-2 mt-6 rounded-2xl border-2 border-dashed border-zinc-300 p-6">
-          <Button variant="primary" size="lg" icon="plus" onClick={onGenerate} disabled={!canGenerate}>
+          <GenerateRoundsButton size="lg" icon="plus" onGenerate={onGenerate} disabled={!canGenerate}>
             Generate round {rounds.length + 1}
-          </Button>
+          </GenerateRoundsButton>
           {checkedInCount < 4 && (
             <p className="text-[12.5px] text-ink-mute">Check in at least 4 players before generating the next round</p>
           )}
