@@ -387,18 +387,27 @@ function balanceCourts(
   });
 
   let currentScore = score();
+  let attemptsWithoutImprovement = 0;
   const rememberBest = () => {
     const spread = worstSpread();
-    if (spread < bestSpread || (spread === bestSpread && currentScore < bestScore)) {
+    // Fractional ideal counts can leave rounding noise after equal-cost swaps.
+    if (spread < bestSpread || (spread === bestSpread && currentScore < bestScore - 1e-7)) {
       bestSpread = spread;
       bestScore = currentScore;
       bestAssignments = assignments.map(round => [...round]);
+      attemptsWithoutImprovement = 0;
     }
   };
   rememberBest();
 
-  const iterations = ids.length <= 20 ? 100_000 : 200_000;
-  for (let iteration = 0; iteration < iterations && bestSpread > minimumSpread; iteration++) {
+  const iterations = ids.length < 20 ? 100_000 : 50_000;
+  const stagnationLimit = ids.length < 20 ? iterations : 10_000;
+  for (
+    let iteration = 0;
+    iteration < iterations && bestSpread > minimumSpread && attemptsWithoutImprovement < stagnationLimit;
+    iteration++
+  ) {
+    attemptsWithoutImprovement++;
     const round = assignments[Math.floor(random() * assignments.length)];
     const first = Math.floor(random() * slotsPerRound);
     const second = Math.floor(random() * slotsPerRound);

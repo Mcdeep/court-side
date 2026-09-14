@@ -43,7 +43,60 @@ describe('generateAmericanoRounds', () => {
     },
   )
 
-  test.each([[8, 2], [12, 3], [16, 4], [16, 2], [16, 3], [20, 5]])(
+  test('still reaches spread one on a larger schedule within the reduced budget', () => {
+    const participants = Array.from({ length: 20 }, (_, index) => `player-${index + 1}`)
+    const rounds = generateAmericanoRounds(participants, 3, seededRandom(42))
+    expect(courtSpread(rounds, participants, 3)).toBe(1)
+  })
+
+  test.each([[20, 5], [24, 4]])('bounds court-search work for %i players and %i courts', (players, courtCount) => {
+    const participants = Array.from({ length: players }, (_, index) => `player-${index + 1}`)
+    const draws = [0, 0]
+    for (const [index, courts] of [1, courtCount].entries()) {
+      const random = seededRandom(42)
+      generateAmericanoRounds(participants, courts, () => {
+        draws[index]++
+        return random()
+      })
+    }
+    // Fixture generation and match-side shuffles use the same number of draws.
+    expect(draws[1] - draws[0]).toBeLessThanOrEqual(4 * 50_000)
+  })
+
+  test('stops a stalled court search even when every proposed swap is skipped', () => {
+    const participants = Array.from({ length: 24 }, (_, index) => `player-${index + 1}`)
+    let draws = 0
+    const random = seededRandom(42)
+    const original = generateAmericanoRounds(participants, 1, () => {
+      draws++
+      return random()
+    })
+    const matchCount = original.flat().length
+    const fixtureDraws = draws - matchCount
+    const replay = seededRandom(42)
+    draws = 0
+    const balanced = generateAmericanoRounds(participants, 4, () => {
+      draws++
+      return draws <= fixtureDraws ? replay() : 0
+    })
+
+    expect(draws - fixtureDraws - matchCount).toBeLessThanOrEqual(3 * 10_000)
+    expect(fixtures(balanced)).toEqual(fixtures(original))
+    expect(courtSpread(balanced, participants, 4)).toBeLessThanOrEqual(3)
+  })
+
+  test.each([
+    [24, 4], [36, 4], [40, 6],
+  ].flatMap(([players, courts]) => [0, 42].map(seed => ({ players, courts, seed }))))(
+    'keeps larger schedules within spread two: $players players, $courts courts, seed $seed',
+    ({ players, courts, seed }) => {
+      const participants = Array.from({ length: players }, (_, index) => `player-${index + 1}`)
+      const rounds = generateAmericanoRounds(participants, courts, seededRandom(seed))
+      expect(courtSpread(rounds, participants, courts)).toBeLessThanOrEqual(2)
+    },
+  )
+
+  test.each([[8, 2], [12, 3], [16, 4], [16, 2], [16, 3], [20, 5], [24, 4], [36, 4], [40, 6]])(
     'preserves fixtures within each partnership round for %i players and %i courts', (players, courts) => {
       const participants = Array.from({ length: players }, (_, index) => `player-${index + 1}`)
       const original = generateAmericanoRounds(participants, 1, seededRandom(42))

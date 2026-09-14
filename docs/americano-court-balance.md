@@ -8,10 +8,58 @@ waves; empty slots allow a partial wave to use any available court.
 The optimizer retains the lowest worst-player court spread it has seen, using
 the sum of fourth powers of deviations from the ideal count to break ties.
 Squared deviations alone cannot distinguish any assignments of the eight-player
-template. A greedy assignment starts the search, followed by at most 100,000
-swap attempts through 20 players, or 200,000 above that. All random choices use
-the injected random function. The original assignment remains a candidate, so
-optimization cannot increase the worst spread. One-court schedules bypass it.
+template. A greedy assignment starts the search. Fixed templates below 20
+players retain a maximum of 100,000 swap attempts. For 20 or more players,
+the search stops after at most 50,000 attempts, or after 10,000 consecutive
+attempts without improving the saved best spread or its tie-breaking penalty.
+Skipped and rejected swaps count toward both limits; an accepted swap alone
+does not reset stagnation. Penalty improvements smaller than `1e-7` are ignored
+to prevent floating-point rounding noise from resetting that counter.
+
+All random choices use the injected random function. Iteration limits keep
+results deterministic rather than depending on machine speed. The original
+assignment remains a candidate, so optimization cannot increase the worst
+spread. One-court schedules bypass it.
+
+## Runtime and quality tradeoffs
+
+The court pass runs inside `rounds.generate`, which is a Convex mutation.
+[Convex limits mutation execution to one second of user code](https://docs.convex.dev/production/state/limits#execution-time-and-scheduling).
+The reduced budget bounds the added court-search work; it does not guarantee
+the entire generator fits that limit.
+
+On 2026-09-14, a temporary internal mutation timed only court balancing on
+identical saved fixtures in the local `anonymous-court-side` backend
+(`precompiled-2026-09-11-157eb19`). The table gives median `performance.now()`
+durations across seeds 0, 1, 7, and 42, comparing PR commit `5e8fb8e` with the
+reduced budget. These local measurements are not production latency guarantees.
+
+| Players / courts | Previous court pass | Reduced court pass | Previous / reduced spread |
+| --- | --- | --- | --- |
+| 20 / 5 | 48 ms | 11 ms | 2 / 2 |
+| 24 / 4 | 71 ms | 14 ms | 1–2 / 2 |
+| 36 / 4 | 84 ms | 20 ms | 1–2 / 2 |
+| 40 / 6 | 106 ms | 21 ms | 2 / 2 |
+
+A shorter search can miss a spread-one assignment that the previous budget
+eventually found. The target remains one for dynamically generated fixtures;
+spread two is not treated as a proven minimum. The tests retain the template
+bounds, fixture preservation, and deterministic output, and cover the reduced
+work budget, stalled searches, and larger schedules.
+
+A separate sweep of seeds 0–9 and 42 kept those four configurations at spread
+two or better in all 44 cases. Other sampled configurations still reached
+spread one within the reduced budget, including 20 players on three courts
+with seed 42.
+
+A separate full-generator mutation benchmark, without database writes, tested
+seeds 0 and 42. Both `main` (`9cf6c06`) and both PR versions timed out for
+24 / 4, 36 / 4, and 40 / 6. All three versions completed 20 / 5. This exposes
+an existing generator execution-limit problem: reducing the new court pass
+alone does not fix larger tournaments. The existing fixture/opponent search
+needs a separate performance change or computation in an action followed by
+a mutation that validates and persists the schedule. The temporary benchmark
+functions were removed after measurement.
 
 ## Proven limits of the fixed templates
 
@@ -28,7 +76,7 @@ match order, and match sides does not change these limits.
 | 16 | 2 | 3 |
 
 The generator stops when it reaches these proven minima. Other configurations
-aim for spread at most one within the same iteration budget. A bounded search
+aim for spread at most one within their configured search budget. A bounded search
 does not guarantee an optimal assignment for arbitrary fixtures.
 
 ### Eight players, two courts
