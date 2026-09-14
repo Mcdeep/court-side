@@ -2,7 +2,7 @@ import type { QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { rankStandings } from "./standings";
 import type { StandingsMatch } from "./standings";
-import { DEFAULT_TIEBREAK_ORDER } from "./tiebreaks";
+import { getRankingOrder } from "./tiebreaks";
 import { getRecordedScore } from "./recordedScore";
 
 const FIXED_PAIR_FORMATS = ["round_robin", "knockout", "king_of_the_court", "snakes_and_ladders"];
@@ -92,6 +92,6 @@ export async function getTournamentStandings(ctx: Pick<QueryCtx, "db">, tourname
     }
   }
   const ranked = useTiebreaks && !tiebreaksUnavailable;
-  return rankStandings(units, matches, ranked ? tournament.tiebreakOrder ?? DEFAULT_TIEBREAK_ORDER : [])
+  return rankStandings(units, matches, ranked ? getRankingOrder(tournament.tiebreakOrder) : ["points"])
     .map(row => ({ ...row, pointDiff: ranked ? row.pointDiff : null, tiebreaksUnavailable }));
 }

@@ -14,9 +14,9 @@ export function TiebreakOrderField({ value, onChange, disabled = false }: {
   }
 
   return (
-    <Field label="Tiebreak order">
-      <p className="mb-3 text-xs text-ink-mute">Total points always comes first. Move the tiebreaks into your preferred order.</p>
-      <ol aria-label="Tiebreak order" className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 bg-white px-3">
+    <Field label="Ranking order">
+      <p className="mb-3 text-xs text-ink-mute">Move the criteria into your preferred order. The first determines the ranking; the rest break ties.</p>
+      <ol aria-label="Ranking order" className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 bg-white px-3">
         {value.map((criterion, index) => (
           <li key={criterion} className="flex items-center gap-3 py-2">
             <span className="w-5 text-center font-mono text-xs text-ink-mute">{index + 1}</span>

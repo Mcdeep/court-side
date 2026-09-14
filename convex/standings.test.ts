@@ -54,21 +54,22 @@ async function setup() {
 describe('tournament tiebreak settings', () => {
   test('stores defaults on create and preserves a chosen order when duplicating', async () => {
     const { t, organizer, tournamentId } = await setup()
-    expect(await t.query(api.tournaments.get, { tournamentId })).toMatchObject({ tiebreakOrder: ['wins', 'point_diff', 'head_to_head'] })
-    await organizer.mutation(api.tournaments.update, { tournamentId, tiebreakOrder: ['head_to_head', 'point_diff', 'wins'] })
+    expect(await t.query(api.tournaments.get, { tournamentId })).toMatchObject({ tiebreakOrder: ['points', 'wins', 'point_diff', 'head_to_head'] })
+    await organizer.mutation(api.tournaments.update, { tournamentId, tiebreakOrder: ['points', 'head_to_head', 'point_diff', 'wins'] })
     const copy = await organizer.mutation(api.tournaments.duplicate, { tournamentId })
-    expect(await t.query(api.tournaments.get, { tournamentId: copy })).toMatchObject({ tiebreakOrder: ['head_to_head', 'point_diff', 'wins'] })
+    expect(await t.query(api.tournaments.get, { tournamentId: copy })).toMatchObject({ tiebreakOrder: ['points', 'head_to_head', 'point_diff', 'wins'] })
   })
 
   test('rejects missing or repeated criteria', async () => {
     const { organizer, tournamentId } = await setup()
     await expect(organizer.mutation(api.tournaments.update, { tournamentId, tiebreakOrder: ['wins', 'wins', 'point_diff'] })).rejects.toThrow('exactly once')
     await expect(organizer.mutation(api.tournaments.update, { tournamentId, tiebreakOrder: [] })).rejects.toThrow('exactly once')
+    await expect(organizer.mutation(api.tournaments.update, { tournamentId, tiebreakOrder: ['wins', 'point_diff', 'head_to_head'] })).rejects.toThrow('exactly once')
   })
 
   test('requires membership in the tournament organisation', async () => {
     const { t, tournamentId } = await setup()
-    const args = { tournamentId, tiebreakOrder: ['point_diff', 'wins', 'head_to_head'] as ('point_diff' | 'wins' | 'head_to_head')[] }
+    const args = { tournamentId, tiebreakOrder: ['points', 'point_diff', 'wins', 'head_to_head'] as ('points' | 'point_diff' | 'wins' | 'head_to_head')[] }
     await expect(t.mutation(api.tournaments.update, args)).rejects.toThrow('Not authenticated')
     const outsider = t.withIdentity({ tokenIdentifier: 'outsider', org_id: 'another-club', org_role: 'org:admin' })
     await expect(outsider.mutation(api.tournaments.update, args)).rejects.toThrow('Not a member')
@@ -77,13 +78,41 @@ describe('tournament tiebreak settings', () => {
   test('locks the order after completion while allowing unrelated edits', async () => {
     const { t, organizer, tournamentId } = await setup()
     await t.run(async ctx => ctx.db.patch(tournamentId, { state: 'completed' }))
-    await expect(organizer.mutation(api.tournaments.update, { tournamentId, tiebreakOrder: ['point_diff', 'wins', 'head_to_head'] })).rejects.toThrow('completed')
-    await organizer.mutation(api.tournaments.update, { tournamentId, name: 'Renamed', tiebreakOrder: ['wins', 'point_diff', 'head_to_head'] })
+    await expect(organizer.mutation(api.tournaments.update, { tournamentId, tiebreakOrder: ['points', 'point_diff', 'wins', 'head_to_head'] })).rejects.toThrow('completed')
+    await organizer.mutation(api.tournaments.update, { tournamentId, name: 'Renamed', tiebreakOrder: ['points', 'wins', 'point_diff', 'head_to_head'] })
     expect(await t.query(api.tournaments.get, { tournamentId })).toMatchObject({ name: 'Renamed' })
   })
 })
 
 describe('Americano standings and ratings', () => {
+  test('a wins-first tournament ranks and awards players ahead of higher points totals', async () => {
+    vi.useFakeTimers()
+    const { t, organizer, tournamentId, scoreFixtures } = await setup()
+    await organizer.mutation(api.tournaments.update, { tournamentId, tiebreakOrder: ['wins', 'points', 'point_diff', 'head_to_head'] })
+    await scoreFixtures()
+    const standings = await t.query(api.leaderboard.get, { tournamentId })
+    expect(standings.map(row => row.players[0].displayName)).toEqual(['D', 'A', 'E', 'F', 'B', 'C'])
+    expect(standings.map(row => row.rank)).toEqual([1, 2, 3, 3, 5, 6])
+    await organizer.mutation(api.tournaments.updateState, { tournamentId, state: 'completed' })
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+    const awards = await t.run(async ctx => ctx.db.query('ratingHistory').withIndex('by_tournament', q => q.eq('tournamentId', tournamentId)).collect())
+    expect(awards.find(award => award.participantId === standings[0].participantId)).toMatchObject({ placement: 1, pointsEarned: 10 })
+    expect(awards.find(award => award.participantId === standings[2].participantId)).toMatchObject({ placement: 3, pointsEarned: 5 })
+  })
+
+  test('existing three-criterion settings retain their effective order and completion lock', async () => {
+    vi.useFakeTimers()
+    const { t, organizer, tournamentId, scoreFixtures } = await setup()
+    await scoreFixtures()
+    await t.run(async ctx => ctx.db.patch(tournamentId, { tiebreakOrder: ['point_diff', 'wins', 'head_to_head'], state: 'completed' }))
+    const standings = await t.query(api.leaderboard.get, { tournamentId })
+    expect(standings.map(row => row.players[0].displayName)).toEqual(['E', 'F', 'D', 'B', 'A', 'C'])
+    const copy = await organizer.mutation(api.tournaments.duplicate, { tournamentId })
+    expect(await t.query(api.tournaments.get, { tournamentId: copy })).toMatchObject({ tiebreakOrder: ['points', 'point_diff', 'wins', 'head_to_head'] })
+    await organizer.mutation(api.tournaments.update, { tournamentId, name: 'Renamed', tiebreakOrder: ['points', 'point_diff', 'wins', 'head_to_head'] })
+    await expect(organizer.mutation(api.tournaments.update, { tournamentId, tiebreakOrder: ['wins', 'points', 'point_diff', 'head_to_head'] })).rejects.toThrow('completed')
+  })
+
   test('uses the saved order and current match results across standings and rating awards', async () => {
     vi.useFakeTimers()
     const { t, organizer, tournamentId, scoreFixtures } = await setup()
@@ -93,7 +122,7 @@ describe('Americano standings and ratings', () => {
     expect(standings.map(row => row.rank)).toEqual([1, 1, 3, 4, 5, 6])
     expect(standings.find(row => row.players[0].displayName === 'A')).toMatchObject({ pointDiff: 2, wins: 2, played: 2 })
 
-    await organizer.mutation(api.tournaments.update, { tournamentId, tiebreakOrder: ['point_diff', 'wins', 'head_to_head'] })
+    await organizer.mutation(api.tournaments.update, { tournamentId, tiebreakOrder: ['points', 'point_diff', 'wins', 'head_to_head'] })
     expect((await t.query(api.leaderboard.get, { tournamentId })).map(row => row.players[0].displayName))
       .toEqual(['E', 'F', 'D', 'B', 'A', 'C'])
     await t.run(async ctx => ctx.db.patch(tournamentId, { state: 'completed' }))
@@ -241,7 +270,7 @@ describe('Americano standings and ratings', () => {
     const before = await t.run(async ctx => ctx.db.query('ratingHistory').collect())
     await t.run(async ctx => ctx.db.patch(tournamentId, { awardedRatingTiers: undefined }))
     await organizer.mutation(api.tournaments.updateState, { tournamentId, state: 'in_progress' })
-    await expect(organizer.mutation(api.tournaments.update, { tournamentId, tiebreakOrder: ['wins', 'point_diff', 'head_to_head'] }))
+    await expect(organizer.mutation(api.tournaments.update, { tournamentId, tiebreakOrder: ['points', 'wins', 'point_diff', 'head_to_head'] }))
       .rejects.toThrow('completed')
     await organizer.mutation(api.tournaments.update, { tournamentId, name: 'Renamed' })
     await organizer.mutation(api.tournaments.finish, { tournamentId })
@@ -266,7 +295,7 @@ describe('Americano standings and ratings', () => {
     await t.run(async ctx => ctx.db.patch(tournamentId, { state: 'in_progress', tiebreakOrder: undefined }))
     await organizer.mutation(api.tournaments.finish, { tournamentId })
     await t.finishAllScheduledFunctions(vi.runAllTimers)
-    expect(await t.query(api.tournaments.get, { tournamentId })).toMatchObject({ tiebreakOrder: ['wins', 'point_diff', 'head_to_head'] })
+    expect(await t.query(api.tournaments.get, { tournamentId })).toMatchObject({ tiebreakOrder: ['points', 'wins', 'point_diff', 'head_to_head'] })
     expect((await t.query(api.leaderboard.get, { tournamentId })).map(row => row.rank)).toEqual([1, 1, 3, 4, 5, 6])
   })
 

@@ -679,7 +679,7 @@ function StepReview({ data, venues }: { data: WizardData; venues: { _id: string;
                 : `First to ${data.points}`}
             </dd></div>
             {data.format === 'americano' && (
-              <div><dt className="text-ink-mute">Ranking order</dt><dd className="mt-1 font-semibold">Total points → {data.tiebreakOrder.map(rule => TIEBREAK_LABELS[rule]).join(' → ')}</dd></div>
+              <div><dt className="text-ink-mute">Ranking order</dt><dd className="mt-1 font-semibold">{data.tiebreakOrder.map(rule => TIEBREAK_LABELS[rule]).join(' → ')}</dd></div>
             )}
             {data.format === 'round_robin' && (
               <div className="flex justify-between"><dt className="text-ink-mute">Rounds</dt><dd className="font-semibold tabular-nums">{countRoundRobinRounds(Math.floor(data.players.length / 2), data.courts)}</dd></div>

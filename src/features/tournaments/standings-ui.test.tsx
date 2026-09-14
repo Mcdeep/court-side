@@ -22,12 +22,18 @@ test('lets the organiser change the priority using accessible buttons', () => {
     return <TiebreakOrderField value={value} onChange={onChange} />
   }
   render(<Settings />)
-  fireEvent.click(screen.getByRole('button', { name: 'Move Point difference up' }))
-  const rows = within(screen.getByRole('list', { name: 'Tiebreak order' })).getAllByRole('listitem')
-  expect(rows[0].textContent).toContain('Point difference')
-  expect(rows[1].textContent).toContain('Matches won')
-  expect(screen.getByRole('button', { name: 'Move Point difference up' }).hasAttribute('disabled')).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: 'Move Matches won up' }))
+  const rows = within(screen.getByRole('list', { name: 'Ranking order' })).getAllByRole('listitem')
+  expect(rows).toHaveLength(4)
+  expect(rows[0].textContent).toContain('Matches won')
+  expect(rows[1].textContent).toContain('Total points')
+  expect(screen.getByRole('button', { name: 'Move Matches won up' }).hasAttribute('disabled')).toBe(true)
   expect(screen.getByRole('button', { name: 'Move Head-to-head down' }).hasAttribute('disabled')).toBe(true)
+})
+
+test('the standings caption follows a wins-first ranking order', () => {
+  render(<StandingsTab leaderboard={[entry('A', 1)]} tiebreakOrder={['wins', 'points', 'point_diff', 'head_to_head']} />)
+  expect(screen.getByText('Matches won \u2192 Total points \u2192 Point difference \u2192 Head-to-head. Equal results share a position.')).toBeTruthy()
 })
 
 test('locked settings cannot reorder the rules', () => {

@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Avatar } from '#/components/ui/avatar'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#/components/ui/table'
-import { DEFAULT_TIEBREAK_ORDER, TIEBREAK_LABELS } from '#/../convex/lib/tiebreaks'
+import { getRankingOrder, TIEBREAK_LABELS } from '#/../convex/lib/tiebreaks'
 import type { Tiebreak } from '#/../convex/lib/tiebreaks'
 import type { LeaderboardEntry } from './types'
 
 type SortField = 'rank' | 'played' | 'wins' | 'losses' | 'pointDiff' | 'points'
 
-export function StandingsTab({ leaderboard, tiebreakOrder = DEFAULT_TIEBREAK_ORDER }: {
+export function StandingsTab({ leaderboard, tiebreakOrder }: {
   leaderboard: LeaderboardEntry[]; tiebreakOrder?: readonly Tiebreak[]
 }) {
   const [sortField, setSortField] = useState<SortField>('rank')
@@ -43,7 +43,7 @@ export function StandingsTab({ leaderboard, tiebreakOrder = DEFAULT_TIEBREAK_ORD
       )}
       {showDifference && (
         <p className="px-5 py-3 text-xs text-ink-mute border-b border-zinc-100">
-          Total points → {tiebreakOrder.map(rule => TIEBREAK_LABELS[rule]).join(' → ')}. Equal results share a position.
+          {getRankingOrder(tiebreakOrder).map(rule => TIEBREAK_LABELS[rule]).join(' → ')}. Equal results share a position.
         </p>
       )}
       <Table aria-label="Standings" className="min-w-[500px]">

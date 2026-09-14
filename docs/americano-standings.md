@@ -1,8 +1,8 @@
 # Americano standings
 
-Organisers can choose the tiebreak order when creating or editing an Americano tournament. The setting belongs to the tournament, so organisers, players and kiosk viewers see the same ranking. Duplicating a tournament copies its order.
+Organisers can choose the ranking order when creating or editing an Americano tournament. The setting belongs to the tournament, so organisers, players and kiosk viewers see the same ranking. Duplicating a tournament copies its order.
 
-Total points always come first. The default tiebreak order is matches won, point difference, then head-to-head. All three criteria must appear exactly once. Other formats keep their points-only ranking.
+All four criteria are configurable: total points, matches won, point difference and head-to-head. The first criterion determines the ranking; later criteria break ties. They must each appear exactly once. The default order is total points, matches won, point difference, then head-to-head, but an organiser can put matches won first or move points to any later position. Other formats keep their points-only ranking.
 
 Point difference is points scored minus points conceded across completed matches. Drawn matches count as played but give neither side a win or loss.
 
@@ -17,5 +17,7 @@ The order locks on completion and remains locked after ratings are awarded, even
 ## Existing tournaments
 
 Completed or archived tournaments with no saved order retain their original points-only standings and awards. Active tournaments use the default order until an organiser chooses another order; completing one saves that order. No historical backfill is needed.
+
+Previously saved three-criterion orders retain their original meaning: total points first, followed by those three criteria. The editor shows all four criteria, and saving or duplicating records the full order.
 
 Older approval paths sometimes omitted the final match score. Approved submissions alone cannot establish the final score because an admin could resolve them differently. For these events, standings retain cached total points, display a missing-results notice, and defer rating awards. Correcting such a match requires restoring its original score first so its previous contribution can be reversed safely.

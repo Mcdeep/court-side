@@ -8,14 +8,14 @@ import { Input } from '#/components/ui/input'
 import { toDatetimeLocal } from '#/lib/format'
 import { useAsyncAction } from '#/hooks/use-async-action'
 import type { Id, Tournament } from './types'
-import { DEFAULT_TIEBREAK_ORDER } from '#/../convex/lib/tiebreaks'
+import { getRankingOrder } from '#/../convex/lib/tiebreaks'
 import { TiebreakOrderField } from './tiebreak-order-field'
 
 export function EditTournamentModal({ tournament, tournamentId, onClose }: {
   tournament: Tournament; tournamentId: Id<'tournaments'>; onClose: () => void
 }) {
   const [name, setName] = useState(tournament.name)
-  const [tiebreakOrder, setTiebreakOrder] = useState(tournament.tiebreakOrder ?? DEFAULT_TIEBREAK_ORDER)
+  const [tiebreakOrder, setTiebreakOrder] = useState(getRankingOrder(tournament.tiebreakOrder))
   const tiebreaksLocked = tournament.tiebreakOrderLocked
   const legacyStandings = tiebreaksLocked && !tournament.tiebreakOrder
   const [roundMinutes, setRoundMinutes] = useState(tournament.roundDurationMs ? String(tournament.roundDurationMs / 60_000) : '')

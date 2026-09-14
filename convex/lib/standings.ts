@@ -25,7 +25,7 @@ export function rankStandings<Row extends { participantId: string; points: numbe
   }));
 
   let groups = [entries];
-  for (const criterion of ["points", ...order] as const) {
+  for (const criterion of order) {
     groups = groups.flatMap(group => {
       if (group.length < 2) return [group];
       const headToHead = new Map(group.map(row => [row.participantId, 0]));
