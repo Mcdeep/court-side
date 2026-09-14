@@ -9,6 +9,13 @@ export type RoundPlan = MatchPlan[];
 type Partnership = [string, string];
 type PartnershipMatch = [Partnership, Partnership];
 
+// These bounds depend on the fixed templates below; see docs/americano-court-balance.md.
+const COURT_SPREAD_MINIMUMS: Record<number, Record<number, number>> = {
+  8: { 2: 5 },
+  12: { 3: 2 },
+  16: { 2: 3, 4: 3 },
+};
+
 const WHIST_SCHEDULES: Record<number, { labels: string; rounds: string[] }> = {
   4: {
     labels: "ABCD",
@@ -321,6 +328,119 @@ function exactOpponentSchedule(
   return shuffled([...selected.values()], random);
 }
 
+function balanceCourts(
+  schedule: PartnershipMatch[][],
+  ids: string[],
+  courts: number,
+  random: () => number,
+) {
+  const slotsPerRound = Math.ceil(schedule[0].length / courts) * courts;
+  let assignments: (PartnershipMatch | null)[][] = schedule.map(round =>
+    Array.from({ length: slotsPerRound }, (_, index) => round[index] ?? null),
+  );
+  if (courts === 1) return assignments;
+
+  const playerIndex = new Map(ids.map((id, index) => [id, index]));
+  const players = new Map(schedule.flat().map(match =>
+    [match, match.flat().map(id => playerIndex.get(id)!)],
+  ));
+  const counts = ids.map(() => Array<number>(courts).fill(0));
+  const ideal = schedule.length / courts;
+  // Squared error is constant for all court assignments of the eight-player template.
+  const penalty = (count: number) => (count - ideal) ** 4;
+  const worstSpread = () => Math.max(...counts.map(row => Math.max(...row) - Math.min(...row)));
+  const score = () => counts.reduce((total, row) =>
+    total + row.reduce((sum, count) => sum + penalty(count), 0), 0,
+  );
+  const add = (match: PartnershipMatch | null, court: number, amount: number) => {
+    for (const player of match === null ? [] : players.get(match)!) counts[player][court] += amount;
+  };
+
+  for (const round of assignments) round.forEach((match, slot) => add(match, slot % courts, 1));
+  let bestAssignments = assignments.map(round => [...round]);
+  let bestSpread = worstSpread();
+  let bestScore = score();
+  const minimumSpread = COURT_SPREAD_MINIMUMS[ids.length]?.[courts] ?? 1;
+  if (bestSpread <= minimumSpread) return bestAssignments;
+
+  for (const row of counts) row.fill(0);
+  assignments = schedule.map(round => {
+    const slots: (PartnershipMatch | null)[] = Array(slotsPerRound).fill(null);
+    for (const match of round) {
+      let bestSlot = 0;
+      let cost = Infinity;
+      for (let slot = 0; slot < slots.length; slot++) {
+        if (slots[slot] !== null) continue;
+        const candidate = players.get(match)!.reduce((total, player) => {
+          const count = counts[player][slot % courts];
+          return total + penalty(count + 1) - penalty(count);
+        }, 0);
+        if (candidate < cost) {
+          cost = candidate;
+          bestSlot = slot;
+        }
+      }
+      slots[bestSlot] = match;
+      add(match, bestSlot % courts, 1);
+    }
+    return slots;
+  });
+
+  let currentScore = score();
+  let attemptsWithoutImprovement = 0;
+  const rememberBest = () => {
+    const spread = worstSpread();
+    // Fractional ideal counts can leave rounding noise after equal-cost swaps.
+    if (spread < bestSpread || (spread === bestSpread && currentScore < bestScore - 1e-7)) {
+      bestSpread = spread;
+      bestScore = currentScore;
+      bestAssignments = assignments.map(round => [...round]);
+      attemptsWithoutImprovement = 0;
+    }
+  };
+  rememberBest();
+
+  const iterations = ids.length < 20 ? 100_000 : 50_000;
+  const stagnationLimit = ids.length < 20 ? iterations : 10_000;
+  for (
+    let iteration = 0;
+    iteration < iterations && bestSpread > minimumSpread && attemptsWithoutImprovement < stagnationLimit;
+    iteration++
+  ) {
+    attemptsWithoutImprovement++;
+    const round = assignments[Math.floor(random() * assignments.length)];
+    const first = Math.floor(random() * slotsPerRound);
+    const second = Math.floor(random() * slotsPerRound);
+    const courtA = first % courts;
+    const courtB = second % courts;
+    if (courtA === courtB || (round[first] === null && round[second] === null)) continue;
+
+    let delta = 0;
+    for (const [slot, from, to] of [[first, courtA, courtB], [second, courtB, courtA]]) {
+      const match = round[slot];
+      for (const player of match === null ? [] : players.get(match)!) {
+        const row = counts[player];
+        delta += penalty(row[from] - 1) - penalty(row[from])
+          + penalty(row[to] + 1) - penalty(row[to]);
+      }
+    }
+
+    const progress = (iteration % 25_000) / 25_000;
+    const temperature = 4 * (1 - progress) ** 2 + 0.05;
+    if (delta > 0 && random() >= Math.exp(-delta / temperature)) continue;
+
+    add(round[first], courtA, -1);
+    add(round[first], courtB, 1);
+    add(round[second], courtB, -1);
+    add(round[second], courtA, 1);
+    [round[first], round[second]] = [round[second], round[first]];
+    currentScore += delta;
+    rememberBest();
+  }
+
+  return bestAssignments;
+}
+
 export function generateAmericanoRounds(
   participantIds: string[],
   courtCount: number,
@@ -370,17 +490,19 @@ export function generateAmericanoRounds(
     bestSchedule = improveOpponentBalance(bestSchedule, ids, random);
   }
 
+  const balancedSchedule = balanceCourts(bestSchedule, ids, courts, random);
   const rounds: RoundPlan[] = [];
-  for (const partnershipMatches of bestSchedule) {
+  for (const partnershipMatches of balancedSchedule) {
     for (let start = 0; start < partnershipMatches.length; start += courts) {
       const wave = partnershipMatches.slice(start, start + courts);
-      rounds.push(wave.map((match, index) => {
+      rounds.push(wave.flatMap((match, index) => {
+        if (match === null) return [];
         const sides = shuffled(match, random);
-        return {
+        return [{
           pairA: sides[0],
           pairB: sides[1],
           courtNumber: index + 1,
-        };
+        }];
       }));
     }
   }

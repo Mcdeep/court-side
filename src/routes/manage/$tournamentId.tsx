@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useConvex, useMutation, useQuery } from 'convex/react'
+import { useAction, useConvex, useQuery } from 'convex/react'
 import { useEffect, useState } from 'react'
 import { api } from '#/../convex/_generated/api'
 import type { Id } from '#/../convex/_generated/dataModel'
@@ -35,7 +35,7 @@ function ManagePage() {
   const rounds = useQuery(api.rounds.list, tournament ? { tournamentId: tid } : 'skip')
   const participants = useQuery(api.participants.list, tournament ? { tournamentId: tid } : 'skip')
   const leaderboard = useQuery(api.leaderboard.get, tournament ? { tournamentId: tid } : 'skip')
-  const generateRounds = useMutation(api.rounds.generate)
+  const generateRounds = useAction(api.rounds.generate)
 
   const invalidPin = pin !== null && tournament === null
 

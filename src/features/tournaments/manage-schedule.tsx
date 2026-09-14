@@ -1,3 +1,4 @@
+import { GenerateRoundsButton } from './generate-rounds-button'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '#/../convex/_generated/api'
@@ -16,7 +17,7 @@ import type { Participant, Round, Tournament } from './types'
 // full-width buttons sized for a thumb rather than a mouse.
 export function ManageSchedule({ tournament, rounds, participants, onGenerate, onFinished, pin }: {
   tournament: Tournament; rounds: Round[]; participants: Participant[]
-  onGenerate: () => void
+  onGenerate: () => Promise<void>
   onFinished?: () => void
   pin?: string
 }) {
@@ -64,9 +65,9 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, o
           {!isPreGenerated && (
             <p className="text-ink-mute text-[12.5px] mt-2 tnum">{checkedInCount} checked in</p>
           )}
-          <Button variant="primary" size="lg" icon="bolt" className="w-full mt-5" onClick={onGenerate} disabled={!canGenerate}>
+          <GenerateRoundsButton size="lg" icon="bolt" className="w-full mt-5" onGenerate={onGenerate} disabled={!canGenerate}>
             Generate round 1
-          </Button>
+          </GenerateRoundsButton>
           {!canGenerate && (
             <p className="text-[12.5px] text-red-500 mt-2">Check in at least 4 players first</p>
           )}
@@ -139,9 +140,9 @@ export function ManageSchedule({ tournament, rounds, participants, onGenerate, o
 
       {!isPreGenerated && !locked && (
         <div className="flex flex-col items-center gap-2 mt-6 rounded-2xl border-2 border-dashed border-zinc-300 p-5">
-          <Button variant="primary" size="lg" icon="plus" className="w-full" onClick={onGenerate} disabled={!canGenerate}>
+          <GenerateRoundsButton size="lg" icon="plus" className="w-full" onGenerate={onGenerate} disabled={!canGenerate}>
             Generate round {rounds.length + 1}
-          </Button>
+          </GenerateRoundsButton>
           {checkedInCount < 4 && (
             <p className="text-[12.5px] text-ink-mute text-center">Check in at least 4 players before generating the next round</p>
           )}
