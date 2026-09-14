@@ -2,6 +2,8 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireOrgAdmin, requireOrgAdminOrPin } from "./lib/auth";
 import { internal } from "./_generated/api";
+import { DEFAULT_TIEBREAK_ORDER, tiebreakValidator, validateTiebreakOrder } from "./lib/tiebreaks";
+import { hasRatingAwards, usesLegacyStandings, withTiebreakLock } from "./lib/tournamentStandings";
 
 const formatValidator = v.union(
   v.literal("americano"),
@@ -34,11 +36,13 @@ export const create = mutation({
     roundDurationMs: v.optional(v.number()),
     pointsToWin: v.optional(v.number()),
     scoringMode: v.optional(scoringModeValidator),
+    tiebreakOrder: v.optional(v.array(tiebreakValidator)),
     startsAt: v.number(),
     endsAt: v.number(),
   },
   handler: async (ctx, args) => {
     await requireOrgAdmin(ctx, args.organizationId);
+    if (args.tiebreakOrder) validateTiebreakOrder(args.tiebreakOrder);
     const venue = await ctx.db.get(args.venueId);
     if (!venue) throw new Error("Venue not found");
     const courtCount = args.courtCount ?? venue.courtCount;
@@ -53,6 +57,7 @@ export const create = mutation({
       roundDurationMs: args.roundDurationMs,
       pointsToWin: args.pointsToWin,
       scoringMode: args.scoringMode,
+      tiebreakOrder: args.format === "americano" ? args.tiebreakOrder ?? DEFAULT_TIEBREAK_ORDER : undefined,
       startsAt: args.startsAt,
       endsAt: args.endsAt,
       state: "draft",
@@ -161,7 +166,8 @@ export const listWithDetails = query({
 export const get = query({
   args: { tournamentId: v.id("tournaments") },
   handler: async (ctx, args) => {
-    return ctx.db.get(args.tournamentId);
+    const tournament = await ctx.db.get(args.tournamentId);
+    return tournament ? withTiebreakLock(ctx, tournament) : null;
   },
 });
 
@@ -197,7 +203,7 @@ export const getForManage = query({
   handler: async (ctx, args) => {
     const t = await ctx.db.get(args.tournamentId);
     if (!t || !t.managePin || t.managePin !== args.pin) return null;
-    return t;
+    return withTiebreakLock(ctx, t);
   },
 });
 
@@ -209,6 +215,7 @@ export const update = mutation({
     roundDurationMs: v.optional(v.number()),
     pointsToWin: v.optional(v.number()),
     scoringMode: v.optional(scoringModeValidator),
+    tiebreakOrder: v.optional(v.array(tiebreakValidator)),
     startsAt: v.optional(v.number()),
     endsAt: v.optional(v.number()),
   },
@@ -216,6 +223,15 @@ export const update = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
+    if (args.tiebreakOrder) {
+      validateTiebreakOrder(args.tiebreakOrder);
+      if (tournament.format !== "americano") throw new Error("Tiebreak settings are only available for Americano");
+      const previousOrder = tournament.tiebreakOrder ?? DEFAULT_TIEBREAK_ORDER;
+      const changed = !tournament.tiebreakOrder || args.tiebreakOrder.some((criterion, index) => criterion !== previousOrder[index]);
+      if (changed && (tournament.tiebreakOrderLocked || tournament.state === "completed" || tournament.state === "archived" || await hasRatingAwards(ctx, tournament))) {
+        throw new Error("Cannot change tiebreak order on a completed tournament");
+      }
+    }
     if (args.pointsToWin !== undefined && (!Number.isInteger(args.pointsToWin) || args.pointsToWin < 1)) {
       throw new Error("Points target must be a positive whole number");
     }
@@ -257,6 +273,7 @@ export const duplicate = mutation({
       roundDurationMs: source.roundDurationMs,
       pointsToWin: source.pointsToWin,
       scoringMode: source.scoringMode,
+      tiebreakOrder: source.format === "americano" ? source.tiebreakOrder ?? DEFAULT_TIEBREAK_ORDER : undefined,
       startsAt,
       endsAt: startsAt + durationMs,
       state: "draft",
@@ -299,7 +316,9 @@ export const finish = mutation({
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdminOrPin(ctx, tournament, args.pin);
     if (tournament.state !== "in_progress") throw new Error("Tournament is not in progress");
-    await ctx.db.patch(args.tournamentId, { state: "completed" });
+    const tiebreakOrder = tournament.format === "americano" && !await usesLegacyStandings(ctx, tournament)
+      ? tournament.tiebreakOrder ?? DEFAULT_TIEBREAK_ORDER : tournament.tiebreakOrder;
+    await ctx.db.patch(args.tournamentId, { state: "completed", tiebreakOrder, tiebreakOrderLocked: true });
     await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, {
       tournamentId: args.tournamentId,
     });
@@ -315,7 +334,10 @@ export const updateState = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
-    await ctx.db.patch(args.tournamentId, { state: args.state });
+    const tiebreakOrder = args.state === "completed" && tournament.format === "americano" && !await usesLegacyStandings(ctx, tournament)
+      ? tournament.tiebreakOrder ?? DEFAULT_TIEBREAK_ORDER : tournament.tiebreakOrder;
+    const tiebreakOrderLocked = args.state === "completed" || args.state === "archived" || (await withTiebreakLock(ctx, tournament)).tiebreakOrderLocked;
+    await ctx.db.patch(args.tournamentId, { state: args.state, tiebreakOrder, tiebreakOrderLocked });
     if (args.state === "completed") {
       await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, {
         tournamentId: args.tournamentId,

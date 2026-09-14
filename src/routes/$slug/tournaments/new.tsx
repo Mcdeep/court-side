@@ -10,6 +10,9 @@ import { ToggleGroup, ToggleGroupItem } from '#/components/ui/toggle-group'
 import { toDatetimeLocal } from '#/lib/format'
 import { useAsyncAction } from '#/hooks/use-async-action'
 import { countRoundRobinRounds } from '#/../convex/formats/round_robin'
+import { DEFAULT_TIEBREAK_ORDER, TIEBREAK_LABELS } from '#/../convex/lib/tiebreaks'
+import type { Tiebreak } from '#/../convex/lib/tiebreaks'
+import { TiebreakOrderField } from '#/features/tournaments/tiebreak-order-field'
 
 export const Route = createFileRoute('/$slug/tournaments/new')({
   component: NewTournamentPage,
@@ -31,6 +34,7 @@ type WizardData = {
   courts: number
   points: number
   scoringMode: 'first_to' | 'shared_total' | 'time_based'
+  tiebreakOrder: Tiebreak[]
   roundMinutes: string
   // False once the organizer manually edits round duration — stops the
   // Round Robin auto-suggestion from overwriting their choice.
@@ -292,6 +296,11 @@ function StepFormat({ data, set, orgId }: { data: WizardData; set: (p: Partial<W
         </div>
         {data.scoringMode === 'time_based' && !data.roundMinutes && (
           <p className="mt-3 text-[12px] text-amber-600">Set a round duration above so matches know when time's up.</p>
+        )}
+        {data.format === 'americano' && (
+          <div className="mt-5 pt-5 border-t border-zinc-100">
+            <TiebreakOrderField value={data.tiebreakOrder} onChange={tiebreakOrder => set({ tiebreakOrder })} />
+          </div>
         )}
       </div>
     </div>
@@ -669,6 +678,9 @@ function StepReview({ data, venues }: { data: WizardData; venues: { _id: string;
                 : data.scoringMode === 'time_based' ? 'Most points when time runs out'
                 : `First to ${data.points}`}
             </dd></div>
+            {data.format === 'americano' && (
+              <div><dt className="text-ink-mute">Ranking order</dt><dd className="mt-1 font-semibold">Total points → {data.tiebreakOrder.map(rule => TIEBREAK_LABELS[rule]).join(' → ')}</dd></div>
+            )}
             {data.format === 'round_robin' && (
               <div className="flex justify-between"><dt className="text-ink-mute">Rounds</dt><dd className="font-semibold tabular-nums">{countRoundRobinRounds(Math.floor(data.players.length / 2), data.courts)}</dd></div>
             )}
@@ -734,6 +746,7 @@ function NewTournamentPage() {
     courts: 4,
     points: 24,
     scoringMode: 'first_to',
+    tiebreakOrder: DEFAULT_TIEBREAK_ORDER,
     roundMinutes: '',
     roundMinutesAuto: true,
     startsAt: toDatetimeLocal(now + 60 * 60 * 1000),
@@ -780,6 +793,7 @@ function NewTournamentPage() {
         roundDurationMs: data.roundMinutes ? Number(data.roundMinutes) * 60_000 : undefined,
         pointsToWin: data.points,
         scoringMode: data.scoringMode,
+        tiebreakOrder: data.format === 'americano' ? data.tiebreakOrder : undefined,
         startsAt: new Date(data.startsAt).getTime(),
         endsAt: new Date(data.endsAt).getTime(),
       })

@@ -1,14 +1,9 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireOrgAdmin } from "./lib/auth";
-import type { Id } from "./_generated/dataModel";
+import { getTournamentStandings } from "./lib/tournamentStandings";
 
 const DEFAULT_TIERS = [10, 8, 6, 4, 3, 2];
-
-// Formats where partners are fixed for the whole tournament (mirrors
-// convex/rounds.ts and src/lib/constants.ts) -- a team occupies one
-// placement/tier slot, not one per player.
-const FIXED_PAIR_FORMATS = ["round_robin", "knockout", "king_of_the_court", "snakes_and_ladders"];
 
 export const getTiers = query({
   args: { organizationId: v.id("organizations") },
@@ -208,15 +203,16 @@ export const getPlayerHistory = query({
 
 export const awardRatings = internalMutation({
   args: { tournamentId: v.id("tournaments") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const tournament = await ctx.db.get(args.tournamentId);
-    if (!tournament) return;
+    if (!tournament) return null;
 
     const alreadyAwarded = await ctx.db
       .query("ratingHistory")
       .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
-      .take(1);
-    if (alreadyAwarded.length > 0) return;
+      .take(200);
+    if (alreadyAwarded.length > 0 && (tournament.format !== "americano" || !tournament.tiebreakOrder || !tournament.awardedRatingTiers)) return null;
 
     const config = await ctx.db
       .query("ratingConfig")
@@ -224,54 +220,16 @@ export const awardRatings = internalMutation({
         q.eq("organizationId", tournament.organizationId)
       )
       .unique();
-    const tiers = config?.tiers ?? DEFAULT_TIERS;
+    const tiers = tournament.awardedRatingTiers ?? config?.tiers ?? DEFAULT_TIERS;
 
-    const standings = await ctx.db
-      .query("leaderboard")
-      .withIndex("by_tournament_points", (q) =>
-        q.eq("tournamentId", args.tournamentId)
-      )
-      .order("desc")
-      .take(200);
-
-    if (standings.length === 0) return;
-
-    // In team formats, both partners always have identical points (they
-    // always play together) -- collapse them into one placement "unit" so
-    // a team occupies a single tier slot instead of two. Keyed by team so
-    // partners don't need to be adjacent in `standings`.
-    const isTeamFormat = FIXED_PAIR_FORMATS.includes(tournament.format);
-    type Unit = { points: number; participantIds: Id<"participants">[] };
-    const units: Unit[] = [];
-    if (isTeamFormat) {
-      const unitByTeam = new Map<string, Unit>();
-      for (const entry of standings) {
-        const participant = await ctx.db.get(entry.participantId);
-        const teamId = participant?.teamId as string | undefined;
-        const existingUnit = teamId ? unitByTeam.get(teamId) : undefined;
-        if (existingUnit) {
-          existingUnit.participantIds.push(entry.participantId);
-          continue;
-        }
-        const unit: Unit = { points: entry.points, participantIds: [entry.participantId] };
-        if (teamId) unitByTeam.set(teamId, unit);
-        units.push(unit);
-      }
-    } else {
-      for (const entry of standings) {
-        units.push({ points: entry.points, participantIds: [entry.participantId] });
-      }
-    }
-
-    // Group units by points to handle ties
-    const groups: { points: number; units: Unit[] }[] = [];
-    for (const unit of units) {
+    const standings = await getTournamentStandings(ctx, tournament);
+    if (standings.some(row => row.tiebreaksUnavailable)) return null;
+    if (!tournament.awardedRatingTiers) await ctx.db.patch(tournament._id, { awardedRatingTiers: tiers });
+    const groups: { rank: number; units: typeof standings }[] = [];
+    for (const unit of standings) {
       const last = groups[groups.length - 1];
-      if (last && last.points === unit.points) {
-        last.units.push(unit);
-      } else {
-        groups.push({ points: unit.points, units: [unit] });
-      }
+      if (last?.rank === unit.rank) last.units.push(unit);
+      else groups.push({ rank: unit.rank, units: [unit] });
     }
 
     // Assign tier points with tie averaging
@@ -290,12 +248,19 @@ export const awardRatings = internalMutation({
         if (!participant) continue;
         if (!participant.userId && !participant.memberId) continue;
 
-        const placement = position + 1;
+        const placement = group.rank;
+        const previous = alreadyAwarded.find(award => award.participantId === participantId);
+        const pointsChange = avgPoints - (previous?.pointsEarned ?? 0);
+        const tournamentChange = previous ? 0 : 1;
+        const member = participant.memberId ? await ctx.db.get(participant.memberId) : null;
+        const userId = participant.userId ?? member?.userId;
 
-        if (participant.userId) {
-          await ctx.db.insert("ratingHistory", {
+        if (userId) {
+          if (previous) await ctx.db.patch(previous._id, { placement, pointsEarned: avgPoints });
+          else await ctx.db.insert("ratingHistory", {
             organizationId: tournament.organizationId,
-            userId: participant.userId,
+            userId,
+            participantId,
             tournamentId: args.tournamentId,
             placement,
             pointsEarned: avgPoints,
@@ -306,19 +271,19 @@ export const awardRatings = internalMutation({
             .withIndex("by_organization_and_user", (q) =>
               q
                 .eq("organizationId", tournament.organizationId)
-                .eq("userId", participant.userId!)
+                .eq("userId", userId)
             )
             .unique();
 
           if (existing) {
             await ctx.db.patch(existing._id, {
-              totalPoints: existing.totalPoints + avgPoints,
-              tournamentsPlayed: existing.tournamentsPlayed + 1,
+              totalPoints: existing.totalPoints + pointsChange,
+              tournamentsPlayed: existing.tournamentsPlayed + tournamentChange,
             });
           } else {
             await ctx.db.insert("playerRatings", {
               organizationId: tournament.organizationId,
-              userId: participant.userId,
+              userId,
               totalPoints: avgPoints,
               tournamentsPlayed: 1,
             });
@@ -327,25 +292,27 @@ export const awardRatings = internalMutation({
           // This participant was entered without a linked account —
           // accumulate directly on their member row instead of
           // playerRatings, which requires a linked account.
-          const member = await ctx.db.get(participant.memberId!);
           if (!member) continue;
 
-          await ctx.db.insert("ratingHistory", {
+          if (previous) await ctx.db.patch(previous._id, { placement, pointsEarned: avgPoints });
+          else await ctx.db.insert("ratingHistory", {
             organizationId: tournament.organizationId,
             memberId: participant.memberId,
+            participantId,
             tournamentId: args.tournamentId,
             placement,
             pointsEarned: avgPoints,
           });
 
           await ctx.db.patch(member._id, {
-            startingPoints: (member.startingPoints ?? 0) + avgPoints,
-            tournamentsPlayed: (member.tournamentsPlayed ?? 0) + 1,
+            startingPoints: (member.startingPoints ?? 0) + pointsChange,
+            tournamentsPlayed: (member.tournamentsPlayed ?? 0) + tournamentChange,
           });
         }
       }
 
       position += count;
     }
+    return null;
   },
 });

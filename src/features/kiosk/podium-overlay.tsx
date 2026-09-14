@@ -9,19 +9,17 @@ export function PodiumOverlay({ tournamentName, top3, onDismiss }: {
   tournamentName: string; top3: LeaderboardEntry[]; onDismiss: () => void
 }) {
   const [revealed, setRevealed] = useState(0)
+  const rankKey = [1, 2, 3].filter(rank => top3.some(entry => entry.rank === rank)).join(',')
 
   useEffect(() => {
-    const timers = top3.map((_, i) =>
-      setTimeout(() => setRevealed(r => Math.max(r, i + 1)), i * REVEAL_MS)
+    setRevealed(0)
+    const timers = rankKey.split(',').filter(Boolean).map((rank, index) =>
+      setTimeout(() => setRevealed(current => Math.max(current, Number(rank))), index * REVEAL_MS)
     )
     return () => timers.forEach(clearTimeout)
-    // Reveal sequence should run once when the podium mounts, not on every
-    // parent re-render (the kiosk clock ticks every second) — top3 is stable
-    // in practice since the tournament is already completed.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [rankKey])
 
-  const order = [1, 0, 2].filter(i => i < top3.length)
+  const order = [2, 1, 3].filter(rank => top3.some(entry => entry.rank === rank))
 
   return (
     <button
@@ -33,36 +31,39 @@ export function PodiumOverlay({ tournamentName, top3, onDismiss }: {
         <h1 className="font-display font-bold text-[34px] tracking-tight">{tournamentName}</h1>
       </div>
 
-      <div className="flex items-end gap-6">
-        {order.map(i => {
-          const entry = top3[i]
-          const rank = i + 1
-          const show = revealed > i
+      <div className="max-h-[70vh] w-full overflow-auto px-6">
+       <div className="flex w-full items-end justify-center gap-3 sm:gap-6">
+        {order.map(rank => {
+          const entries = top3.filter(entry => entry.rank === rank)
+          const show = revealed >= rank
           const height = rank === 1 ? 220 : rank === 2 ? 170 : 140
           const medal = rank === 1 ? 'bg-accent text-ink' : rank === 2 ? 'bg-paper/25 text-paper' : 'bg-paper/15 text-paper'
           return (
             <div
-              key={entry._id}
-              className={`flex flex-col items-center gap-3 transition-all duration-500 ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+              key={rank}
+              className={`flex min-w-0 max-w-40 flex-1 flex-col items-center gap-3 transition-all duration-500 ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
             >
-              <div className="flex items-center">
-                {entry.players.map((p, pi) => (
-                  <Avatar key={pi} name={p.displayName} size={rank === 1 ? 64 : 52} className={pi > 0 ? '-ml-3' : ''} />
-                ))}
-              </div>
-              <div className="text-center">
-                <div className="font-display font-bold text-[18px] leading-tight">{entry.players.map(p => p.displayName).join(' / ')}</div>
-                <div className="font-mono tnum text-[14px] text-paper/50">{entry.points} pts</div>
-              </div>
+              {entries.map(entry => (
+                <div key={entry._id} className="flex w-full flex-col items-center gap-2 text-center">
+                  <div className="flex items-center">
+                    {entry.players.map((player, index) => (
+                      <Avatar key={index} name={player.displayName} size={rank === 1 ? 64 : 52} className={index > 0 ? '-ml-3' : ''} />
+                    ))}
+                  </div>
+                  <div className="font-display font-bold text-xs sm:text-[18px] leading-tight break-words">{entry.players.map(player => player.displayName).join(' / ')}</div>
+                  <div className="font-mono tnum text-[14px] text-paper/50">{entry.points} pts</div>
+                </div>
+              ))}
               <div
                 style={{ height }}
-                className={`w-28 rounded-t-2xl flex items-start justify-center pt-3 ${medal}`}
+                className={`w-full max-w-28 rounded-t-2xl flex items-start justify-center pt-3 ${medal}`}
               >
-                <span className="font-display font-bold text-[28px]">{rank}</span>
+                <span className="font-display font-bold text-[28px]">{entries.length > 1 ? '=' : ''}{rank}</span>
               </div>
             </div>
           )
         })}
+       </div>
       </div>
 
       <div className="flex items-center gap-1.5 text-paper/40 text-[13px] font-medium">

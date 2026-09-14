@@ -131,7 +131,7 @@ function ManagePage() {
             onFinished={() => setTab('standings')}
           />
         ) : (
-          <StandingsTab leaderboard={leaderboard} />
+          <StandingsTab leaderboard={leaderboard} tiebreakOrder={tournament.tiebreakOrder} />
         )}
       </main>
     </div>

@@ -3,6 +3,15 @@ import { v } from "convex/values";
 import { requireOrgAdmin, requireOrgAdminOrPin, requireOrgMember } from "./lib/auth";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
+import { getRecordedScore } from "./lib/recordedScore";
+
+function previousResult(match: Doc<"matches">) {
+  const result = getRecordedScore(match);
+  if (match.state === "completed" && !result) {
+    throw new Error("The original result is unavailable. Restore the original match score before correcting it.");
+  }
+  return result;
+}
 
 function assertValidScores(tournament: Doc<"tournaments">, scoreA: number, scoreB: number) {
   if (tournament.scoringMode === "shared_total" && tournament.pointsToWin !== undefined) {
@@ -55,13 +64,16 @@ export const submit = mutation({
       }
 
       // Scores match — approve
-      await ctx.db.patch(args.matchId, { state: "completed" });
+      await ctx.db.patch(args.matchId, { state: "completed", scoreA: args.scoreA, scoreB: args.scoreB });
       await ctx.db.patch(prior._id, { state: "approved" });
       await ctx.scheduler.runAfter(0, internal.leaderboard.recalculate, {
         matchId: args.matchId,
         scoreA: args.scoreA,
         scoreB: args.scoreB,
       });
+      if (tournament.format === "americano" && (tournament.state === "completed" || tournament.state === "archived")) {
+        await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, { tournamentId: tournament._id });
+      }
       return { status: "approved" };
     }
 
@@ -92,6 +104,7 @@ export const resolve = mutation({
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
     assertValidScores(tournament, args.scoreA, args.scoreB);
+    const previous = previousResult(match);
 
     const scores = await ctx.db
       .query("scores")
@@ -99,15 +112,20 @@ export const resolve = mutation({
       .take(10);
 
     for (const score of scores) {
-      await ctx.db.patch(score._id, { state: "approved" });
+      await ctx.db.patch(score._id, { state: "approved", scoreA: args.scoreA, scoreB: args.scoreB });
     }
 
-    await ctx.db.patch(args.matchId, { state: "completed" });
+    await ctx.db.patch(args.matchId, { state: "completed", scoreA: args.scoreA, scoreB: args.scoreB });
     await ctx.scheduler.runAfter(0, internal.leaderboard.recalculate, {
       matchId: args.matchId,
       scoreA: args.scoreA,
       scoreB: args.scoreB,
+      prevScoreA: previous?.scoreA,
+      prevScoreB: previous?.scoreB,
     });
+    if (tournament.format === "americano" && (tournament.state === "completed" || tournament.state === "archived")) {
+      await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, { tournamentId: tournament._id });
+    }
   },
 });
 
@@ -137,8 +155,9 @@ export const saveResult = mutation({
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdminOrPin(ctx, tournament, args.pin);
     assertValidScores(tournament, args.scoreA, args.scoreB);
-    const prevScoreA = match.scoreA;
-    const prevScoreB = match.scoreB;
+    const previous = previousResult(match);
+    const prevScoreA = previous?.scoreA;
+    const prevScoreB = previous?.scoreB;
     await ctx.db.patch(args.matchId, { state: "completed", scoreA: args.scoreA, scoreB: args.scoreB });
     await ctx.scheduler.runAfter(0, internal.leaderboard.recalculate, {
       matchId: args.matchId,
@@ -147,5 +166,8 @@ export const saveResult = mutation({
       prevScoreA,
       prevScoreB,
     });
+    if (tournament.format === "americano" && (tournament.state === "completed" || tournament.state === "archived")) {
+      await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, { tournamentId: tournament._id });
+    }
   },
 });
