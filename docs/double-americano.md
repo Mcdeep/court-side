@@ -22,7 +22,7 @@ Organisers can swap one player from each group before generating. The displayed 
 | 3 | 14 waves, one court per group | 2 waves using all three courts |
 | 4 or more | 7 rounds, two courts per group | 1 round using four courts |
 
-At least two courts are required. With four courts Group 1 uses courts 1-2 and Group 2 uses courts 3-4. Additional courts are unused. The group phase calls the existing Americano generator twice; it preserves each player's seven distinct partners and two meetings against every other group member.
+At least two courts are required. With four courts Group 1 uses courts 1-2 in the first round and courts 3-4 in the next, alternating throughout the group phase. Group 2 takes the opposite courts. With two or three courts, groups swap courts 1 and 2 after both waves of each partnership round, so every player follows the same rotation. Additional courts are unused. The group phase calls the existing Americano generator twice; it preserves each player's seven distinct partners and two meetings against every other group member.
 
 ## Standings and crossover finals
 

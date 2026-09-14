@@ -99,6 +99,32 @@ describe('generateDoubleAmericanoRounds', () => {
     expect(new Set(rounds.flat().map(match => match.courtNumber))).toEqual(new Set(usedCourts))
   })
 
+  test.each([
+    { courts: 4, wavesPerRound: 1, firstCourts: [1, 2], secondCourts: [3, 4] },
+    { courts: 6, wavesPerRound: 1, firstCourts: [1, 2], secondCourts: [3, 4] },
+    { courts: 2, wavesPerRound: 2, firstCourts: [1], secondCourts: [2] },
+    { courts: 3, wavesPerRound: 2, firstCourts: [1], secondCourts: [2] },
+  ])('swaps group courts after each complete partnership round with $courts courts', ({ courts, wavesPerRound, firstCourts, secondCourts }) => {
+    const groups = [ids.slice(0, 8), ids.slice(8)]
+    const rounds = generateDoubleAmericanoRounds(groups[0], groups[1], courts)
+    for (let partnershipRound = 0; partnershipRound < 7; partnershipRound++) {
+      const waves = rounds.slice(partnershipRound * wavesPerRound, (partnershipRound + 1) * wavesPerRound)
+      const expectedCourts = partnershipRound % 2 === 0 ? [firstCourts, secondCourts] : [secondCourts, firstCourts]
+      for (const wave of waves) {
+        expect(wave.map(match => match.courtNumber)).toEqual([...firstCourts, ...secondCourts])
+        for (const [groupIndex, group] of groups.entries()) {
+          const groupMatches = wave.filter(match => group.includes(match.pairA[0]))
+          expect(groupMatches.map(match => match.courtNumber)).toEqual(expectedCourts[groupIndex])
+          expect(groupMatches.flatMap(match => [...match.pairA, ...match.pairB]).every(id => group.includes(id))).toBe(true)
+        }
+      }
+      for (const group of groups) {
+        const players = waves.flat().flatMap(match => [...match.pairA, ...match.pairB]).filter(id => group.includes(id))
+        expect(players.sort()).toEqual([...group].sort())
+      }
+    }
+  })
+
   test('preserves complete Americano partnership and opponent rotations within each group', () => {
     const groups = [ids.slice(0, 8), ids.slice(8)]
     const rounds = generateDoubleAmericanoRounds(groups[0], groups[1], 4)

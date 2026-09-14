@@ -105,13 +105,17 @@ export function generateDoubleAmericanoRounds(
   const firstRounds = generateAmericanoRounds(group1, courtsPerGroup)
   const secondRounds = generateAmericanoRounds(group2, courtsPerGroup)
 
-  return firstRounds.map((round, index) => [
-    ...round,
-    ...secondRounds[index].map(match => ({
-      ...match,
-      courtNumber: match.courtNumber + courtsPerGroup,
-    })),
-  ])
+  const wavesPerRound = courtsPerGroup === 1 ? 2 : 1
+  return firstRounds.map((round, index) => {
+    // Keep both waves together so all eight players follow the same court rotation.
+    const swapSides = Math.floor(index / wavesPerRound) % 2 === 1
+    const firstOffset = swapSides ? courtsPerGroup : 0
+    const secondOffset = swapSides ? 0 : courtsPerGroup
+    return [
+      ...round.map(match => ({ ...match, courtNumber: match.courtNumber + firstOffset })),
+      ...secondRounds[index].map(match => ({ ...match, courtNumber: match.courtNumber + secondOffset })),
+    ].sort((a, b) => a.courtNumber - b.courtNumber)
+  })
 }
 
 export function generateDoubleAmericanoFinals(
