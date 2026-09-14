@@ -239,13 +239,13 @@ describe('Americano standings and ratings', () => {
     expect((await t.query(api.leaderboard.get, { tournamentId })).find(row => row.participantId === participants[1]))
       .toMatchObject({ points: 20, pointDiff: null, tiebreaksUnavailable: true })
     await expect(organizer.mutation(api.scores.saveResult, { matchId: matchIds[3], scoreA: 20, scoreB: 0 }))
-      .rejects.toThrow('original result is unavailable')
+      .rejects.toThrow('previous result')
     const cached = await t.run(async ctx => ctx.db.query('leaderboard')
       .withIndex('by_tournament_and_participant', q => q.eq('tournamentId', tournamentId).eq('participantId', participants[1])).unique())
     expect(cached).toMatchObject({ points: 20, wins: 1, losses: 1 })
   })
 
-  test('preserves cached totals when an older result cannot be recovered', async () => {
+  test('finishing with a missing legacy result awards ratings from cached points' , async () => {
     vi.useFakeTimers()
     const { t, organizer, tournamentId, participants, scoreFixtures } = await setup()
     const matchIds = await scoreFixtures()
@@ -253,9 +253,107 @@ describe('Americano standings and ratings', () => {
     expect((await t.query(api.leaderboard.get, { tournamentId })).find(row => row.participantId === participants[1]))
       .toMatchObject({ points: 20, pointDiff: null, rank: 3, tiebreaksUnavailable: true })
     await expect(organizer.mutation(api.scores.saveResult, { matchId: matchIds[3], scoreA: 20, scoreB: 0 }))
-      .rejects.toThrow('original result is unavailable')
-    await t.mutation(internal.ratings.awardRatings, { tournamentId })
-    expect(await t.run(async ctx => ctx.db.query('ratingHistory').collect())).toHaveLength(0)
+      .rejects.toThrow('previous result')
+    await t.run(async ctx => ctx.db.patch(tournamentId, { state: 'in_progress', tiebreakOrder: undefined }))
+    await organizer.mutation(api.tournaments.finish, { tournamentId })
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+    const awards = await t.run(async ctx => ctx.db.query('ratingHistory').collect())
+    expect(awards).toHaveLength(6)
+    expect(awards.find(award => award.participantId === participants[1])).toMatchObject({ placement: 3, pointsEarned: 3.75 })
+  })
+
+  test.each(['americano', 'mexicano', 'round_robin', 'knockout', 'king_of_the_court', 'snakes_and_ladders', 'team_clash'] as const)(
+    'repairs and corrects a missing %s result without double-counting standings', async format => {
+      vi.useFakeTimers()
+      const { t, organizer, tournamentId, participants, scoreFixtures } = await setup()
+      const matchIds = await scoreFixtures()
+      await t.run(async ctx => {
+        await ctx.db.patch(tournamentId, { format })
+        await ctx.db.patch(matchIds[3], { scoreA: undefined, scoreB: undefined })
+      })
+      await organizer.mutation(api.scores.saveResult, { matchId: matchIds[3], scoreA: 20, scoreB: 0, previousScore: { scoreA: 10, scoreB: 0 } })
+      await t.finishAllScheduledFunctions(vi.runAllTimers)
+      expect(await t.run(async ctx => ctx.db.get(matchIds[3]))).toMatchObject({ scoreA: 20, scoreB: 0 })
+      const cached = await t.run(async ctx => ctx.db.query('leaderboard')
+        .withIndex('by_tournament_and_participant', q => q.eq('tournamentId', tournamentId).eq('participantId', participants[1])).unique())
+      expect(cached).toMatchObject({ points: 30, wins: 1, losses: 1 })
+    })
+
+  test('admin resolution can repair a missing result despite conflicting old submissions', async () => {
+    vi.useFakeTimers()
+    const { t, organizer, participants, tournamentId, scoreFixtures } = await setup()
+    const matchIds = await scoreFixtures()
+    await t.run(async ctx => {
+      await ctx.db.patch(matchIds[3], { scoreA: undefined, scoreB: undefined })
+      await ctx.db.insert('scores', { matchId: matchIds[3], submittedBy: participants[1], scoreA: 0, scoreB: 10, state: 'approved' })
+    })
+    await organizer.mutation(api.scores.resolve, { matchId: matchIds[3], scoreA: 8, scoreB: 12, previousScore: { scoreA: 10, scoreB: 0 } })
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+    const cached = await t.run(async ctx => ctx.db.query('leaderboard')
+      .withIndex('by_tournament_and_participant', q => q.eq('tournamentId', tournamentId).eq('participantId', participants[1])).unique())
+    expect(cached).toMatchObject({ points: 18, wins: 0, losses: 2 })
+  })
+
+  test('repairing a finished event replaces fallback awards with its configured ranking', async () => {
+    vi.useFakeTimers()
+    const { t, organizer, tournamentId, participants, scoreFixtures } = await setup()
+    const matchIds = await scoreFixtures()
+    await t.run(async ctx => {
+      await ctx.db.patch(matchIds[3], { scoreA: undefined, scoreB: undefined })
+      await ctx.db.patch(tournamentId, { state: 'in_progress' })
+    })
+    await organizer.mutation(api.tournaments.finish, { tournamentId })
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+    await organizer.mutation(api.scores.saveResult, { matchId: matchIds[3], scoreA: 10, scoreB: 0, previousScore: { scoreA: 10, scoreB: 0 } })
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+    const standings = await t.query(api.leaderboard.get, { tournamentId })
+    expect(standings.every(row => !row.tiebreaksUnavailable)).toBe(true)
+    const awards = await t.run(async ctx => ctx.db.query('ratingHistory').collect())
+    expect(awards).toHaveLength(6)
+    expect(awards.find(award => award.participantId === participants[1])).toMatchObject({ placement: 5, pointsEarned: 3 })
+    const member = await t.run(async ctx => ctx.db.get((await ctx.db.get(participants[1]))!.memberId!))
+    expect(member).toMatchObject({ startingPoints: 3, tournamentsPlayed: 1 })
+  })
+
+  test('a partial repair updates cached standings before fallback awards are scheduled', async () => {
+    vi.useFakeTimers()
+    const { t, organizer, tournamentId, participants, scoreFixtures } = await setup()
+    const matchIds = await scoreFixtures()
+    await t.run(async ctx => {
+      for (const matchId of [matchIds[0], matchIds[3]]) await ctx.db.patch(matchId, { scoreA: undefined, scoreB: undefined })
+      await ctx.db.patch(tournamentId, { state: 'in_progress' })
+    })
+    await organizer.mutation(api.tournaments.finish, { tournamentId })
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+    await organizer.mutation(api.scores.saveResult, { matchId: matchIds[3], scoreA: 20, scoreB: 0, previousScore: { scoreA: 10, scoreB: 0 } })
+    const standings = await t.query(api.leaderboard.get, { tournamentId })
+    expect(standings.find(row => row.participantId === participants[1])).toMatchObject({ points: 30, rank: 1, tiebreaksUnavailable: true })
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+    const awards = await t.run(async ctx => ctx.db.query('ratingHistory').collect())
+    expect(awards.find(award => award.participantId === participants[1])).toMatchObject({ placement: 1, pointsEarned: 9 })
+  })
+
+  test('stored match scores take precedence over a stale restoration entry', async () => {
+    vi.useFakeTimers()
+    const { t, organizer, tournamentId, participants, scoreFixtures } = await setup()
+    const matchIds = await scoreFixtures()
+    await organizer.mutation(api.scores.saveResult, { matchId: matchIds[3], scoreA: 20, scoreB: 0, previousScore: { scoreA: 99, scoreB: 99 } })
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+    const cached = await t.run(async ctx => ctx.db.query('leaderboard')
+      .withIndex('by_tournament_and_participant', q => q.eq('tournamentId', tournamentId).eq('participantId', participants[1])).unique())
+    expect(cached).toMatchObject({ points: 30, wins: 1, losses: 1 })
+  })
+
+  test('restoration requires the existing score permissions and valid previous scores', async () => {
+    vi.useFakeTimers()
+    const { t, organizer, scoreFixtures } = await setup()
+    const matchIds = await scoreFixtures()
+    await t.run(async ctx => ctx.db.patch(matchIds[3], { scoreA: undefined, scoreB: undefined }))
+    const correction = { matchId: matchIds[3], scoreA: 20, scoreB: 0, previousScore: { scoreA: 10, scoreB: 0 } }
+    await expect(t.mutation(api.scores.saveResult, correction)).rejects.toThrow('Not authenticated')
+    await expect(organizer.mutation(api.scores.saveResult, { ...correction, previousScore: { scoreA: -1, scoreB: 0 } }))
+      .rejects.toThrow('non-negative whole numbers')
+    expect(await t.run(async ctx => ctx.db.get(matchIds[3]))).not.toHaveProperty('scoreA')
   })
 
   test('completed legacy events keep points-only ranks and awards, even after reopening', async () => {

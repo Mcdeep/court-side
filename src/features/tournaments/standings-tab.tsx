@@ -38,7 +38,7 @@ export function StandingsTab({ leaderboard, tiebreakOrder }: {
     <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card overflow-hidden">
       {leaderboard.some(entry => entry.tiebreaksUnavailable) && (
         <p className="px-5 py-3 text-sm text-ink-mute border-b border-zinc-100">
-          Some older match results are missing. Showing total points until those results are restored.
+          Some older match results are missing. Standings and rating awards use total points until they are restored. Open a missing match score in the schedule to restore it.
         </p>
       )}
       {showDifference && (

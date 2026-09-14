@@ -5,10 +5,16 @@ import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { getRecordedScore } from "./lib/recordedScore";
 
-function previousResult(match: Doc<"matches">) {
+const previousScoreValidator = v.object({ scoreA: v.number(), scoreB: v.number() });
+
+function previousResult(match: Doc<"matches">, restored?: NonNullable<ReturnType<typeof getRecordedScore>>) {
   const result = getRecordedScore(match);
   if (match.state === "completed" && !result) {
-    throw new Error("The original result is unavailable. Restore the original match score before correcting it.");
+    if (!restored) throw new Error("Enter the previous result in the score editor before saving this correction.");
+    if ([restored.scoreA, restored.scoreB].some(score => !Number.isInteger(score) || score < 0)) {
+      throw new Error("Previous scores must be non-negative whole numbers");
+    }
+    return restored;
   }
   return result;
 }
@@ -66,7 +72,7 @@ export const submit = mutation({
       // Scores match — approve
       await ctx.db.patch(args.matchId, { state: "completed", scoreA: args.scoreA, scoreB: args.scoreB });
       await ctx.db.patch(prior._id, { state: "approved" });
-      await ctx.scheduler.runAfter(0, internal.leaderboard.recalculate, {
+      await ctx.runMutation(internal.leaderboard.recalculate, {
         matchId: args.matchId,
         scoreA: args.scoreA,
         scoreB: args.scoreB,
@@ -94,7 +100,9 @@ export const resolve = mutation({
     matchId: v.id("matches"),
     scoreA: v.number(),
     scoreB: v.number(),
+    previousScore: v.optional(previousScoreValidator),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const match = await ctx.db.get(args.matchId);
     if (!match) throw new Error("Match not found");
@@ -104,7 +112,7 @@ export const resolve = mutation({
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
     assertValidScores(tournament, args.scoreA, args.scoreB);
-    const previous = previousResult(match);
+    const previous = previousResult(match, args.previousScore);
 
     const scores = await ctx.db
       .query("scores")
@@ -116,7 +124,7 @@ export const resolve = mutation({
     }
 
     await ctx.db.patch(args.matchId, { state: "completed", scoreA: args.scoreA, scoreB: args.scoreB });
-    await ctx.scheduler.runAfter(0, internal.leaderboard.recalculate, {
+    await ctx.runMutation(internal.leaderboard.recalculate, {
       matchId: args.matchId,
       scoreA: args.scoreA,
       scoreB: args.scoreB,
@@ -126,6 +134,7 @@ export const resolve = mutation({
     if (tournament.format === "americano" && (tournament.state === "completed" || tournament.state === "archived")) {
       await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, { tournamentId: tournament._id });
     }
+    return null;
   },
 });
 
@@ -145,7 +154,9 @@ export const saveResult = mutation({
     scoreA: v.number(),
     scoreB: v.number(),
     pin: v.optional(v.string()),
+    previousScore: v.optional(previousScoreValidator),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const match = await ctx.db.get(args.matchId);
     if (!match) throw new Error("Match not found");
@@ -155,11 +166,11 @@ export const saveResult = mutation({
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdminOrPin(ctx, tournament, args.pin);
     assertValidScores(tournament, args.scoreA, args.scoreB);
-    const previous = previousResult(match);
+    const previous = previousResult(match, args.previousScore);
     const prevScoreA = previous?.scoreA;
     const prevScoreB = previous?.scoreB;
     await ctx.db.patch(args.matchId, { state: "completed", scoreA: args.scoreA, scoreB: args.scoreB });
-    await ctx.scheduler.runAfter(0, internal.leaderboard.recalculate, {
+    await ctx.runMutation(internal.leaderboard.recalculate, {
       matchId: args.matchId,
       scoreA: args.scoreA,
       scoreB: args.scoreB,
@@ -169,5 +180,6 @@ export const saveResult = mutation({
     if (tournament.format === "americano" && (tournament.state === "completed" || tournament.state === "archived")) {
       await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, { tournamentId: tournament._id });
     }
+    return null;
   },
 });

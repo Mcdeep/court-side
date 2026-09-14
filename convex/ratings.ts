@@ -223,7 +223,6 @@ export const awardRatings = internalMutation({
     const tiers = tournament.awardedRatingTiers ?? config?.tiers ?? DEFAULT_TIERS;
 
     const standings = await getTournamentStandings(ctx, tournament);
-    if (standings.some(row => row.tiebreaksUnavailable)) return null;
     if (!tournament.awardedRatingTiers) await ctx.db.patch(tournament._id, { awardedRatingTiers: tiers });
     const groups: { rank: number; units: typeof standings }[] = [];
     for (const unit of standings) {

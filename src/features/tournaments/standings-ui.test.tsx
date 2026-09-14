@@ -52,6 +52,12 @@ test('shows official shared ranks and point difference, even after sorting anoth
   expect(within(screen.getByRole('row', { name: /Player D/ })).getByLabelText('Position 4')).toBeTruthy()
 })
 
+test('fallback standings explain the rating basis and how to restore missing results', () => {
+  render(<StandingsTab leaderboard={[{ ...entry('A', 1), pointDiff: null, tiebreaksUnavailable: true }]} />)
+  expect(screen.getByText(/Standings and rating awards use total points/)).toBeTruthy()
+  expect(screen.getByText(/Open a missing match score in the schedule to restore it/)).toBeTruthy()
+})
+
 test('the podium includes every player sharing third place', () => {
   vi.useFakeTimers()
   render(<PodiumOverlay tournamentName="Final" top3={[entry('A', 1), entry('B', 2), entry('C', 3, true), entry('D', 3, true)]} onDismiss={() => {}} />)
