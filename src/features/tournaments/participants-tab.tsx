@@ -9,9 +9,9 @@ import { PRE_GENERATED_FORMATS } from '#/lib/constants'
 import { errorMessage } from '#/lib/utils'
 import type { Id, Participant, TournamentFormat } from './types'
 
-export function ParticipantsTab({ participants, tournamentId, format, canAdd, onAdd }: {
+export function ParticipantsTab({ participants, tournamentId, format, canAdd, onAdd, onCopyRoster }: {
   participants: Participant[]; tournamentId: Id<'tournaments'>; format: TournamentFormat
-  canAdd: boolean; onAdd: () => void
+  canAdd: boolean; onAdd: () => void; onCopyRoster: () => void
 }) {
   const removeParticipant = useMutation(api.participants.remove)
   const setParticipantSkillRating = useMutation(api.participants.setSkillRating)
@@ -74,7 +74,10 @@ export function ParticipantsTab({ participants, tournamentId, format, canAdd, on
           )}
           <Button variant="ghost" size="sm" icon="filter">Sort</Button>
           {canAdd && (
-            <Button variant="outline" size="sm" icon="plus" onClick={onAdd}>Add player</Button>
+            <>
+              <Button variant="ghost" size="sm" icon="copy" onClick={onCopyRoster}>Copy roster</Button>
+              <Button variant="outline" size="sm" icon="plus" onClick={onAdd}>Add player</Button>
+            </>
           )}
         </div>
       </div>

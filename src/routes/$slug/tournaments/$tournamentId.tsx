@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '#/components/ui/sh
 import { StatusChip } from '#/components/ui/status-chip'
 import { AddPlayerModal } from '#/features/tournaments/add-player-modal'
 import { ConfirmDialog } from '#/features/tournaments/confirm-dialog'
+import { CopyRosterModal } from '#/features/tournaments/copy-roster-modal'
 import { EditTournamentModal } from '#/features/tournaments/edit-tournament-modal'
 import { OverflowMenu } from '#/features/tournaments/overflow-menu'
 import { ParticipantsTab } from '#/features/tournaments/participants-tab'
@@ -30,6 +31,7 @@ function TournamentDetailPage() {
   const navigate = useNavigate()
   const [tab, setTab] = useState('schedule')
   const [showAddPlayer, setShowAddPlayer] = useState(false)
+  const [showCopyRoster, setShowCopyRoster] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [confirmAction, setConfirmAction] = useState<'archive' | 'delete' | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -88,6 +90,14 @@ function TournamentDetailPage() {
           organizationId={tournament.organizationId}
           existingMemberIds={participants.map(p => p.memberId).filter(Boolean) as Id<'members'>[]}
           onClose={() => setShowAddPlayer(false)}
+        />
+      )}
+      {showCopyRoster && (
+        <CopyRosterModal
+          tournamentId={tid}
+          organizationId={tournament.organizationId}
+          existingMemberIds={participants.map(p => p.memberId).filter(Boolean) as Id<'members'>[]}
+          onClose={() => setShowCopyRoster(false)}
         />
       )}
       {showEdit && (
@@ -219,6 +229,7 @@ function TournamentDetailPage() {
             format={tournament.format}
             canAdd={canAddPlayer}
             onAdd={() => setShowAddPlayer(true)}
+            onCopyRoster={() => setShowCopyRoster(true)}
           />
         </>
       )}
