@@ -431,7 +431,10 @@ export const resetSchedule = mutation({
       .take(200);
     for (const entry of leaderboardEntries) await ctx.db.delete(entry._id);
 
-    await ctx.db.patch(args.tournamentId, { state: "registration_open" });
+    await ctx.db.patch(args.tournamentId, {
+      state: "registration_open",
+      tiebreakOrderLocked: tournament.tiebreakOrderLocked || tournament.state === "completed" || tournament.state === "archived",
+    });
   },
 });
 

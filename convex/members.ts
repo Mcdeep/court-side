@@ -88,7 +88,7 @@ export const link = mutation({
           organizationId: member.organizationId,
           userId: args.userId,
           totalPoints: member.startingPoints,
-          tournamentsPlayed: 0,
+          tournamentsPlayed: member.tournamentsPlayed ?? 0,
         });
       }
     }

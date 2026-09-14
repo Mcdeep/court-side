@@ -1,4 +1,4 @@
-import type { FunctionReturnType } from 'convex/server'
+import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from '#/../convex/_generated/api'
 import type { Id } from '#/../convex/_generated/dataModel'
 
@@ -17,6 +17,8 @@ export type Participant = FunctionReturnType<typeof api.participants.list>[numbe
 export type Round = FunctionReturnType<typeof api.rounds.list>[number]
 
 export type Match = FunctionReturnType<typeof api.matches.listByRound>[number]
+
+export type PreviousScore = NonNullable<FunctionArgs<typeof api.scores.saveResult>['previousScore']>
 
 export type LeaderboardEntry = FunctionReturnType<typeof api.leaderboard.get>[number]
 

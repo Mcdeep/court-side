@@ -163,7 +163,7 @@ function KioskPage() {
               {leaderboard.length === 0 ? (
                 <div className="flex-1 flex items-center justify-center text-paper/30 text-lg">No scores yet</div>
               ) : (
-                <BoardList rows={leaderboard.slice(0, 10)} />
+                <BoardList rows={leaderboard.filter(entry => entry.rank <= 10)} />
               )}
             </section>
           </aside>
@@ -197,7 +197,7 @@ function KioskPage() {
       {isCompleted && !podiumDismissed && leaderboard.length > 0 && (
         <PodiumOverlay
           tournamentName={tournament.name}
-          top3={leaderboard.slice(0, 3)}
+          top3={leaderboard.filter(entry => entry.rank <= 3)}
           onDismiss={() => {
             localStorage.setItem(podiumKey, '1')
             setPodiumDismissed(true)

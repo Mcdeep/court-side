@@ -233,7 +233,7 @@ function TournamentDetailPage() {
           />
         </>
       )}
-      {tab === 'standings' && <StandingsTab leaderboard={leaderboard} />}
+      {tab === 'standings' && <StandingsTab leaderboard={leaderboard} tiebreakOrder={tournament.tiebreakOrder} />}
 
       <Sheet open={showLeaderboard} onOpenChange={setShowLeaderboard}>
         <SheetContent side="right" className="w-full sm:max-w-md">
@@ -241,7 +241,7 @@ function TournamentDetailPage() {
             <SheetTitle className="font-display font-bold text-[20px] tracking-tight">Leaderboard</SheetTitle>
           </SheetHeader>
           <div className="px-4 pb-4 overflow-y-auto">
-            <StandingsTab leaderboard={leaderboard} />
+            <StandingsTab leaderboard={leaderboard} tiebreakOrder={tournament.tiebreakOrder} />
           </div>
         </SheetContent>
       </Sheet>

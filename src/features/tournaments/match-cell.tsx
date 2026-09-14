@@ -6,7 +6,9 @@ import { Button } from '#/components/ui/button'
 import { Icon } from '#/components/ui/icon'
 import { pairNames } from '#/lib/names'
 import { POINTS_TO_WIN, TIME_BASED_MAX_SCORE } from '#/lib/constants'
-import type { Match } from './types'
+import type { Match, PreviousScore } from './types'
+import { PreviousScoreForm } from './previous-score-form'
+import { useAsyncAction } from '#/hooks/use-async-action'
 
 export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'first_to', pin }: {
   match: Match; pointsToWin?: number; scoringMode?: 'first_to' | 'shared_total' | 'time_based'; pin?: string
@@ -14,7 +16,8 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'f
   const [editing, setEditing] = useState(false)
   const [a, setA] = useState(match.scoreA ?? 0)
   const [b, setB] = useState(match.scoreB ?? 0)
-  const [saving, setSaving] = useState(false)
+  const [previousScore, setPreviousScore] = useState<PreviousScore>()
+  const { working, error, setError, run } = useAsyncAction()
   const saveResult = useMutation(api.scores.saveResult)
   const shared = scoringMode === 'shared_total'
   const timeBased = scoringMode === 'time_based'
@@ -35,21 +38,21 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'f
 
   const live  = match.state === 'in_progress'
   const final = match.state === 'completed'
+  const needsPreviousScore = final && (match.scoreA === undefined || match.scoreB === undefined)
 
   function startEditing() {
+    setPreviousScore(undefined)
+    setError('')
     setA(match.scoreA ?? 0)
     setB(match.scoreB ?? 0)
     setEditing(true)
   }
 
   async function handleSave() {
-    setSaving(true)
-    try {
-      await saveResult({ matchId: match._id, scoreA: a, scoreB: b, pin })
+    await run(async () => {
+      await saveResult({ matchId: match._id, scoreA: a, scoreB: b, pin, previousScore })
       setEditing(false)
-    } finally {
-      setSaving(false)
-    }
+    })
   }
 
   return (
@@ -74,12 +77,22 @@ export function MatchCell({ match, pointsToWin = POINTS_TO_WIN, scoringMode = 'f
             </div>
           }
         >
-          <NumberGrid label={`${nameA1} / ${nameA2}`} value={a} onChange={handleChangeA} max={entryMax} highlight={a > b} />
-          <NumberGrid label={`${nameB1} / ${nameB2}`} value={b} onChange={handleChangeB} max={entryMax} highlight={b > a} />
-          <div className="flex gap-2">
-            <Button variant="ghost" size="lg" className="flex-1" onClick={() => setEditing(false)}>Cancel</Button>
-            <Button variant="primary" size="lg" className="flex-[1.4]" icon="check" onClick={handleSave} disabled={saving}>Save</Button>
-          </div>
+          {needsPreviousScore && !previousScore ? (
+            <PreviousScoreForm match={match} onConfirm={score => {
+              setPreviousScore(score)
+              setA(score.scoreA)
+              setB(score.scoreB)
+            }} />
+          ) : <>
+            {previousScore && <p className="text-sm text-ink-mute">The previous result is filled in below. Save it unchanged to restore it, or select the corrected scores.</p>}
+            {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
+            <NumberGrid label={`${nameA1} / ${nameA2}`} value={a} onChange={handleChangeA} max={entryMax} highlight={a > b} />
+            <NumberGrid label={`${nameB1} / ${nameB2}`} value={b} onChange={handleChangeB} max={entryMax} highlight={b > a} />
+            <div className="flex gap-2">
+              <Button variant="ghost" size="lg" className="flex-1" onClick={() => setEditing(false)}>Cancel</Button>
+              <Button variant="primary" size="lg" className="flex-[1.4]" icon="check" onClick={handleSave} disabled={working}>Save</Button>
+            </div>
+          </>}
         </AppDialog>
       )}
       <button onClick={startEditing}

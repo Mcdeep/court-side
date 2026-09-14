@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { tiebreakValidator } from "./lib/tiebreaks";
 
 export default defineSchema({
   organizations: defineTable({
@@ -52,6 +53,9 @@ export default defineSchema({
     // "shared_total": each match splits a fixed pool of pointsToWin points between the two teams.
     // "time_based": match ends when the round timer runs out; whichever team has more points wins.
     scoringMode: v.optional(v.union(v.literal("first_to"), v.literal("shared_total"), v.literal("time_based"))),
+    tiebreakOrder: v.optional(v.array(tiebreakValidator)),
+    awardedRatingTiers: v.optional(v.array(v.number())),
+    tiebreakOrderLocked: v.optional(v.boolean()),
     startsAt: v.number(),
     endsAt: v.number(),
     // Generated when the tournament starts (first round generated). Lets
@@ -191,6 +195,7 @@ export default defineSchema({
 
   ratingHistory: defineTable({
     organizationId: v.id("organizations"),
+    participantId: v.optional(v.id("participants")),
     // Exactly one of userId/memberId is set — userId for a linked account,
     // memberId for an unlinked roster member (see ratings.awardRatings).
     userId: v.optional(v.id("users")),

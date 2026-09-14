@@ -8,11 +8,16 @@ import { Input } from '#/components/ui/input'
 import { toDatetimeLocal } from '#/lib/format'
 import { useAsyncAction } from '#/hooks/use-async-action'
 import type { Id, Tournament } from './types'
+import { getRankingOrder } from '#/../convex/lib/tiebreaks'
+import { TiebreakOrderField } from './tiebreak-order-field'
 
 export function EditTournamentModal({ tournament, tournamentId, onClose }: {
   tournament: Tournament; tournamentId: Id<'tournaments'>; onClose: () => void
 }) {
   const [name, setName] = useState(tournament.name)
+  const [tiebreakOrder, setTiebreakOrder] = useState(getRankingOrder(tournament.tiebreakOrder))
+  const tiebreaksLocked = tournament.tiebreakOrderLocked
+  const legacyStandings = tiebreaksLocked && !tournament.tiebreakOrder
   const [roundMinutes, setRoundMinutes] = useState(tournament.roundDurationMs ? String(tournament.roundDurationMs / 60_000) : '')
   const [startsAt, setStartsAt] = useState(toDatetimeLocal(tournament.startsAt))
   const [endsAt, setEndsAt] = useState(toDatetimeLocal(tournament.endsAt))
@@ -26,6 +31,7 @@ export function EditTournamentModal({ tournament, tournamentId, onClose }: {
       await updateTournament({
         tournamentId,
         name: name.trim(),
+        tiebreakOrder: tournament.format === 'americano' && !legacyStandings ? tiebreakOrder : undefined,
         roundDurationMs: roundMinutes ? Number(roundMinutes) * 60_000 : undefined,
         startsAt: new Date(startsAt).getTime(),
         endsAt: new Date(endsAt).getTime(),
@@ -51,6 +57,12 @@ export function EditTournamentModal({ tournament, tournamentId, onClose }: {
             <Input type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)} required />
           </Field>
         </div>
+        {tournament.format === 'americano' && (legacyStandings ? (
+          <p className="text-sm text-ink-mute">This completed tournament keeps its original ranking by total points.</p>
+        ) : (
+          <TiebreakOrderField value={tiebreakOrder} onChange={setTiebreakOrder}
+            disabled={working || tiebreaksLocked} />
+        ))}
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <div className="flex gap-2 pt-1">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>

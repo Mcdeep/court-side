@@ -8,6 +8,8 @@ import { Field } from '#/components/ui/field'
 import { Input } from '#/components/ui/input'
 import { toDatetimeLocal } from '#/lib/format'
 import { useAsyncAction } from '#/hooks/use-async-action'
+import { DEFAULT_TIEBREAK_ORDER } from '#/../convex/lib/tiebreaks'
+import { TiebreakOrderField } from './tiebreak-order-field'
 
 const FORMAT_OPTIONS = [
   { value: 'americano',          label: 'Americano' },
@@ -39,6 +41,7 @@ export function NewTournamentModal({ orgId, onClose, onCreated }: {
   const [startsAt, setStartsAt] = useState(toDatetimeLocal(now + 1000 * 60 * 60))
   const [endsAt, setEndsAt]     = useState(toDatetimeLocal(now + 1000 * 60 * 60 * 4))
   const [roundMinutes, setRoundMinutes] = useState('')
+  const [tiebreakOrder, setTiebreakOrder] = useState(DEFAULT_TIEBREAK_ORDER)
 
   const firstVenueId = venues?.[0]?._id
   const resolvedVenue = (venueId || firstVenueId) as Id<'venues'> | undefined
@@ -53,6 +56,7 @@ export function NewTournamentModal({ orgId, onClose, onCreated }: {
         venueId: resolvedVenue,
         name: name.trim(),
         format,
+        tiebreakOrder: format === 'americano' ? tiebreakOrder : undefined,
         roundDurationMs: roundMinutes ? Number(roundMinutes) * 60_000 : undefined,
         startsAt: new Date(startsAt).getTime(),
         endsAt: new Date(endsAt).getTime(),
@@ -104,6 +108,7 @@ export function NewTournamentModal({ orgId, onClose, onCreated }: {
             <Input type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)} required />
           </Field>
         </div>
+        {format === 'americano' && <TiebreakOrderField value={tiebreakOrder} onChange={setTiebreakOrder} disabled={working} />}
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <div className="flex gap-2 pt-1">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
