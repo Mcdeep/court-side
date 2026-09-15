@@ -44,7 +44,10 @@ export const adminCreateOrg = action({
     if (!args.name.trim()) throw new Error("Name required");
     if (!args.slug.trim()) throw new Error("Slug required");
 
-    const slug = args.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
+    const slug = args.slug
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-");
     const isDev = !process.env.CONVEX_CLOUD_URL?.includes(".convex.cloud");
     const clerkSlug = isDev ? `dev-${slug}` : slug;
 
@@ -57,14 +60,11 @@ export const adminCreateOrg = action({
       }),
     });
 
-    const orgId: Id<"organizations"> = await ctx.runMutation(
-      internal.clerkAdmin.insertOrg,
-      {
-        clerkOrgId: clerkOrg.id,
-        name: args.name.trim(),
-        slug,
-      }
-    );
+    const orgId: Id<"organizations"> = await ctx.runMutation(internal.clerkAdmin.insertOrg, {
+      clerkOrgId: clerkOrg.id,
+      name: args.name.trim(),
+      slug,
+    });
 
     if (args.adminUserId) {
       const user = await ctx.runQuery(internal.clerkAdmin.getUser, {
@@ -99,15 +99,13 @@ export const listOrgAdmins = action({
     if (!org) throw new Error("Organisation not found");
     if (!org.clerkOrgId) return [];
 
-    const result = await clerkFetch(
-      `/organizations/${org.clerkOrgId}/memberships?limit=100`
-    );
+    const result = await clerkFetch(`/organizations/${org.clerkOrgId}/memberships?limit=100`);
 
     return (result.data as any[]).map((m) => ({
       clerkUserId: m.public_user_data?.user_id as string,
-      name: [m.public_user_data?.first_name, m.public_user_data?.last_name]
-        .filter(Boolean)
-        .join(" ") || m.public_user_data?.identifier,
+      name:
+        [m.public_user_data?.first_name, m.public_user_data?.last_name].filter(Boolean).join(" ") ||
+        m.public_user_data?.identifier,
       email: m.public_user_data?.identifier as string,
       role: m.role as string,
     }));

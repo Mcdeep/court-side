@@ -40,9 +40,7 @@ export function generateRoundRobinRounds(
 
   const P = teams.length;
   // Add null sentinel for bye when P is odd
-  const sched: ([string, string] | null)[] = P % 2 === 0
-    ? [...teams]
-    : [...teams, null];
+  const sched: ([string, string] | null)[] = P % 2 === 0 ? [...teams] : [...teams, null];
   const S = sched.length; // always even
   const numLegs = P % 2 === 0 ? P - 1 : P;
 

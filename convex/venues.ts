@@ -7,9 +7,7 @@ export const listByOrg = query({
   handler: async (ctx, args) => {
     return ctx.db
       .query("venues")
-      .withIndex("by_organization", (q) =>
-        q.eq("organizationId", args.organizationId)
-      )
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
       .take(100);
   },
 });

@@ -5,15 +5,26 @@ import { getTournamentStandings } from "./lib/tournamentStandings";
 
 export const get = query({
   args: { tournamentId: v.id("tournaments") },
-  returns: v.array(v.object({
-    _id: v.id("participants"), participantId: v.id("participants"), participantIds: v.array(v.id("participants")),
-    points: v.number(), wins: v.number(), losses: v.number(), played: v.number(),
-    pointDiff: v.union(v.number(), v.null()), rank: v.number(), tied: v.boolean(),
-    tiebreaksUnavailable: v.boolean(),
-    group: v.optional(v.union(v.literal(1), v.literal(2))),
-    groupRank: v.optional(v.number()), groupTied: v.optional(v.boolean()), finalPlacement: v.optional(v.number()),
-    players: v.array(v.object({ displayName: v.string() })),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("participants"),
+      participantId: v.id("participants"),
+      participantIds: v.array(v.id("participants")),
+      points: v.number(),
+      wins: v.number(),
+      losses: v.number(),
+      played: v.number(),
+      pointDiff: v.union(v.number(), v.null()),
+      rank: v.number(),
+      tied: v.boolean(),
+      tiebreaksUnavailable: v.boolean(),
+      group: v.optional(v.union(v.literal(1), v.literal(2))),
+      groupRank: v.optional(v.number()),
+      groupTied: v.optional(v.boolean()),
+      finalPlacement: v.optional(v.number()),
+      players: v.array(v.object({ displayName: v.string() })),
+    }),
+  ),
   handler: async (ctx, args) => {
     const tournament = await ctx.db.get(args.tournamentId);
     return tournament ? getTournamentStandings(ctx, tournament) : [];
@@ -49,17 +60,41 @@ export const recalculate = internalMutation({
     const winnersA = args.scoreA > args.scoreB;
     const prevWinnersA = hadPrev && args.prevScoreA! > args.prevScoreB!;
     const participants = [
-      { id: pairA.participantAId, won: winnersA, score: args.scoreA, prevWon: prevWinnersA, prevScore: args.prevScoreA ?? 0 },
-      { id: pairA.participantBId, won: winnersA, score: args.scoreA, prevWon: prevWinnersA, prevScore: args.prevScoreA ?? 0 },
-      { id: pairB.participantAId, won: !winnersA, score: args.scoreB, prevWon: hadPrev && !prevWinnersA, prevScore: args.prevScoreB ?? 0 },
-      { id: pairB.participantBId, won: !winnersA, score: args.scoreB, prevWon: hadPrev && !prevWinnersA, prevScore: args.prevScoreB ?? 0 },
+      {
+        id: pairA.participantAId,
+        won: winnersA,
+        score: args.scoreA,
+        prevWon: prevWinnersA,
+        prevScore: args.prevScoreA ?? 0,
+      },
+      {
+        id: pairA.participantBId,
+        won: winnersA,
+        score: args.scoreA,
+        prevWon: prevWinnersA,
+        prevScore: args.prevScoreA ?? 0,
+      },
+      {
+        id: pairB.participantAId,
+        won: !winnersA,
+        score: args.scoreB,
+        prevWon: hadPrev && !prevWinnersA,
+        prevScore: args.prevScoreB ?? 0,
+      },
+      {
+        id: pairB.participantBId,
+        won: !winnersA,
+        score: args.scoreB,
+        prevWon: hadPrev && !prevWinnersA,
+        prevScore: args.prevScoreB ?? 0,
+      },
     ];
 
     for (const p of participants) {
       const existing = await ctx.db
         .query("leaderboard")
         .withIndex("by_tournament_and_participant", (q) =>
-          q.eq("tournamentId", round.tournamentId).eq("participantId", p.id as Id<"participants">)
+          q.eq("tournamentId", round.tournamentId).eq("participantId", p.id as Id<"participants">),
         )
         .unique();
 

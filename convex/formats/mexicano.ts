@@ -4,10 +4,7 @@ import type { RoundPlan } from "./americano";
 // Within each block of 4, rank 1+3 play rank 2+4 (block 1: ranks 1-4, block 2: ranks 5-8, etc).
 // participantsByRank must already be sorted highest-points first.
 // First round: pass participants sorted by skill rating (no leaderboard yet).
-export function generateMexicanoRound(
-  participantsByRank: string[],
-  courtCount: number,
-): RoundPlan {
+export function generateMexicanoRound(participantsByRank: string[], courtCount: number): RoundPlan {
   const n = participantsByRank.length;
   if (n < 4) throw new Error("Mexicano requires at least 4 participants");
 

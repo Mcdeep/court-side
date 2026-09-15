@@ -16,6 +16,7 @@ zero signal, and it syncs automatically once connectivity returns, without
 silently losing or corrupting data.
 
 **Scope:**
+
 - **Offline-capable**: score entry (`scores.saveResult`), round
   start/complete (`rounds.start`/`rounds.complete`), including the existing
   auto-complete-when-all-scored effect.
@@ -31,7 +32,7 @@ silently losing or corrupting data.
 - **State management**: use **Zustand** for the shared queue/connectivity
   state (pending ops, sync status, needs-reauth flag) that `MatchCell`,
   `ManageRoundCard`, and the page header all need to read/update — a store
-  lets each component subscribe to just the slice it needs (e.g. "is *this*
+  lets each component subscribe to just the slice it needs (e.g. "is _this_
   match's score pending?") without re-rendering the whole schedule on every
   queue change, and lets the non-React queue-drain logic update state
   directly without a dispatch/context wiring layer. New dependency, not
@@ -47,7 +48,7 @@ silently losing or corrupting data.
 - `ConvexReactClient` (installed `convex@^1.41.0`) exposes
   `subscribeToConnectionState(cb): () => void` and `connectionState()`,
   returning `{ isWebSocketConnected, hasInflightRequests, hasEverConnected,
-  connectionCount, connectionRetries, inflightMutations, inflightActions }`
+connectionCount, connectionRetries, inflightMutations, inflightActions }`
   — this is the connectivity source of truth, not `navigator.onLine` (which
   only reflects "some network interface is up", not "can reach Convex").
 - No `zustand`, `idb-keyval`, `vite-plugin-pwa`, or `convex-test` currently
@@ -63,8 +64,9 @@ silently losing or corrupting data.
 
 Two flat key spaces, no schema/migrations needed since this is "one active
 tournament's state on one phone", not a general sync engine:
+
 - `mirror:{tournamentId}` — last-known `{ tournament, rounds, participants,
-  leaderboard }` blob, refreshed on every successful live query resolution.
+leaderboard }` blob, refreshed on every successful live query resolution.
 - `mirror:matches:{roundId}` — last-known `matches.listByRound` result per
   round.
 - `outbox:{tournamentId}` — one ordered array of `QueuedOp` records.
@@ -73,11 +75,35 @@ tournament's state on one phone", not a general sync engine:
 `setMirror`, `getMatchesMirror`, `setMatchesMirror`, `getOutbox`,
 `appendToOutbox`, `removeFromOutbox`, `updateOutboxOp`. Also defines the
 `QueuedOp` union:
+
 ```ts
 type QueuedOp =
-  | { id: string; kind: 'saveResult'; matchId: Id<'matches'>; scoreA: number; scoreB: number; queuedAt: number; status: 'pending' | 'error'; lastError?: string }
-  | { id: string; kind: 'startRound'; roundId: Id<'rounds'>; queuedAt: number; status: 'pending' | 'error'; lastError?: string }
-  | { id: string; kind: 'completeRound'; roundId: Id<'rounds'>; queuedAt: number; status: 'pending' | 'error'; lastError?: string }
+  | {
+      id: string;
+      kind: "saveResult";
+      matchId: Id<"matches">;
+      scoreA: number;
+      scoreB: number;
+      queuedAt: number;
+      status: "pending" | "error";
+      lastError?: string;
+    }
+  | {
+      id: string;
+      kind: "startRound";
+      roundId: Id<"rounds">;
+      queuedAt: number;
+      status: "pending" | "error";
+      lastError?: string;
+    }
+  | {
+      id: string;
+      kind: "completeRound";
+      roundId: Id<"rounds">;
+      queuedAt: number;
+      status: "pending" | "error";
+      lastError?: string;
+    };
 ```
 
 ### 2. Shared state — Zustand store
@@ -86,20 +112,22 @@ type QueuedOp =
 per mount (created via a factory + React context so each `/manage/:id`
 session gets its own store instance, avoiding cross-tournament leakage if
 the app is ever used for two tournaments in one browser session):
+
 ```ts
 type ManageState = {
-  pendingOps: QueuedOp[]
-  isOnline: boolean
-  isSyncing: boolean
-  needsReauth: boolean
-  setPendingOps: (ops: QueuedOp[]) => void
-  setConnection: (state: { isOnline: boolean }) => void
-  setSyncing: (syncing: boolean) => void
-  setNeedsReauth: (needs: boolean) => void
-}
+  pendingOps: QueuedOp[];
+  isOnline: boolean;
+  isSyncing: boolean;
+  needsReauth: boolean;
+  setPendingOps: (ops: QueuedOp[]) => void;
+  setConnection: (state: { isOnline: boolean }) => void;
+  setSyncing: (syncing: boolean) => void;
+  setNeedsReauth: (needs: boolean) => void;
+};
 ```
+
 - `MatchCell` subscribes with a selector (`useManageStore(s =>
-  s.pendingOps.some(op => op.kind === 'saveResult' && op.matchId === match._id))`)
+s.pendingOps.some(op => op.kind === 'saveResult' && op.matchId === match._id))`)
   so only the affected card re-renders when the queue changes.
 - The header badge subscribes to `pendingOps.length`, `isOnline`,
   `isSyncing`.
@@ -123,7 +151,7 @@ type ManageState = {
   only (`useEffect` in the root route, SSR-safe).
 - Fix `public/manifest.json` (currently unmodified Create-TanStack-App
   boilerplate — wrong name/icons) with real branding, `display:
-  "standalone"`, real theme colors pulled from the app's actual CSS
+"standalone"`, real theme colors pulled from the app's actual CSS
   tokens (don't invent hex values).
 - `netlify.toml`: confirm/add a `Cache-Control: no-cache` header rule for
   `/sw.js` so Netlify's CDN doesn't serve a stale worker for a long TTL —
@@ -143,12 +171,15 @@ shows last-known state.
 
 **New file** `src/features/manage/offline-queue.ts` (pure TS, unit-testable
 without React):
+
 ```ts
-export async function enqueueOp(tournamentId, op: QueuedOp): Promise<void>
-export async function drainQueue(tournamentId, convexClient, pin, store): Promise<void>
+export async function enqueueOp(tournamentId, op: QueuedOp): Promise<void>;
+export async function drainQueue(tournamentId, convexClient, pin, store): Promise<void>;
 ```
+
 `drainQueue` runs strictly FIFO (a `for` loop, not `Promise.all` — score
 ordering for the same match matters). Per op:
+
 - Dispatch the matching mutation (`scores.saveResult`, `rounds.start`,
   `rounds.complete`).
 - On success or a `{status: 'noop'}` response (see backend change below):
@@ -194,7 +225,7 @@ added.
 
 **Modify `convex/rounds.ts`**: `start`/`complete` currently `throw` when
 the round isn't in the expected state. Change so that if the round has
-*already reached or passed* the target state (e.g. `start` called on an
+_already reached or passed_ the target state (e.g. `start` called on an
 already-`in_progress` or `completed` round), return `{ status: "noop" }`
 instead of throwing — this is what makes replaying a queued op after a
 page reload (or after another device already advanced the round) safe
@@ -202,10 +233,11 @@ rather than a spurious error. Only throw for genuinely unexpected states.
 
 **Modify `convex/scores.ts`**: `saveResult` currently always overwrites.
 New behavior:
-- If the match is already `completed`/`disputed` with the *same*
+
+- If the match is already `completed`/`disputed` with the _same_
   `scoreA`/`scoreB` being written again → return `{ status: "noop" }`
   (idempotent replay).
-- If already `completed` with *different* scores → this is the two-device
+- If already `completed` with _different_ scores → this is the two-device
   conflict case: patch the match to `disputed`, insert both the existing
   and incoming scores into the `scores` table as `disputed` rows (mirrors
   the existing conflict branch in `scores.submit`), and — critically — do
@@ -286,7 +318,7 @@ matching.
   mocks) using DevTools Network → Offline against a real test tournament
   for each phase's scenarios described above.
 - Follow the existing git workflow: feature branch per phase, `npm run
-  changelog`, PR via `gh pr create`, merge only with explicit user
+changelog`, PR via `gh pr create`, merge only with explicit user
   confirmation (Netlify auto-deploys `main`).
 
 ## Critical files

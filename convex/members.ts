@@ -34,10 +34,12 @@ export const add = mutation({
 export const bulkImport = mutation({
   args: {
     organizationId: v.id("organizations"),
-    rows: v.array(v.object({
-      name: v.string(),
-      startingPoints: v.optional(v.number()),
-    })),
+    rows: v.array(
+      v.object({
+        name: v.string(),
+        startingPoints: v.optional(v.number()),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
     await requireOrgAdmin(ctx, args.organizationId);
@@ -45,11 +47,13 @@ export const bulkImport = mutation({
     for (const row of args.rows) {
       const name = row.name.trim();
       if (!name) continue;
-      ids.push(await ctx.db.insert("members", {
-        organizationId: args.organizationId,
-        name,
-        startingPoints: row.startingPoints,
-      }));
+      ids.push(
+        await ctx.db.insert("members", {
+          organizationId: args.organizationId,
+          name,
+          startingPoints: row.startingPoints,
+        }),
+      );
     }
     return { imported: ids.length };
   },
@@ -69,7 +73,7 @@ export const link = mutation({
     const existingLink = await ctx.db
       .query("members")
       .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", member.organizationId).eq("userId", args.userId)
+        q.eq("organizationId", member.organizationId).eq("userId", args.userId),
       )
       .unique();
     if (existingLink) throw new Error("This account is already linked to another roster member");
@@ -80,7 +84,7 @@ export const link = mutation({
       const existingRating = await ctx.db
         .query("playerRatings")
         .withIndex("by_organization_and_user", (q) =>
-          q.eq("organizationId", member.organizationId).eq("userId", args.userId)
+          q.eq("organizationId", member.organizationId).eq("userId", args.userId),
         )
         .unique();
       if (!existingRating) {
@@ -154,7 +158,7 @@ export const listByOrg = query({
           ...m,
           email: user?.email,
         };
-      })
+      }),
     );
     return resolved.sort((a, b) => a.name.localeCompare(b.name));
   },

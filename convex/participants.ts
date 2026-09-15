@@ -2,7 +2,11 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireOrgAdmin, requireUser } from "./lib/auth";
 import { splitDoubleAmericanoGroups } from "./formats/double_americano";
-import { groupSplitModeValidator, isDoubleAmericano, participantSkillRating } from "./lib/doubleAmericano";
+import {
+  groupSplitModeValidator,
+  isDoubleAmericano,
+  participantSkillRating,
+} from "./lib/doubleAmericano";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 
@@ -31,10 +35,7 @@ export const add = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
-    if (
-      tournament.state !== "draft" &&
-      tournament.state !== "registration_open"
-    ) {
+    if (tournament.state !== "draft" && tournament.state !== "registration_open") {
       throw new Error("Tournament is not accepting participants");
     }
 
@@ -119,9 +120,7 @@ export const list = query({
     const tournament = await ctx.db.get(args.tournamentId);
     const participants = await ctx.db
       .query("participants")
-      .withIndex("by_tournament", (q) =>
-        q.eq("tournamentId", args.tournamentId)
-      )
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
       .take(200);
 
     return Promise.all(
@@ -129,9 +128,11 @@ export const list = query({
         const member = p.memberId ? await ctx.db.get(p.memberId) : null;
         const resolvedUserId = member?.userId ?? p.userId;
         const user = resolvedUserId ? await ctx.db.get(resolvedUserId) : null;
-        const rating = tournament ? await participantSkillRating(ctx, p, tournament.organizationId) : p.skillRating;
+        const rating = tournament
+          ? await participantSkillRating(ctx, p, tournament.organizationId)
+          : p.skillRating;
         return { ...p, user, rating, ...(resolvedUserId ? { resolvedUserId } : {}) };
-      })
+      }),
     );
   },
 });
@@ -141,7 +142,7 @@ export const listByOrg = query({
   handler: async (ctx, args) => {
     const tournaments = await ctx.db
       .query("tournaments")
-      .withIndex("by_organization", q => q.eq("organizationId", args.organizationId))
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
       .take(50);
 
     const memberMap = new Map<string, { userId: Id<"users">; count: number }>();
@@ -150,7 +151,7 @@ export const listByOrg = query({
     for (const t of tournaments) {
       const participants = await ctx.db
         .query("participants")
-        .withIndex("by_tournament", q => q.eq("tournamentId", t._id))
+        .withIndex("by_tournament", (q) => q.eq("tournamentId", t._id))
         .take(200);
 
       for (const p of participants) {
@@ -175,11 +176,11 @@ export const listByOrg = query({
         const playerRating = await ctx.db
           .query("playerRatings")
           .withIndex("by_organization_and_user", (q) =>
-            q.eq("organizationId", args.organizationId).eq("userId", userId)
+            q.eq("organizationId", args.organizationId).eq("userId", userId),
           )
           .unique();
         return { ...user, tournamentCount: count, skillRating: playerRating?.skillRating };
-      })
+      }),
     );
 
     return {
@@ -235,11 +236,19 @@ async function editableGroups(ctx: MutationCtx, tournamentId: Id<"tournaments">)
   const tournament = await ctx.db.get(tournamentId);
   if (!tournament) throw new Error("Tournament not found");
   await requireOrgAdmin(ctx, tournament.organizationId);
-  if (!isDoubleAmericano(tournament)) throw new Error("Groups are only available for Double Americano");
-  const round = await ctx.db.query("rounds").withIndex("by_tournament", q => q.eq("tournamentId", tournamentId)).first();
+  if (!isDoubleAmericano(tournament))
+    throw new Error("Groups are only available for Double Americano");
+  const round = await ctx.db
+    .query("rounds")
+    .withIndex("by_tournament", (q) => q.eq("tournamentId", tournamentId))
+    .first();
   if (round) throw new Error("Cannot change groups after rounds are generated");
-  if (!["draft", "registration_open", "published"].includes(tournament.state)) throw new Error("Tournament is not accepting group changes");
-  const participants = await ctx.db.query("participants").withIndex("by_tournament", q => q.eq("tournamentId", tournamentId)).take(200);
+  if (!["draft", "registration_open", "published"].includes(tournament.state))
+    throw new Error("Tournament is not accepting group changes");
+  const participants = await ctx.db
+    .query("participants")
+    .withIndex("by_tournament", (q) => q.eq("tournamentId", tournamentId))
+    .take(200);
   if (participants.length !== 16) throw new Error("Double Americano requires exactly 16 players");
   return { tournament, participants };
 }
@@ -249,23 +258,34 @@ export const assignGroups = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const { tournament, participants } = await editableGroups(ctx, args.tournamentId);
-    const players = await Promise.all(participants.map(async p => ({ id: p._id, rating: await participantSkillRating(ctx, p, tournament.organizationId) })));
+    const players = await Promise.all(
+      participants.map(async (p) => ({
+        id: p._id,
+        rating: await participantSkillRating(ctx, p, tournament.organizationId),
+      })),
+    );
     const [first] = splitDoubleAmericanoGroups(players, args.mode);
     const group1 = new Set(first);
-    for (const participant of participants) await ctx.db.patch(participant._id, { group: group1.has(participant._id) ? 1 : 2 });
+    for (const participant of participants)
+      await ctx.db.patch(participant._id, { group: group1.has(participant._id) ? 1 : 2 });
     await ctx.db.patch(tournament._id, { groupSplitMode: args.mode });
     return null;
   },
 });
 
 export const swapGroups = mutation({
-  args: { tournamentId: v.id("tournaments"), participantAId: v.id("participants"), participantBId: v.id("participants") },
+  args: {
+    tournamentId: v.id("tournaments"),
+    participantAId: v.id("participants"),
+    participantBId: v.id("participants"),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
     const { participants } = await editableGroups(ctx, args.tournamentId);
-    const a = participants.find(p => p._id === args.participantAId);
-    const b = participants.find(p => p._id === args.participantBId);
-    if (!a?.group || !b?.group || a.group === b.group) throw new Error("Select one player from each group");
+    const a = participants.find((p) => p._id === args.participantAId);
+    const b = participants.find((p) => p._id === args.participantBId);
+    if (!a?.group || !b?.group || a.group === b.group)
+      throw new Error("Select one player from each group");
     await ctx.db.patch(a._id, { group: b.group });
     await ctx.db.patch(b._id, { group: a.group });
     return null;

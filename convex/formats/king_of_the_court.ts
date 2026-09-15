@@ -1,10 +1,7 @@
 import type { RoundPlan } from "./americano";
 
 // Round 1: random assignment — same as any other first round.
-export function generateKingFirstRound(
-  participantIds: string[],
-  courtCount: number,
-): RoundPlan {
+export function generateKingFirstRound(participantIds: string[], courtCount: number): RoundPlan {
   const n = participantIds.length;
   if (n < 4) throw new Error("King of the Court requires at least 4 participants");
 

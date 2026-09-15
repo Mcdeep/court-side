@@ -2,10 +2,7 @@ import type { RoundPlan } from "./americano";
 
 // Round 1: sequential assignment — same as any other first round.
 // Pairs 0+1 on court 1, pairs 2+3 on court 2, etc.
-export function generateSnakesFirstRound(
-  participantIds: string[],
-  courtCount: number,
-): RoundPlan {
+export function generateSnakesFirstRound(participantIds: string[], courtCount: number): RoundPlan {
   const n = participantIds.length;
   if (n < 4) throw new Error("Snakes & Ladders requires at least 4 participants");
 

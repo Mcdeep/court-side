@@ -11,9 +11,7 @@ export const getTiers = query({
   handler: async (ctx, args) => {
     const config = await ctx.db
       .query("ratingConfig")
-      .withIndex("by_organization", (q) =>
-        q.eq("organizationId", args.organizationId)
-      )
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
       .unique();
     return config?.tiers ?? DEFAULT_TIERS;
   },
@@ -32,9 +30,7 @@ export const setTiers = mutation({
     }
     const existing = await ctx.db
       .query("ratingConfig")
-      .withIndex("by_organization", (q) =>
-        q.eq("organizationId", args.organizationId)
-      )
+      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
       .unique();
     if (existing) {
       await ctx.db.patch(existing._id, { tiers: args.tiers });
@@ -65,7 +61,7 @@ export const setSkillRating = mutation({
     const existing = await ctx.db
       .query("playerRatings")
       .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", args.organizationId).eq("userId", args.userId)
+        q.eq("organizationId", args.organizationId).eq("userId", args.userId),
       )
       .unique();
 
@@ -99,9 +95,7 @@ export const getRankings = query({
 
     const ratings = await ctx.db
       .query("playerRatings")
-      .withIndex("by_organization_and_points", (q) =>
-        q.eq("organizationId", args.organizationId)
-      )
+      .withIndex("by_organization_and_points", (q) => q.eq("organizationId", args.organizationId))
       .take(200);
     const ratingByUserId = new Map(ratings.map((r) => [r.userId as string, r]));
     const coveredUserIds = new Set<string>();
@@ -127,7 +121,7 @@ export const getRankings = query({
           totalPoints: m.startingPoints ?? 0,
           tournamentsPlayed: m.tournamentsPlayed ?? 0,
         };
-      })
+      }),
     );
 
     const legacyRows = await Promise.all(
@@ -142,7 +136,7 @@ export const getRankings = query({
             totalPoints: r.totalPoints,
             tournamentsPlayed: r.tournamentsPlayed,
           };
-        })
+        }),
     );
 
     return [...rosterRows, ...legacyRows].sort((a, b) => b.totalPoints - a.totalPoints);
@@ -156,9 +150,7 @@ export const getMyRankings = query({
     if (!identity) return [];
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerk_user_id", (q) =>
-        q.eq("clerkUserId", identity.tokenIdentifier)
-      )
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.tokenIdentifier))
       .unique();
     if (!user) return [];
 
@@ -171,7 +163,7 @@ export const getMyRankings = query({
       ratings.map(async (r) => {
         const org = await ctx.db.get(r.organizationId);
         return { ...r, clubName: org?.name ?? "Unknown" };
-      })
+      }),
     );
   },
 });
@@ -185,7 +177,7 @@ export const getPlayerHistory = query({
     const history = await ctx.db
       .query("ratingHistory")
       .withIndex("by_organization_and_user", (q) =>
-        q.eq("organizationId", args.organizationId).eq("userId", args.userId)
+        q.eq("organizationId", args.organizationId).eq("userId", args.userId),
       )
       .order("desc")
       .take(50);
@@ -197,7 +189,7 @@ export const getPlayerHistory = query({
           ...h,
           tournamentName: tournament?.name ?? "Unknown",
         };
-      })
+      }),
     );
   },
 });
@@ -213,21 +205,26 @@ export const awardRatings = internalMutation({
       .query("ratingHistory")
       .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
       .take(200);
-    if (alreadyAwarded.length > 0 && (tournament.format !== "americano" || !tournament.tiebreakOrder || !tournament.awardedRatingTiers)) return null;
+    if (
+      alreadyAwarded.length > 0 &&
+      (tournament.format !== "americano" ||
+        !tournament.tiebreakOrder ||
+        !tournament.awardedRatingTiers)
+    )
+      return null;
 
     const config = await ctx.db
       .query("ratingConfig")
-      .withIndex("by_organization", (q) =>
-        q.eq("organizationId", tournament.organizationId)
-      )
+      .withIndex("by_organization", (q) => q.eq("organizationId", tournament.organizationId))
       .unique();
     const tiers = tournament.awardedRatingTiers ?? config?.tiers ?? DEFAULT_TIERS;
 
     // An archived Double Americano may never have played its finals; score
     // corrections still schedule this job, so skip rather than fail it.
-    if (!await doubleFinalsComplete(ctx, tournament)) return null;
+    if (!(await doubleFinalsComplete(ctx, tournament))) return null;
     const standings = await getTournamentStandings(ctx, tournament);
-    if (!tournament.awardedRatingTiers) await ctx.db.patch(tournament._id, { awardedRatingTiers: tiers });
+    if (!tournament.awardedRatingTiers)
+      await ctx.db.patch(tournament._id, { awardedRatingTiers: tiers });
     const groups: { rank: number; units: typeof standings }[] = [];
     for (const unit of standings) {
       const last = groups[groups.length - 1];
@@ -252,7 +249,7 @@ export const awardRatings = internalMutation({
         if (!participant.userId && !participant.memberId) continue;
 
         const placement = group.rank;
-        const previous = alreadyAwarded.find(award => award.participantId === participantId);
+        const previous = alreadyAwarded.find((award) => award.participantId === participantId);
         const pointsChange = avgPoints - (previous?.pointsEarned ?? 0);
         const tournamentChange = previous ? 0 : 1;
         const member = participant.memberId ? await ctx.db.get(participant.memberId) : null;
@@ -260,21 +257,20 @@ export const awardRatings = internalMutation({
 
         if (userId) {
           if (previous) await ctx.db.patch(previous._id, { placement, pointsEarned: avgPoints });
-          else await ctx.db.insert("ratingHistory", {
-            organizationId: tournament.organizationId,
-            userId,
-            participantId,
-            tournamentId: args.tournamentId,
-            placement,
-            pointsEarned: avgPoints,
-          });
+          else
+            await ctx.db.insert("ratingHistory", {
+              organizationId: tournament.organizationId,
+              userId,
+              participantId,
+              tournamentId: args.tournamentId,
+              placement,
+              pointsEarned: avgPoints,
+            });
 
           const existing = await ctx.db
             .query("playerRatings")
             .withIndex("by_organization_and_user", (q) =>
-              q
-                .eq("organizationId", tournament.organizationId)
-                .eq("userId", userId)
+              q.eq("organizationId", tournament.organizationId).eq("userId", userId),
             )
             .unique();
 
@@ -298,14 +294,15 @@ export const awardRatings = internalMutation({
           if (!member) continue;
 
           if (previous) await ctx.db.patch(previous._id, { placement, pointsEarned: avgPoints });
-          else await ctx.db.insert("ratingHistory", {
-            organizationId: tournament.organizationId,
-            memberId: participant.memberId,
-            participantId,
-            tournamentId: args.tournamentId,
-            placement,
-            pointsEarned: avgPoints,
-          });
+          else
+            await ctx.db.insert("ratingHistory", {
+              organizationId: tournament.organizationId,
+              memberId: participant.memberId,
+              participantId,
+              tournamentId: args.tournamentId,
+              placement,
+              pointsEarned: avgPoints,
+            });
 
           await ctx.db.patch(member._id, {
             startingPoints: (member.startingPoints ?? 0) + pointsChange,

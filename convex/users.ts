@@ -9,9 +9,7 @@ export const upsert = mutation({
     if (!identity) throw new Error("Not authenticated");
     const existing = await ctx.db
       .query("users")
-      .withIndex("by_clerk_user_id", (q) =>
-        q.eq("clerkUserId", identity.tokenIdentifier)
-      )
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.tokenIdentifier))
       .unique();
 
     const name = identity.name?.trim() || identity.nickname?.trim() || identity.email || "Unknown";
