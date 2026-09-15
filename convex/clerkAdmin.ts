@@ -8,9 +8,7 @@ export const verifySuperAdmin = internalQuery({
     if (!identity) throw new Error("Not authenticated");
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerk_user_id", (q) =>
-        q.eq("clerkUserId", identity.tokenIdentifier)
-      )
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.tokenIdentifier))
       .unique();
     if (!user?.isSuperAdmin) throw new Error("Super admin access required");
     return user;

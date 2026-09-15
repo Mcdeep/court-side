@@ -3,7 +3,10 @@ import type { Infer } from "convex/values";
 import type { Doc, Id, TableNames } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
 import { requireOrgAdminOrPin } from "./auth";
-import { generateDoubleAmericanoRounds, generateDoubleAmericanoFinals } from "../formats/double_americano";
+import {
+  generateDoubleAmericanoRounds,
+  generateDoubleAmericanoFinals,
+} from "../formats/double_americano";
 import { getTournamentStandings } from "./tournamentStandings";
 import { isDoubleAmericano } from "./doubleAmericano";
 import { generateAmericanoRounds } from "../formats/americano";
@@ -17,26 +20,67 @@ const pairValidator = v.array(v.id("participants"));
 const initialFields = { participantIds: v.array(v.id("participants")), courtCount: v.number() };
 const seedValidator = v.object({ id: v.id("participants"), rank: v.number() });
 const generationInputsValidator = v.union(
-  v.object({ kind: v.literal("double_group"), group1: pairValidator, group2: pairValidator, courtCount: v.number() }),
-  v.object({ kind: v.literal("double_final"), group1: v.array(seedValidator), group2: v.array(seedValidator), courtCount: v.number() }),
+  v.object({
+    kind: v.literal("double_group"),
+    group1: pairValidator,
+    group2: pairValidator,
+    courtCount: v.number(),
+  }),
+  v.object({
+    kind: v.literal("double_final"),
+    group1: v.array(seedValidator),
+    group2: v.array(seedValidator),
+    courtCount: v.number(),
+  }),
   v.object({ kind: v.literal("americano"), ...initialFields }),
   v.object({ kind: v.literal("round_robin"), ...initialFields }),
   v.object({ kind: v.literal("mexicano"), ...initialFields }),
   v.object({ kind: v.literal("knockout_first"), ...initialFields }),
   v.object({ kind: v.literal("king_first"), ...initialFields }),
   v.object({ kind: v.literal("snakes_first"), ...initialFields }),
-  v.object({ kind: v.literal("knockout_next"), winnerPairs: v.array(pairValidator), courtCount: v.number() }),
-  v.object({ kind: v.literal("king_next"), currentKings: v.array(pairValidator), challengers: v.array(pairValidator), courtCount: v.number() }),
-  v.object({ kind: v.literal("snakes_next"), pairsWithLevel: v.array(v.object({ pair: pairValidator, level: v.number() })), courtCount: v.number() }),
+  v.object({
+    kind: v.literal("knockout_next"),
+    winnerPairs: v.array(pairValidator),
+    courtCount: v.number(),
+  }),
+  v.object({
+    kind: v.literal("king_next"),
+    currentKings: v.array(pairValidator),
+    challengers: v.array(pairValidator),
+    courtCount: v.number(),
+  }),
+  v.object({
+    kind: v.literal("snakes_next"),
+    pairsWithLevel: v.array(v.object({ pair: pairValidator, level: v.number() })),
+    courtCount: v.number(),
+  }),
 );
 type GenerationInputs = Infer<typeof generationInputsValidator>;
 export const generationArgs = { tournamentId: v.id("tournaments"), pin: v.optional(v.string()) };
-export const generationSnapshotValidator = v.object({ inputs: generationInputsValidator, snapshot: v.string(), roundCount: v.number() });
-export const roundPlansValidator = v.array(v.array(v.object({ courtNumber: v.number(), pairA: pairValidator, pairB: pairValidator, finalMatchIndex: v.optional(v.number()) })));
+export const generationSnapshotValidator = v.object({
+  inputs: generationInputsValidator,
+  snapshot: v.string(),
+  roundCount: v.number(),
+});
+export const roundPlansValidator = v.array(
+  v.array(
+    v.object({
+      courtNumber: v.number(),
+      pairA: pairValidator,
+      pairB: pairValidator,
+      finalMatchIndex: v.optional(v.number()),
+    }),
+  ),
+);
 
-export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId: Id<"tournaments">; pin?: string }): Promise<Infer<typeof generationSnapshotValidator>> {
+export async function prepareRoundGeneration(
+  ctx: QueryCtx,
+  args: { tournamentId: Id<"tournaments">; pin?: string },
+): Promise<Infer<typeof generationSnapshotValidator>> {
   const sources = new Map<string, Doc<TableNames>>();
-  async function read<T extends Doc<TableNames> | Doc<TableNames>[] | null>(operation: Promise<T>): Promise<T> {
+  async function read<T extends Doc<TableNames> | Doc<TableNames>[] | null>(
+    operation: Promise<T>,
+  ): Promise<T> {
     const result = await operation;
     for (const document of Array.isArray(result) ? result : [result]) {
       if (document) sources.set(document._id, document);
@@ -52,12 +96,14 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
   async function orderByTeamPairing(
     ctx: QueryCtx,
     tournamentId: Id<"tournaments">,
-    participants: Doc<"participants">[]
+    participants: Doc<"participants">[],
   ): Promise<Id<"participants">[]> {
-    const teams = await read(ctx.db
-      .query("teams")
-      .withIndex("by_tournament", (q) => q.eq("tournamentId", tournamentId))
-      .take(200));
+    const teams = await read(
+      ctx.db
+        .query("teams")
+        .withIndex("by_tournament", (q) => q.eq("tournamentId", tournamentId))
+        .take(200),
+    );
 
     const byTeam = new Map<string, Doc<"participants">[]>();
     const unpaired: Doc<"participants">[] = [];
@@ -73,8 +119,9 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
 
     const ordered: Id<"participants">[] = [];
     for (const team of teams) {
-      const members = (byTeam.get(team._id) ?? [])
-        .sort((a, b) => a._creationTime - b._creationTime);
+      const members = (byTeam.get(team._id) ?? []).sort(
+        (a, b) => a._creationTime - b._creationTime,
+      );
       for (const m of members) ordered.push(m._id);
     }
     for (const p of unpaired) ordered.push(p._id);
@@ -92,35 +139,49 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
     courtCount = venue.courtCount;
   }
 
-  const supported = ["americano", "round_robin", "mexicano", "knockout", "king_of_the_court", "snakes_and_ladders"];
+  const supported = [
+    "americano",
+    "round_robin",
+    "mexicano",
+    "knockout",
+    "king_of_the_court",
+    "snakes_and_ladders",
+  ];
   if (!supported.includes(tournament.format)) {
     throw new Error(`Format "${tournament.format}" not yet supported`);
   }
 
   const PRE_GENERATED = ["americano", "round_robin"];
-  const existingRounds = await read(ctx.db
-    .query("rounds")
-    .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
-    .order("asc")
-    .take(200));
+  const existingRounds = await read(
+    ctx.db
+      .query("rounds")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
+      .order("asc")
+      .take(200),
+  );
 
   const double = isDoubleAmericano(tournament);
   if (!double && PRE_GENERATED.includes(tournament.format) && existingRounds.length > 0) {
     throw new Error("Rounds already generated for this tournament");
   }
-  if (["mexicano", "knockout", "king_of_the_court", "snakes_and_ladders"].includes(tournament.format) && existingRounds.length > 0) {
+  if (
+    ["mexicano", "knockout", "king_of_the_court", "snakes_and_ladders"].includes(
+      tournament.format,
+    ) &&
+    existingRounds.length > 0
+  ) {
     const last = existingRounds[existingRounds.length - 1];
     if (last.state !== "completed") {
       throw new Error("Complete the current round before generating the next");
     }
   }
 
-  const allParticipants = await read(ctx.db
-    .query("participants")
-    .withIndex("by_tournament", (q) =>
-      q.eq("tournamentId", args.tournamentId)
-    )
-    .take(200));
+  const allParticipants = await read(
+    ctx.db
+      .query("participants")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
+      .take(200),
+  );
   const isPreGenerated = PRE_GENERATED.includes(tournament.format);
   const participants = isPreGenerated
     ? allParticipants
@@ -130,7 +191,7 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
     throw new Error(
       isPreGenerated
         ? "Need at least 4 participants to generate rounds"
-        : "Need at least 4 checked-in participants to generate rounds"
+        : "Need at least 4 checked-in participants to generate rounds",
     );
   }
 
@@ -141,38 +202,61 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
 
   let inputs: GenerationInputs;
   if (double) {
-    if (!Number.isInteger(courtCount) || courtCount < 2) throw new Error("Double Americano needs at least two courts");
-    const group1 = participants.filter(p => p.group === 1).map(p => p._id);
-    const group2 = participants.filter(p => p.group === 2).map(p => p._id);
-    if (participants.length !== 16 || group1.length !== 8 || group2.length !== 8) throw new Error("Assign exactly 16 players to two groups of eight before generating");
+    if (!Number.isInteger(courtCount) || courtCount < 2)
+      throw new Error("Double Americano needs at least two courts");
+    const group1 = participants.filter((p) => p.group === 1).map((p) => p._id);
+    const group2 = participants.filter((p) => p.group === 2).map((p) => p._id);
+    if (participants.length !== 16 || group1.length !== 8 || group2.length !== 8)
+      throw new Error("Assign exactly 16 players to two groups of eight before generating");
     if (existingRounds.length === 0) {
       inputs = { kind: "double_group", group1, group2, courtCount };
     } else {
-      if (existingRounds.some(round => round.stage === "final")) throw new Error("Crossover finals already generated");
-      if (existingRounds.some(round => round.state !== "completed")) throw new Error("Complete all group rounds before generating the final");
+      if (existingRounds.some((round) => round.stage === "final"))
+        throw new Error("Crossover finals already generated");
+      if (existingRounds.some((round) => round.state !== "completed"))
+        throw new Error("Complete all group rounds before generating the final");
       for (const round of existingRounds) {
-        const matches = await read(ctx.db.query("matches").withIndex("by_round", q => q.eq("roundId", round._id)).take(50));
+        const matches = await read(
+          ctx.db
+            .query("matches")
+            .withIndex("by_round", (q) => q.eq("roundId", round._id))
+            .take(50),
+        );
         for (const match of matches) {
-          if (match.state !== "completed" || match.scoreA === undefined || match.scoreB === undefined) throw new Error("Record all group scores before generating the final");
+          if (
+            match.state !== "completed" ||
+            match.scoreA === undefined ||
+            match.scoreB === undefined
+          )
+            throw new Error("Record all group scores before generating the final");
           await read(ctx.db.get(match.pairAId));
           await read(ctx.db.get(match.pairBId));
         }
       }
       const standings = await getTournamentStandings(ctx, tournament);
-      if (standings.length !== 16 || standings.some(row => row.tiebreaksUnavailable)) throw new Error("Complete all group results before generating the final");
-      inputs = { kind: "double_final", courtCount,
-        group1: standings.filter(row => row.group === 1).map(row => ({ id: row.participantId, rank: row.rank })),
-        group2: standings.filter(row => row.group === 2).map(row => ({ id: row.participantId, rank: row.rank })),
+      if (standings.length !== 16 || standings.some((row) => row.tiebreaksUnavailable))
+        throw new Error("Complete all group results before generating the final");
+      inputs = {
+        kind: "double_final",
+        courtCount,
+        group1: standings
+          .filter((row) => row.group === 1)
+          .map((row) => ({ id: row.participantId, rank: row.rank })),
+        group2: standings
+          .filter((row) => row.group === 2)
+          .map((row) => ({ id: row.participantId, rank: row.rank })),
       };
     }
   } else if (tournament.format === "round_robin") {
     inputs = { kind: "round_robin", participantIds, courtCount };
   } else if (tournament.format === "mexicano") {
-    const leaderboard = await read(ctx.db
-      .query("leaderboard")
-      .withIndex("by_tournament_points", (q) => q.eq("tournamentId", args.tournamentId))
-      .order("desc")
-      .take(200));
+    const leaderboard = await read(
+      ctx.db
+        .query("leaderboard")
+        .withIndex("by_tournament_points", (q) => q.eq("tournamentId", args.tournamentId))
+        .order("desc")
+        .take(200),
+    );
     const rankedIds = leaderboard.map((e) => e.participantId);
     const rankedSet = new Set(rankedIds);
     const unranked = participants.filter((p) => !rankedSet.has(p._id));
@@ -184,12 +268,14 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
       if (p.isWalkIn) {
         if (p.skillRating !== undefined) skillRatings.set(p._id, p.skillRating);
       } else if (p.userId) {
-        const playerRating = await read(ctx.db
-          .query("playerRatings")
-          .withIndex("by_organization_and_user", (q) =>
-            q.eq("organizationId", tournament.organizationId).eq("userId", p.userId!)
-          )
-          .unique());
+        const playerRating = await read(
+          ctx.db
+            .query("playerRatings")
+            .withIndex("by_organization_and_user", (q) =>
+              q.eq("organizationId", tournament.organizationId).eq("userId", p.userId!),
+            )
+            .unique(),
+        );
         if (playerRating?.skillRating !== undefined) {
           skillRatings.set(p._id, playerRating.skillRating);
         }
@@ -205,10 +291,12 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
       inputs = { kind: "knockout_first", participantIds, courtCount };
     } else {
       const lastRound = existingRounds[existingRounds.length - 1];
-      const lastMatches = await read(ctx.db
-        .query("matches")
-        .withIndex("by_round", (q) => q.eq("roundId", lastRound._id))
-        .take(50));
+      const lastMatches = await read(
+        ctx.db
+          .query("matches")
+          .withIndex("by_round", (q) => q.eq("roundId", lastRound._id))
+          .take(50),
+      );
       lastMatches.sort((a, b) => a.courtNumber - b.courtNumber);
 
       const winnerPairs: [Id<"participants">, Id<"participants">][] = [];
@@ -230,29 +318,38 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
       // Track the last round each participant appeared in (for queue ordering).
       const lastRoundPlayed = new Map<string, number>();
       for (const round of existingRounds) {
-        const matches = await read(ctx.db
-          .query("matches")
-          .withIndex("by_round", (q) => q.eq("roundId", round._id))
-          .take(50));
-        await Promise.all(matches.map(async (match) => {
-          const [pA, pB] = await Promise.all([read(ctx.db.get(match.pairAId)), read(ctx.db.get(match.pairBId))]);
-          for (const p of [pA, pB]) {
-            if (!p) return;
-            for (const pid of [p.participantAId as string, p.participantBId as string]) {
-              if ((lastRoundPlayed.get(pid) ?? 0) < round.roundNumber) {
-                lastRoundPlayed.set(pid, round.roundNumber);
+        const matches = await read(
+          ctx.db
+            .query("matches")
+            .withIndex("by_round", (q) => q.eq("roundId", round._id))
+            .take(50),
+        );
+        await Promise.all(
+          matches.map(async (match) => {
+            const [pA, pB] = await Promise.all([
+              read(ctx.db.get(match.pairAId)),
+              read(ctx.db.get(match.pairBId)),
+            ]);
+            for (const p of [pA, pB]) {
+              if (!p) return;
+              for (const pid of [p.participantAId as string, p.participantBId as string]) {
+                if ((lastRoundPlayed.get(pid) ?? 0) < round.roundNumber) {
+                  lastRoundPlayed.set(pid, round.roundNumber);
+                }
               }
             }
-          }
-        }));
+          }),
+        );
       }
 
       // Current kings = winners of last round (sorted by courtNumber).
       const lastRound = existingRounds[existingRounds.length - 1];
-      const lastMatches = await read(ctx.db
-        .query("matches")
-        .withIndex("by_round", (q) => q.eq("roundId", lastRound._id))
-        .take(50));
+      const lastMatches = await read(
+        ctx.db
+          .query("matches")
+          .withIndex("by_round", (q) => q.eq("roundId", lastRound._id))
+          .take(50),
+      );
       lastMatches.sort((a, b) => a.courtNumber - b.courtNumber);
 
       const currentKings: [Id<"participants">, Id<"participants">][] = [];
@@ -260,11 +357,15 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
         if (match.scoreA === undefined || match.scoreB === undefined) {
           throw new Error("Not all matches in the previous round have scores");
         }
-        const [pA, pB] = await Promise.all([read(ctx.db.get(match.pairAId)), read(ctx.db.get(match.pairBId))]);
+        const [pA, pB] = await Promise.all([
+          read(ctx.db.get(match.pairAId)),
+          read(ctx.db.get(match.pairBId)),
+        ]);
         if (!pA || !pB) throw new Error("Pair not found");
-        const winner = match.scoreA >= match.scoreB
-          ? [pA.participantAId, pA.participantBId]
-          : [pB.participantAId, pB.participantBId];
+        const winner =
+          match.scoreA >= match.scoreB
+            ? [pA.participantAId, pA.participantBId]
+            : [pB.participantAId, pB.participantBId];
         currentKings.push([winner[0], winner[1]]);
       }
 
@@ -286,20 +387,27 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
       inputs = { kind: "snakes_first", participantIds, courtCount };
     } else {
       type PK = string;
-      const pKey = (a: string, b: string): PK => a < b ? `${a}:${b}` : `${b}:${a}`;
+      const pKey = (a: string, b: string): PK => (a < b ? `${a}:${b}` : `${b}:${a}`);
       const courtLevels = new Map<PK, number>();
       const pairById = new Map<PK, [Id<"participants">, Id<"participants">]>();
 
       for (const round of existingRounds) {
-        const matches = await read(ctx.db
-          .query("matches")
-          .withIndex("by_round", (q) => q.eq("roundId", round._id))
-          .take(50));
+        const matches = await read(
+          ctx.db
+            .query("matches")
+            .withIndex("by_round", (q) => q.eq("roundId", round._id))
+            .take(50),
+        );
 
-        const matchData = await Promise.all(matches.map(async (match) => {
-          const [pA, pB] = await Promise.all([read(ctx.db.get(match.pairAId)), read(ctx.db.get(match.pairBId))]);
-          return { match, pA, pB };
-        }));
+        const matchData = await Promise.all(
+          matches.map(async (match) => {
+            const [pA, pB] = await Promise.all([
+              read(ctx.db.get(match.pairAId)),
+              read(ctx.db.get(match.pairBId)),
+            ]);
+            return { match, pA, pB };
+          }),
+        );
 
         // Set initial court level from first appearance
         for (const { match, pA, pB } of matchData) {
@@ -344,10 +452,11 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
     inputs = { kind: "americano", participantIds, courtCount };
   }
 
-
   // Queries and the final write use separate transactions. Include every source
   // document so unchanged winners cannot hide a score or roster edit.
-  const documents = [...sources.values()].sort((a, b) => a._id < b._id ? -1 : a._id > b._id ? 1 : 0);
+  const documents = [...sources.values()].sort((a, b) =>
+    a._id < b._id ? -1 : a._id > b._id ? 1 : 0,
+  );
   const snapshot = JSON.stringify({ inputs, documents });
   return { inputs, snapshot, roundCount: existingRounds.length };
 }
@@ -355,33 +464,57 @@ export async function prepareRoundGeneration(ctx: QueryCtx, args: { tournamentId
 export function generateRoundPlans(inputs: GenerationInputs): Infer<typeof roundPlansValidator> {
   const pair = (ids: Id<"participants">[]): [string, string] => [ids[0], ids[1]];
   const courts = inputs.courtCount;
-  const seeded = (entries: {id: Id<"participants">; rank: number}[]) => {
+  const seeded = (entries: { id: Id<"participants">; rank: number }[]) => {
     const shuffled = [...entries];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    return shuffled.sort((a, b) => a.rank - b.rank).map(entry => entry.id);
+    return shuffled.sort((a, b) => a.rank - b.rank).map((entry) => entry.id);
   };
   const compute = () => {
     switch (inputs.kind) {
-      case "double_group": return generateDoubleAmericanoRounds(inputs.group1, inputs.group2, courts);
-      case "double_final": return generateDoubleAmericanoFinals(seeded(inputs.group1), seeded(inputs.group2), courts);
-      case "americano": return generateAmericanoRounds(inputs.participantIds, courts);
-      case "round_robin": return generateRoundRobinRounds(inputs.participantIds, courts);
-      case "mexicano": return [generateMexicanoRound(inputs.participantIds, courts)];
-      case "knockout_first": return [generateKnockoutFirstRound(inputs.participantIds, courts)];
-      case "knockout_next": return [generateKnockoutNextRound(inputs.winnerPairs.map(pair), courts)];
-      case "king_first": return [generateKingFirstRound(inputs.participantIds, courts)];
-      case "king_next": return [generateKingNextRound(inputs.currentKings.map(pair), inputs.challengers.map(pair), courts)];
-      case "snakes_first": return [generateSnakesFirstRound(inputs.participantIds, courts)];
-      case "snakes_next": return [generateSnakesNextRound(inputs.pairsWithLevel.map(entry => ({ ...entry, pair: pair(entry.pair) })), courts)];
+      case "double_group":
+        return generateDoubleAmericanoRounds(inputs.group1, inputs.group2, courts);
+      case "double_final":
+        return generateDoubleAmericanoFinals(seeded(inputs.group1), seeded(inputs.group2), courts);
+      case "americano":
+        return generateAmericanoRounds(inputs.participantIds, courts);
+      case "round_robin":
+        return generateRoundRobinRounds(inputs.participantIds, courts);
+      case "mexicano":
+        return [generateMexicanoRound(inputs.participantIds, courts)];
+      case "knockout_first":
+        return [generateKnockoutFirstRound(inputs.participantIds, courts)];
+      case "knockout_next":
+        return [generateKnockoutNextRound(inputs.winnerPairs.map(pair), courts)];
+      case "king_first":
+        return [generateKingFirstRound(inputs.participantIds, courts)];
+      case "king_next":
+        return [
+          generateKingNextRound(
+            inputs.currentKings.map(pair),
+            inputs.challengers.map(pair),
+            courts,
+          ),
+        ];
+      case "snakes_first":
+        return [generateSnakesFirstRound(inputs.participantIds, courts)];
+      case "snakes_next":
+        return [
+          generateSnakesNextRound(
+            inputs.pairsWithLevel.map((entry) => ({ ...entry, pair: pair(entry.pair) })),
+            courts,
+          ),
+        ];
     }
   };
-  return compute().map(round => round.map(match => ({
-    courtNumber: match.courtNumber,
-    ...("finalMatchIndex" in match ? { finalMatchIndex: match.finalMatchIndex as number } : {}),
-    pairA: match.pairA.map(id => id as Id<"participants">),
-    pairB: match.pairB.map(id => id as Id<"participants">),
-  })));
+  return compute().map((round) =>
+    round.map((match) => ({
+      courtNumber: match.courtNumber,
+      ...("finalMatchIndex" in match ? { finalMatchIndex: match.finalMatchIndex as number } : {}),
+      pairA: match.pairA.map((id) => id as Id<"participants">),
+      pairB: match.pairB.map((id) => id as Id<"participants">),
+    })),
+  );
 }

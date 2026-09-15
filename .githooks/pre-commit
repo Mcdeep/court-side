@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Formats and lints staged files before each commit.
+# Best-effort: only active on machines that opted in via
+#   git config core.hooksPath .githooks
+# Bypass (rare, deliberate): git commit --no-verify
+
+set -eo pipefail
+
+staged_files=$(git diff --cached --name-only --diff-filter=ACM -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.mjs' '*.cjs')
+
+if [[ -z "$staged_files" ]]; then
+  exit 0
+fi
+
+echo "Running oxfmt on staged files..."
+echo "$staged_files" | xargs npx oxfmt
+
+# Re-stage any files oxfmt reformatted so the formatting is part of this commit.
+echo "$staged_files" | xargs git add
+
+echo "Running oxlint on staged files..."
+if ! echo "$staged_files" | xargs npx oxlint --deny-warnings; then
+  echo "error: oxlint found problems in staged files." >&2
+  echo "Fix them (or run 'npm run lint:fix'), then re-stage and commit." >&2
+  echo "(deliberate bypass: git commit --no-verify)" >&2
+  exit 1
+fi
+
+exit 0

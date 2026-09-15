@@ -24,29 +24,48 @@ const WHIST_SCHEDULES: Record<number, { labels: string; rounds: string[] }> = {
   8: {
     labels: "ABCDEFGH",
     rounds: [
-      "AB CD|EF GH", "AC EG|BD FH", "AD EH|BC FG", "AE BF|CG DH",
-      "AF CH|BE DG", "AG DF|BH CE", "AH BG|CF DE",
+      "AB CD|EF GH",
+      "AC EG|BD FH",
+      "AD EH|BC FG",
+      "AE BF|CG DH",
+      "AF CH|BE DG",
+      "AG DF|BH CE",
+      "AH BG|CF DE",
     ],
   },
   12: {
     labels: "I0123456789T",
     rounds: [
-      "I0 45|1T 28|37 69", "I1 56|20 39|48 7T", "I2 67|31 4T|59 80",
-      "I3 78|42 50|6T 91", "I4 89|53 61|70 T2", "I5 9T|64 72|81 03",
-      "I6 T0|75 83|92 14", "I7 01|86 94|T3 25", "I8 12|97 T5|04 36",
-      "I9 23|T8 06|15 47", "IT 34|09 17|26 58",
+      "I0 45|1T 28|37 69",
+      "I1 56|20 39|48 7T",
+      "I2 67|31 4T|59 80",
+      "I3 78|42 50|6T 91",
+      "I4 89|53 61|70 T2",
+      "I5 9T|64 72|81 03",
+      "I6 T0|75 83|92 14",
+      "I7 01|86 94|T3 25",
+      "I8 12|97 T5|04 36",
+      "I9 23|T8 06|15 47",
+      "IT 34|09 17|26 58",
     ],
   },
   16: {
     labels: "ABCDEFGHIJKLMNOP",
     rounds: [
-      "AB CD|EF GH|IJ KL|MN OP", "EG FH|AC BD|MO NP|IK JL",
-      "IL JK|MP NO|EH FG|AD BC", "AE IM|BF JN|CG KO|DH LP",
-      "CH IN|BE LO|AF KP|DG JM", "BH KM|CE JP|DF IO|AG LN",
-      "DE KN|AH JO|BG IP|CF LM", "BJ FN|AI EM|DL HP|CK GO",
-      "AJ HO|DK EN|CL FM|BI GP", "BL EO|CI HN|DJ GM|AK FP",
-      "CJ EP|BK HM|AL GN|DI FO", "CO GK|DP HL|BN FJ|AM EI",
-      "DO FI|AN GL|CP EJ|BM HK", "BP GI|CM FL|AO HJ|DN EK",
+      "AB CD|EF GH|IJ KL|MN OP",
+      "EG FH|AC BD|MO NP|IK JL",
+      "IL JK|MP NO|EH FG|AD BC",
+      "AE IM|BF JN|CG KO|DH LP",
+      "CH IN|BE LO|AF KP|DG JM",
+      "BH KM|CE JP|DF IO|AG LN",
+      "DE KN|AH JO|BG IP|CF LM",
+      "BJ FN|AI EM|DL HP|CK GO",
+      "AJ HO|DK EN|CL FM|BI GP",
+      "BL EO|CI HN|DJ GM|AK FP",
+      "CJ EP|BK HM|AL GN|DI FO",
+      "CO GK|DP HL|BN FJ|AM EI",
+      "DO FI|AN GL|CP EJ|BM HK",
+      "BP GI|CM FL|AO HJ|DN EK",
       "AP FK|DM GJ|BO EL|CN HI",
     ],
   },
@@ -70,15 +89,18 @@ function whistSchedule(ids: string[], random: () => number): PartnershipMatch[][
   if (!reference) return null;
   const playerByLabel = new Map([...reference.labels].map((label, index) => [label, ids[index]]));
 
-  return shuffled(reference.rounds, random).map(round =>
-    shuffled(round.split("|").map(game => {
-      const [pairA, pairB] = game.split(" ");
-      const players = (pair: string): Partnership => [
-        playerByLabel.get(pair[0])!,
-        playerByLabel.get(pair[1])!,
-      ];
-      return [players(pairA), players(pairB)] as PartnershipMatch;
-    }), random),
+  return shuffled(reference.rounds, random).map((round) =>
+    shuffled(
+      round.split("|").map((game) => {
+        const [pairA, pairB] = game.split(" ");
+        const players = (pair: string): Partnership => [
+          playerByLabel.get(pair[0])!,
+          playerByLabel.get(pair[1])!,
+        ];
+        return [players(pairA), players(pairB)] as PartnershipMatch;
+      }),
+      random,
+    ),
   );
 }
 
@@ -86,11 +108,7 @@ function opponentPenalty(count: number) {
   return (count - 2) ** 2 + (count === 0 ? 20 : 0) + (count > 3 ? 20 * (count - 3) : 0);
 }
 
-function opponentCost(
-  pairA: Partnership,
-  pairB: Partnership,
-  opponentCounts: Map<string, number>,
-) {
+function opponentCost(pairA: Partnership, pairB: Partnership, opponentCounts: Map<string, number>) {
   let cost = 0;
   for (const a of pairA) {
     for (const b of pairB) {
@@ -176,10 +194,7 @@ function balanceScore(ids: string[], opponentCounts: Map<string, number>) {
   return score;
 }
 
-function opponentChanges(
-  removed: PartnershipMatch[],
-  added: PartnershipMatch[],
-) {
+function opponentChanges(removed: PartnershipMatch[], added: PartnershipMatch[]) {
   const changes = new Map<string, number>();
   const add = (match: PartnershipMatch, amount: number) => {
     for (const a of match[0]) {
@@ -206,7 +221,7 @@ function improveOpponentBalance(
 
   let score = balanceScore(ids, opponentCounts);
   let bestScore = score;
-  let bestSchedule = schedule.map(round => [...round]);
+  let bestSchedule = schedule.map((round) => [...round]);
   const iterations = ids.length <= 20 ? 100_000 : 200_000;
 
   for (let iteration = 0; iteration < iterations && bestScore > 0; iteration++) {
@@ -219,8 +234,8 @@ function improveOpponentBalance(
       Array.from({ length: round.length }, (_, index) => index),
       random,
     ).slice(0, moveSize);
-    const removed = matchIndexes.map(index => round[index]);
-    const partnerships = removed.flatMap(match => [match[0], match[1]]);
+    const removed = matchIndexes.map((index) => round[index]);
+    const partnerships = removed.flatMap((match) => [match[0], match[1]]);
     const alternative = shuffled(matchupOptions(partnerships), random)[0];
     const changes = opponentChanges(removed, alternative);
 
@@ -244,7 +259,7 @@ function improveOpponentBalance(
 
     if (score < bestScore) {
       bestScore = score;
-      bestSchedule = schedule.map(item => [...item]);
+      bestSchedule = schedule.map((item) => [...item]);
     }
   }
 
@@ -271,16 +286,17 @@ function exactOpponentSchedule(
 ): PartnershipMatch[][] | null {
   if (partnershipRounds[0].length > 6) return null;
 
-  const optionsByRound = partnershipRounds.map(round => shuffled(matchupOptions(round), random));
+  const optionsByRound = partnershipRounds.map((round) => shuffled(matchupOptions(round), random));
   const opponentCounts = new Map<string, number>();
   const selected = new Map<number, PartnershipMatch[]>();
   let visited = 0;
 
-  const isValid = (matches: PartnershipMatch[]) => matches.every(match =>
-    match[0].every(a => match[1].every(b =>
-      (opponentCounts.get(playerPairKey(a, b)) ?? 0) < 2,
-    )),
-  );
+  const isValid = (matches: PartnershipMatch[]) =>
+    matches.every((match) =>
+      match[0].every((a) =>
+        match[1].every((b) => (opponentCounts.get(playerPairKey(a, b)) ?? 0) < 2),
+      ),
+    );
 
   function search(remainingRounds: number[]): boolean {
     if (remainingRounds.length === 0) return true;
@@ -298,14 +314,15 @@ function exactOpponentSchedule(
     }
 
     validOptions.sort((a, b) => {
-      const cost = (matches: PartnershipMatch[]) => matches.reduce(
-        (total, match) => total + opponentCost(match[0], match[1], opponentCounts),
-        0,
-      );
+      const cost = (matches: PartnershipMatch[]) =>
+        matches.reduce(
+          (total, match) => total + opponentCost(match[0], match[1], opponentCounts),
+          0,
+        );
       return cost(a) - cost(b);
     });
 
-    const nextRounds = remainingRounds.filter(index => index !== chosenRound);
+    const nextRounds = remainingRounds.filter((index) => index !== chosenRound);
     for (const matches of validOptions) {
       for (const match of matches) addOpponents(match, opponentCounts);
       selected.set(chosenRound, matches);
@@ -335,36 +352,35 @@ function balanceCourts(
   random: () => number,
 ) {
   const slotsPerRound = Math.ceil(schedule[0].length / courts) * courts;
-  let assignments: (PartnershipMatch | null)[][] = schedule.map(round =>
+  let assignments: (PartnershipMatch | null)[][] = schedule.map((round) =>
     Array.from({ length: slotsPerRound }, (_, index) => round[index] ?? null),
   );
   if (courts === 1) return assignments;
 
   const playerIndex = new Map(ids.map((id, index) => [id, index]));
-  const players = new Map(schedule.flat().map(match =>
-    [match, match.flat().map(id => playerIndex.get(id)!)],
-  ));
+  const players = new Map(
+    schedule.flat().map((match) => [match, match.flat().map((id) => playerIndex.get(id)!)]),
+  );
   const counts = ids.map(() => Array<number>(courts).fill(0));
   const ideal = schedule.length / courts;
   // Squared error is constant for all court assignments of the eight-player template.
   const penalty = (count: number) => (count - ideal) ** 4;
-  const worstSpread = () => Math.max(...counts.map(row => Math.max(...row) - Math.min(...row)));
-  const score = () => counts.reduce((total, row) =>
-    total + row.reduce((sum, count) => sum + penalty(count), 0), 0,
-  );
+  const worstSpread = () => Math.max(...counts.map((row) => Math.max(...row) - Math.min(...row)));
+  const score = () =>
+    counts.reduce((total, row) => total + row.reduce((sum, count) => sum + penalty(count), 0), 0);
   const add = (match: PartnershipMatch | null, court: number, amount: number) => {
     for (const player of match === null ? [] : players.get(match)!) counts[player][court] += amount;
   };
 
   for (const round of assignments) round.forEach((match, slot) => add(match, slot % courts, 1));
-  let bestAssignments = assignments.map(round => [...round]);
+  let bestAssignments = assignments.map((round) => [...round]);
   let bestSpread = worstSpread();
   let bestScore = score();
   const minimumSpread = COURT_SPREAD_MINIMUMS[ids.length]?.[courts] ?? 1;
   if (bestSpread <= minimumSpread) return bestAssignments;
 
   for (const row of counts) row.fill(0);
-  assignments = schedule.map(round => {
+  assignments = schedule.map((round) => {
     const slots: (PartnershipMatch | null)[] = Array(slotsPerRound).fill(null);
     for (const match of round) {
       let bestSlot = 0;
@@ -394,7 +410,7 @@ function balanceCourts(
     if (spread < bestSpread || (spread === bestSpread && currentScore < bestScore - 1e-7)) {
       bestSpread = spread;
       bestScore = currentScore;
-      bestAssignments = assignments.map(round => [...round]);
+      bestAssignments = assignments.map((round) => [...round]);
       attemptsWithoutImprovement = 0;
     }
   };
@@ -404,7 +420,9 @@ function balanceCourts(
   const stagnationLimit = ids.length < 20 ? iterations : 10_000;
   for (
     let iteration = 0;
-    iteration < iterations && bestSpread > minimumSpread && attemptsWithoutImprovement < stagnationLimit;
+    iteration < iterations &&
+    bestSpread > minimumSpread &&
+    attemptsWithoutImprovement < stagnationLimit;
     iteration++
   ) {
     attemptsWithoutImprovement++;
@@ -416,12 +434,15 @@ function balanceCourts(
     if (courtA === courtB || (round[first] === null && round[second] === null)) continue;
 
     let delta = 0;
-    for (const [slot, from, to] of [[first, courtA, courtB], [second, courtB, courtA]]) {
+    for (const [slot, from, to] of [
+      [first, courtA, courtB],
+      [second, courtB, courtA],
+    ]) {
       const match = round[slot];
       for (const player of match === null ? [] : players.get(match)!) {
         const row = counts[player];
-        delta += penalty(row[from] - 1) - penalty(row[from])
-          + penalty(row[to] + 1) - penalty(row[to]);
+        delta +=
+          penalty(row[from] - 1) - penalty(row[from]) + penalty(row[to] + 1) - penalty(row[to]);
       }
     }
 
@@ -466,14 +487,15 @@ export function generateAmericanoRounds(
     rotation = [rotation[0], rotation[usable - 1], ...rotation.slice(1, usable - 1)];
   }
 
-  const exactSchedule = whistSchedule(ids, random) ?? exactOpponentSchedule(partnershipRounds, random);
+  const exactSchedule =
+    whistSchedule(ids, random) ?? exactOpponentSchedule(partnershipRounds, random);
   const attempts = usable <= 20 ? 40 : usable <= 32 ? 12 : 60;
   let bestSchedule: PartnershipMatch[][] = exactSchedule ?? [];
   let bestScore = Number.POSITIVE_INFINITY;
 
   for (let attempt = 0; exactSchedule === null && attempt < attempts; attempt++) {
     const opponentCounts = new Map<string, number>();
-    const schedule = shuffled(partnershipRounds, random).map(partnerships => {
+    const schedule = shuffled(partnershipRounds, random).map((partnerships) => {
       const matches = pairPartnerships(partnerships, opponentCounts, random);
       for (const match of matches) addOpponents(match, opponentCounts);
       return matches;
@@ -495,15 +517,19 @@ export function generateAmericanoRounds(
   for (const partnershipMatches of balancedSchedule) {
     for (let start = 0; start < partnershipMatches.length; start += courts) {
       const wave = partnershipMatches.slice(start, start + courts);
-      rounds.push(wave.flatMap((match, index) => {
-        if (match === null) return [];
-        const sides = shuffled(match, random);
-        return [{
-          pairA: sides[0],
-          pairB: sides[1],
-          courtNumber: index + 1,
-        }];
-      }));
+      rounds.push(
+        wave.flatMap((match, index) => {
+          if (match === null) return [];
+          const sides = shuffled(match, random);
+          return [
+            {
+              pairA: sides[0],
+              pairB: sides[1],
+              courtNumber: index + 1,
+            },
+          ];
+        }),
+      );
     }
   }
 

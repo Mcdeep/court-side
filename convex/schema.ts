@@ -1,6 +1,10 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { americanoVariantValidator, groupSplitModeValidator, groupValidator } from "./lib/doubleAmericano";
+import {
+  americanoVariantValidator,
+  groupSplitModeValidator,
+  groupValidator,
+} from "./lib/doubleAmericano";
 import { tiebreakValidator } from "./lib/tiebreaks";
 
 export default defineSchema({
@@ -53,7 +57,9 @@ export default defineSchema({
     // "first_to" (default): first team to reach pointsToWin wins, scores are independent.
     // "shared_total": each match splits a fixed pool of pointsToWin points between the two teams.
     // "time_based": match ends when the round timer runs out; whichever team has more points wins.
-    scoringMode: v.optional(v.union(v.literal("first_to"), v.literal("shared_total"), v.literal("time_based"))),
+    scoringMode: v.optional(
+      v.union(v.literal("first_to"), v.literal("shared_total"), v.literal("time_based")),
+    ),
     americanoVariant: v.optional(americanoVariantValidator),
     groupSplitMode: v.optional(groupSplitModeValidator),
     tiebreakOrder: v.optional(v.array(tiebreakValidator)),
@@ -72,11 +78,7 @@ export default defineSchema({
   participants: defineTable({
     tournamentId: v.id("tournaments"),
     userId: v.optional(v.id("users")),
-    entryType: v.union(
-      v.literal("solo"),
-      v.literal("pair"),
-      v.literal("team"),
-    ),
+    entryType: v.union(v.literal("solo"), v.literal("pair"), v.literal("team")),
     teamId: v.optional(v.id("teams")),
     group: v.optional(groupValidator),
     isWalkIn: v.boolean(),
@@ -132,11 +134,7 @@ export default defineSchema({
     tournamentId: v.id("tournaments"),
     roundNumber: v.number(),
     stage: v.optional(v.union(v.literal("group"), v.literal("final"))),
-    state: v.union(
-      v.literal("pending"),
-      v.literal("in_progress"),
-      v.literal("completed"),
-    ),
+    state: v.union(v.literal("pending"), v.literal("in_progress"), v.literal("completed")),
     startedAt: v.optional(v.number()),
   }).index("by_tournament", ["tournamentId"]),
 
@@ -162,11 +160,7 @@ export default defineSchema({
     submittedBy: v.id("participants"),
     scoreA: v.number(),
     scoreB: v.number(),
-    state: v.union(
-      v.literal("pending"),
-      v.literal("approved"),
-      v.literal("disputed"),
-    ),
+    state: v.union(v.literal("pending"), v.literal("approved"), v.literal("disputed")),
   }).index("by_match", ["matchId"]),
 
   leaderboard: defineTable({

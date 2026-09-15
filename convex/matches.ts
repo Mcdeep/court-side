@@ -45,7 +45,7 @@ export const listByRound = query({
             participantB: await resolveParticipant(pB2),
           },
         };
-      })
+      }),
     );
   },
 });

@@ -8,11 +8,17 @@ import { getRecordedScore } from "./lib/recordedScore";
 
 const previousScoreValidator = v.object({ scoreA: v.number(), scoreB: v.number() });
 
-function previousResult(match: Doc<"matches">, restored?: NonNullable<ReturnType<typeof getRecordedScore>>) {
+function previousResult(
+  match: Doc<"matches">,
+  restored?: NonNullable<ReturnType<typeof getRecordedScore>>,
+) {
   const result = getRecordedScore(match);
   if (match.state === "completed" && !result) {
-    if (!restored) throw new Error("Enter the previous result in the score editor before saving this correction.");
-    if ([restored.scoreA, restored.scoreB].some(score => !Number.isInteger(score) || score < 0)) {
+    if (!restored)
+      throw new Error(
+        "Enter the previous result in the score editor before saving this correction.",
+      );
+    if ([restored.scoreA, restored.scoreB].some((score) => !Number.isInteger(score) || score < 0)) {
       throw new Error("Previous scores must be non-negative whole numbers");
     }
     return restored;
@@ -20,10 +26,19 @@ function previousResult(match: Doc<"matches">, restored?: NonNullable<ReturnType
   return result;
 }
 
-function assertValidScores(tournament: Doc<"tournaments">, scoreA: number, scoreB: number, round: Doc<"rounds">) {
+function assertValidScores(
+  tournament: Doc<"tournaments">,
+  scoreA: number,
+  scoreB: number,
+  round: Doc<"rounds">,
+) {
   if (tournament.americanoVariant === "double" && round.stage === "final") {
-    if (![scoreA, scoreB].every(score => Number.isInteger(score) && score >= 0)) throw new Error("Final scores must be non-negative whole numbers");
-    if (scoreA === scoreB) throw new Error("Crossover finals need a winner; play a deciding point before recording the result");
+    if (![scoreA, scoreB].every((score) => Number.isInteger(score) && score >= 0))
+      throw new Error("Final scores must be non-negative whole numbers");
+    if (scoreA === scoreB)
+      throw new Error(
+        "Crossover finals need a winner; play a deciding point before recording the result",
+      );
   }
   if (tournament.scoringMode === "shared_total" && tournament.pointsToWin !== undefined) {
     if (scoreA + scoreB !== tournament.pointsToWin) {
@@ -59,8 +74,7 @@ export const submit = mutation({
 
     if (existing.length > 0) {
       const prior = existing[0];
-      const isConflict =
-        prior.scoreA !== args.scoreA || prior.scoreB !== args.scoreB;
+      const isConflict = prior.scoreA !== args.scoreA || prior.scoreB !== args.scoreB;
 
       if (isConflict) {
         await ctx.db.patch(args.matchId, { state: "disputed" });
@@ -76,15 +90,24 @@ export const submit = mutation({
       }
 
       // Scores match — approve
-      await ctx.db.patch(args.matchId, { state: "completed", scoreA: args.scoreA, scoreB: args.scoreB });
+      await ctx.db.patch(args.matchId, {
+        state: "completed",
+        scoreA: args.scoreA,
+        scoreB: args.scoreB,
+      });
       await ctx.db.patch(prior._id, { state: "approved" });
       await ctx.runMutation(internal.leaderboard.recalculate, {
         matchId: args.matchId,
         scoreA: args.scoreA,
         scoreB: args.scoreB,
       });
-      if (tournament.format === "americano" && (tournament.state === "completed" || tournament.state === "archived")) {
-        await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, { tournamentId: tournament._id });
+      if (
+        tournament.format === "americano" &&
+        (tournament.state === "completed" || tournament.state === "archived")
+      ) {
+        await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, {
+          tournamentId: tournament._id,
+        });
       }
       return { status: "approved" };
     }
@@ -127,10 +150,18 @@ export const resolve = mutation({
       .take(10);
 
     for (const score of scores) {
-      await ctx.db.patch(score._id, { state: "approved", scoreA: args.scoreA, scoreB: args.scoreB });
+      await ctx.db.patch(score._id, {
+        state: "approved",
+        scoreA: args.scoreA,
+        scoreB: args.scoreB,
+      });
     }
 
-    await ctx.db.patch(args.matchId, { state: "completed", scoreA: args.scoreA, scoreB: args.scoreB });
+    await ctx.db.patch(args.matchId, {
+      state: "completed",
+      scoreA: args.scoreA,
+      scoreB: args.scoreB,
+    });
     await ctx.runMutation(internal.leaderboard.recalculate, {
       matchId: args.matchId,
       scoreA: args.scoreA,
@@ -138,8 +169,13 @@ export const resolve = mutation({
       prevScoreA: previous?.scoreA,
       prevScoreB: previous?.scoreB,
     });
-    if (tournament.format === "americano" && (tournament.state === "completed" || tournament.state === "archived")) {
-      await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, { tournamentId: tournament._id });
+    if (
+      tournament.format === "americano" &&
+      (tournament.state === "completed" || tournament.state === "archived")
+    ) {
+      await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, {
+        tournamentId: tournament._id,
+      });
     }
     return null;
   },
@@ -177,7 +213,11 @@ export const saveResult = mutation({
     const previous = previousResult(match, args.previousScore);
     const prevScoreA = previous?.scoreA;
     const prevScoreB = previous?.scoreB;
-    await ctx.db.patch(args.matchId, { state: "completed", scoreA: args.scoreA, scoreB: args.scoreB });
+    await ctx.db.patch(args.matchId, {
+      state: "completed",
+      scoreA: args.scoreA,
+      scoreB: args.scoreB,
+    });
     await ctx.runMutation(internal.leaderboard.recalculate, {
       matchId: args.matchId,
       scoreA: args.scoreA,
@@ -185,8 +225,13 @@ export const saveResult = mutation({
       prevScoreA,
       prevScoreB,
     });
-    if (tournament.format === "americano" && (tournament.state === "completed" || tournament.state === "archived")) {
-      await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, { tournamentId: tournament._id });
+    if (
+      tournament.format === "americano" &&
+      (tournament.state === "completed" || tournament.state === "archived")
+    ) {
+      await ctx.scheduler.runAfter(0, internal.ratings.awardRatings, {
+        tournamentId: tournament._id,
+      });
     }
     return null;
   },

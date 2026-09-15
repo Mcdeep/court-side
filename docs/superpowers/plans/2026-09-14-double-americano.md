@@ -3,18 +3,23 @@
 Spec: https://github.com/Mcdeep/court-side/issues/23 and the user's three rating-based split options.
 
 ## Global constraints
+
 Exactly 16 players, two groups of eight, at least two courts. Existing single Americano remains unchanged. Random splitting needs no ratings; top_bottom and balanced require every player's current skill rating. Balanced chooses the minimum possible difference in group rating totals. Organisers can swap players before generating. Group standings use the configured ranking order; randomise only unresolved ties when generating crossover finals. Finals use the same scoring settings but require a winner. Final points never affect group totals. Final placements drive rating awards, partners share placement and averaged tier points. New schema fields are optional. Preserve the six pre-existing generated-file changes. npm only; type-check both projects and run meaningful tests. New branch codex/issue-23-double-americano is based on PR25 action generation.
 
 ## Task 1: Pure split and scheduling algorithms
+
 Create convex/formats/double_americano.ts and its test file. Export splitDoubleAmericanoGroups(players: {id:string;rating?:number}[], mode: 'random'|'top_bottom'|'balanced', random = Math.random): [string[], string[]]. Validate exactly 16 unique players and, for rated modes, finite ratings between 1 and 7. Shuffle tie order. Exact balanced minimum over equal-size partitions, including fractional ratings.
 Export generateDoubleAmericanoRounds(group1: string[], group2: string[], courtCount: number): GeneratedMatch[][], using generateAmericanoRounds for each eight-player group. GeneratedMatch uses courtNumber, pairA:string[], pairB:string[]. Require integer courtCount >=2; each group gets min(2,floor(courtCount/2)) courts; offset second group's court numbers. Four or more courts gives seven rounds, two or three gives fourteen.
 Export generateDoubleAmericanoFinals(group1: string[], group2: string[], courtCount: number): (GeneratedMatch & {finalMatchIndex:number})[][], taking ordered group seeds. Index k gives pairA=[group1[2k],group2[2k+1]], pairB=[group2[2k],group1[2k+1]], finalMatchIndex=k. Distribute four final matches across available courts, with courtNumber = k%courtCount+1. Validate groups have exactly eight distinct players each, no overlap. Tests demonstrate split invariants, missing ratings, exact balanced optimum, partnership/opponent invariants, court assignment, lower-court waves and crossover mapping. Read Convex generated AI guidelines before editing. Do not touch other files, commit, or spawn subagents.
 
 ## Task 2: Persisted groups and tournament lifecycle
+
 Add optional americanoVariant, groupSplitMode, participant.group, round.stage, match.finalMatchIndex. Add authorised group assignment/swap API, resolve current roster ratings, and lock changes after generation. Wire variant into create/update/duplicate. Generate group rounds then finals through the existing action/commit snapshot, including every group score dependency. Completion requires four scored final matches and completed final rounds. Final draws rejected through all scoring paths. Group stats exclude finals; final placements and rating awards use crossover results.
 
 ## Task 3: Tournament setup and live views
+
 Offer the variant for 16-player Americano, three split methods, group review and manual swaps. Show group standings, finals and final placements in tournament, manage and kiosk. Generate final only when groups complete; finish only after finals. Use existing shadcn components, theme tokens, Convex-derived types and useAsyncAction.
 
 ## Task 4: Integration verification and review
+
 Cover group auth/locking, all split modes, stale source rejection, configured tie ranking, final generation guards, draws, final stats and rating averaging, and single Americano regression. Run relevant tests then full npm test, both tsc checks, production build. Review the complete diff and fix findings. Verify locally if needed, targeting only anonymous-court-side localhost:3210. Document behaviour and limits; keep work on the new branch.

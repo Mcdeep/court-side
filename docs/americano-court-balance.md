@@ -37,11 +37,11 @@ durations across seeds 0, 1, 7, and 42, comparing PR commit `5e8fb8e` with the
 reduced budget. These local measurements are not production latency guarantees.
 
 | Players / courts | Previous court pass | Reduced court pass | Previous / reduced spread |
-| --- | --- | --- | --- |
-| 20 / 5 | 48 ms | 11 ms | 2 / 2 |
-| 24 / 4 | 71 ms | 14 ms | 1–2 / 2 |
-| 36 / 4 | 84 ms | 20 ms | 1–2 / 2 |
-| 40 / 6 | 106 ms | 21 ms | 2 / 2 |
+| ---------------- | ------------------- | ------------------ | ------------------------- |
+| 20 / 5           | 48 ms               | 11 ms              | 2 / 2                     |
+| 24 / 4           | 71 ms               | 14 ms              | 1–2 / 2                   |
+| 36 / 4           | 84 ms               | 20 ms              | 1–2 / 2                   |
+| 40 / 6           | 106 ms              | 21 ms              | 2 / 2                     |
 
 A shorter search can miss a spread-one assignment that the previous budget
 eventually found. The target remains one for dynamically generated fixtures;
@@ -85,11 +85,11 @@ wave used valid distinct courts without player duplication. These are single-run
 client-observed durations, not compute-only timings or production guarantees.
 
 | Players / courts | Full action, including writes | Rounds / waves | Matches |
-| --- | --- | --- | --- |
-| 24 / 4 | 9824 ms | 46 | 138 |
-| 24 / 6 | 9613 ms | 23 | 138 |
-| 36 / 4 | 11354 ms | 105 | 315 |
-| 40 / 6 | 11350 ms | 78 | 390 |
+| ---------------- | ----------------------------- | -------------- | ------- |
+| 24 / 4           | 9824 ms                       | 46             | 138     |
+| 24 / 6           | 9613 ms                       | 23             | 138     |
+| 36 / 4           | 11354 ms                      | 105            | 315     |
+| 40 / 6           | 11350 ms                      | 78             | 390     |
 
 All temporary tournaments and verification functions were removed afterward.
 The dev-only seed.devStartRound helper still computes its default 16-player
@@ -103,11 +103,11 @@ courts on which the player never plays. The limits below apply to the current
 match order, and match sides does not change these limits.
 
 | Players | Courts | Minimum possible worst-player spread |
-| --- | --- | --- |
-| 8 | 2 | 5 |
-| 12 | 3 | 2 |
-| 16 | 4 | 3 |
-| 16 | 2 | 3 |
+| ------- | ------ | ------------------------------------ |
+| 8       | 2      | 5                                    |
+| 12      | 3      | 2                                    |
+| 16      | 4      | 3                                    |
+| 16      | 2      | 3                                    |
 
 The generator stops when it reaches these proven minima. Other configurations
 aim for spread at most one within their configured search budget. A bounded search

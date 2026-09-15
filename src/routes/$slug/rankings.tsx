@@ -1,36 +1,31 @@
-import { createFileRoute, useParams } from '@tanstack/react-router'
-import { useQuery, useMutation } from 'convex/react'
-import { api } from '#/../convex/_generated/api'
-import { useState } from 'react'
-import { Avatar } from '#/components/ui/avatar'
-import { Icon } from '#/components/ui/icon'
-import { errorMessage } from '#/lib/utils'
-import type { Id } from '#/../convex/_generated/dataModel'
+import { createFileRoute, useParams } from "@tanstack/react-router";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "#/../convex/_generated/api";
+import { useState } from "react";
+import { Avatar } from "#/components/ui/avatar";
+import { Icon } from "#/components/ui/icon";
+import { errorMessage } from "#/lib/utils";
+import type { Id } from "#/../convex/_generated/dataModel";
 
-export const Route = createFileRoute('/$slug/rankings')({
+export const Route = createFileRoute("/$slug/rankings")({
   component: RankingsPage,
-})
+});
 
 function RankingsPage() {
-  const { slug } = useParams({ from: '/$slug/rankings' })
-  const [editingTiers, setEditingTiers] = useState(false)
+  const { slug } = useParams({ from: "/$slug/rankings" });
+  const [editingTiers, setEditingTiers] = useState(false);
 
-  const org = useQuery(api.organizations.getBySlug, { slug })
-  const rankings = useQuery(
-    api.ratings.getRankings,
-    org ? { organizationId: org._id } : 'skip'
-  )
-  const tiers = useQuery(
-    api.ratings.getTiers,
-    org ? { organizationId: org._id } : 'skip'
-  )
+  const org = useQuery(api.organizations.getBySlug, { slug });
+  const rankings = useQuery(api.ratings.getRankings, org ? { organizationId: org._id } : "skip");
+  const tiers = useQuery(api.ratings.getTiers, org ? { organizationId: org._id } : "skip");
 
-  if (org === undefined || rankings === undefined || tiers === undefined) return <PageSkeleton />
-  if (org === null) return (
-    <div className="flex items-center justify-center h-full">
-      <p className="text-ink-mute">Organisation not found.</p>
-    </div>
-  )
+  if (org === undefined || rankings === undefined || tiers === undefined) return <PageSkeleton />;
+  if (org === null)
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-ink-mute">Organisation not found.</p>
+      </div>
+    );
 
   return (
     <div className="w-full px-10 py-8">
@@ -38,13 +33,15 @@ function RankingsPage() {
       <div className="flex items-end justify-between gap-4 mb-7">
         <div>
           <div className="text-ink-mute text-[13px] font-semibold mb-2 capitalize">{org.name}</div>
-          <h1 className="font-display text-[34px] font-bold leading-tight tracking-tight">Rankings</h1>
+          <h1 className="font-display text-[34px] font-bold leading-tight tracking-tight">
+            Rankings
+          </h1>
         </div>
         <button
           onClick={() => setEditingTiers(!editingTiers)}
           className="h-9 px-4 rounded-xl text-sm font-semibold bg-white ring-1 ring-zinc-200 hover:bg-zinc-50 transition-colors"
         >
-          {editingTiers ? 'Close' : 'Point Tiers'}
+          {editingTiers ? "Close" : "Point Tiers"}
         </button>
       </div>
 
@@ -57,7 +54,11 @@ function RankingsPage() {
 
       {/* Tier editor */}
       {editingTiers && (
-        <TierEditor organizationId={org._id} currentTiers={tiers} onClose={() => setEditingTiers(false)} />
+        <TierEditor
+          organizationId={org._id}
+          currentTiers={tiers}
+          onClose={() => setEditingTiers(false)}
+        />
       )}
 
       {/* Rankings table */}
@@ -82,8 +83,10 @@ function RankingsPage() {
               <div className="text-right">Played</div>
             </div>
             {rankings.map((r, i) => (
-              <div key={r._id}
-                className="grid grid-cols-[60px_auto_1fr_100px_100px] gap-4 px-5 py-3 items-center border-b border-zinc-100 last:border-0 hover:bg-zinc-50/60 transition-colors">
+              <div
+                key={r._id}
+                className="grid grid-cols-[60px_auto_1fr_100px_100px] gap-4 px-5 py-3 items-center border-b border-zinc-100 last:border-0 hover:bg-zinc-50/60 transition-colors"
+              >
                 <div className="text-center">
                   <RankBadge rank={i + 1} />
                 </div>
@@ -104,42 +107,64 @@ function RankingsPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
 
 function RankBadge({ rank }: { rank: number }) {
-  if (rank === 1) return <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-yellow-100 text-yellow-700 font-bold text-xs">1</span>
-  if (rank === 2) return <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-zinc-100 text-zinc-600 font-bold text-xs">2</span>
-  if (rank === 3) return <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-orange-100 text-orange-700 font-bold text-xs">3</span>
-  return <span className="tnum text-sm text-ink-mute font-semibold">{rank}</span>
+  if (rank === 1)
+    return (
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-yellow-100 text-yellow-700 font-bold text-xs">
+        1
+      </span>
+    );
+  if (rank === 2)
+    return (
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-zinc-100 text-zinc-600 font-bold text-xs">
+        2
+      </span>
+    );
+  if (rank === 3)
+    return (
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-orange-100 text-orange-700 font-bold text-xs">
+        3
+      </span>
+    );
+  return <span className="tnum text-sm text-ink-mute font-semibold">{rank}</span>;
 }
 
-function TierEditor({ organizationId, currentTiers, onClose }: {
-  organizationId: Id<'organizations'>
-  currentTiers: number[]
-  onClose: () => void
+function TierEditor({
+  organizationId,
+  currentTiers,
+  onClose,
+}: {
+  organizationId: Id<"organizations">;
+  currentTiers: number[];
+  onClose: () => void;
 }) {
-  const [tiers, setTiers] = useState(currentTiers.join(', '))
-  const [error, setError] = useState('')
-  const setTiersMut = useMutation(api.ratings.setTiers)
+  const [tiers, setTiers] = useState(currentTiers.join(", "));
+  const [error, setError] = useState("");
+  const setTiersMut = useMutation(api.ratings.setTiers);
 
   const handleSave = async () => {
-    const parsed = tiers.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n))
+    const parsed = tiers
+      .split(",")
+      .map((s) => Number(s.trim()))
+      .filter((n) => !isNaN(n));
     if (parsed.length === 0) {
-      setError('Enter at least one number')
-      return
+      setError("Enter at least one number");
+      return;
     }
-    if (parsed.some(n => n < 0)) {
-      setError('Values must be non-negative')
-      return
+    if (parsed.some((n) => n < 0)) {
+      setError("Values must be non-negative");
+      return;
     }
     try {
-      await setTiersMut({ organizationId, tiers: parsed })
-      onClose()
+      await setTiersMut({ organizationId, tiers: parsed });
+      onClose();
     } catch (e) {
-      setError(errorMessage(e))
+      setError(errorMessage(e));
     }
-  }
+  };
 
   return (
     <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card p-5 mb-7">
@@ -150,7 +175,10 @@ function TierEditor({ organizationId, currentTiers, onClose }: {
       <div className="flex gap-3 items-start">
         <input
           value={tiers}
-          onChange={e => { setTiers(e.target.value); setError('') }}
+          onChange={(e) => {
+            setTiers(e.target.value);
+            setError("");
+          }}
           placeholder="10, 8, 6, 4, 3, 2"
           className="flex-1 h-9 px-3 rounded-xl bg-white ring-1 ring-zinc-200 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent-dark/40"
         />
@@ -170,27 +198,29 @@ function TierEditor({ organizationId, currentTiers, onClose }: {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 function ordinal(n: number) {
-  const s = ['th', 'st', 'nd', 'rd']
-  const v = n % 100
-  return n + (s[(v - 20) % 10] || s[v] || s[0])
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
 function Stat({ label, value, icon }: { label: string; value: number; icon: string }) {
   return (
     <div className="rounded-2xl p-4 bg-white ring-1 ring-zinc-200/80 shadow-card">
       <div className="flex items-center justify-between">
-        <span className="text-[12px] font-semibold uppercase tracking-wide text-ink-mute">{label}</span>
+        <span className="text-[12px] font-semibold uppercase tracking-wide text-ink-mute">
+          {label}
+        </span>
         <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-zinc-100 text-zinc-400">
           <Icon name={icon as any} className="w-4 h-4" />
         </span>
       </div>
       <div className="mt-2 font-display font-bold text-[30px] leading-none tnum">{value}</div>
     </div>
-  )
+  );
 }
 
 function PageSkeleton() {
@@ -198,9 +228,11 @@ function PageSkeleton() {
     <div className="w-full px-10 py-8 animate-pulse">
       <div className="h-9 w-32 bg-zinc-100 rounded-xl mb-7" />
       <div className="grid grid-cols-3 gap-4 mb-7">
-        {[0, 1, 2].map(i => <div key={i} className="h-24 bg-zinc-100 rounded-2xl" />)}
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-24 bg-zinc-100 rounded-2xl" />
+        ))}
       </div>
       <div className="h-64 bg-zinc-100 rounded-2xl" />
     </div>
-  )
+  );
 }

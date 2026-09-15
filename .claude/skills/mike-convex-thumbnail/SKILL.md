@@ -1,7 +1,6 @@
 ---
 name: mike-convex-thumbnail
-description:
-  Generate Mike-style YouTube thumbnail concepts and final drafts for Convex
+description: Generate Mike-style YouTube thumbnail concepts and final drafts for Convex
   videos using Mike's local head-and-shoulders photo cutouts and local Convex
   logo assets. Use when the user asks for thumbnails, YouTube thumbnails, video
   thumb options, or a thumbnail like the Convex static hosting "NO DASHBOARDS"

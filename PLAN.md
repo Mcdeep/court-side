@@ -6,14 +6,14 @@ A multitenant SaaS platform for padel tournament management. Organisations (club
 
 ## Stack
 
-| Layer | Choice |
-|---|---|
-| Framework | TanStack Start |
-| Database / Realtime | Convex |
-| Auth | Clerk |
-| Hosting | Netlify |
-| Styling | TailwindCSS |
-| Forms | TanStack Form |
+| Layer                 | Choice                    |
+| --------------------- | ------------------------- |
+| Framework             | TanStack Start            |
+| Database / Realtime   | Convex                    |
+| Auth                  | Clerk                     |
+| Hosting               | Netlify                   |
+| Styling               | TailwindCSS               |
+| Forms                 | TanStack Form             |
 | State / Data fetching | TanStack Query (built-in) |
 
 ## Surfaces
@@ -39,6 +39,7 @@ A multitenant SaaS platform for padel tournament management. Organisations (club
 ## Phase 1 — Foundation
 
 ### 1.1 Project Setup
+
 - [ ] Scaffold TanStack Start project
 - [ ] Configure Convex project (dev + prod)
 - [ ] Connect Netlify deployment pipeline
@@ -46,6 +47,7 @@ A multitenant SaaS platform for padel tournament management. Organisations (club
 - [ ] Define environment variables and secrets
 
 ### 1.2 Auth (Clerk)
+
 - [ ] Clerk integration — email/password + social OAuth for all platform users
 - [ ] Clerk organisation provisioning for tenants (Super Admin creates org via Clerk API)
 - [ ] Anonymous auth for walk-in participants (QR-triggered, short-lived token)
@@ -53,6 +55,7 @@ A multitenant SaaS platform for padel tournament management. Organisations (club
 - [ ] Org context middleware — every request scoped to the active org via Clerk JWT claims
 
 ### 1.3 Core Data Model
+
 ```
 organizations    (id, clerkOrgId, name, slug, status)
 users            (id, clerkUserId, name, email)
@@ -72,22 +75,24 @@ leaderboard      (id, tournamentId, participantId, points, wins, losses)
 ## Phase 2 — Tournament Formats
 
 Each format implements two functions:
+
 - `generateRounds(tournament, participants) → Round[]`
 - `calculatePoints(match, score) → PointsDelta`
 
 ### Format Implementations
 
-| Format | Entry Type | Partner Rotation | Rounds Logic |
-|---|---|---|---|
-| Americano | Solo | Every round | All players rotate, points accumulate individually |
-| Mexicano | Solo | Based on ranking | Partners assigned by current standing each round |
-| Knockout | Pair | Fixed | Single elimination bracket |
-| Round Robin | Pair | Fixed | All pairs play each other, points total |
-| King of the Court | Solo | Winners stay | Winning pair stays on court, losers rotate out |
-| Snakes and Ladders | Pair | Fixed | Round robin + promotion/relegation between courts |
-| Team Clash | Team (pairs) | Fixed | Two teams, pairs matched cross-team, team points total |
+| Format             | Entry Type   | Partner Rotation | Rounds Logic                                           |
+| ------------------ | ------------ | ---------------- | ------------------------------------------------------ |
+| Americano          | Solo         | Every round      | All players rotate, points accumulate individually     |
+| Mexicano           | Solo         | Based on ranking | Partners assigned by current standing each round       |
+| Knockout           | Pair         | Fixed            | Single elimination bracket                             |
+| Round Robin        | Pair         | Fixed            | All pairs play each other, points total                |
+| King of the Court  | Solo         | Winners stay     | Winning pair stays on court, losers rotate out         |
+| Snakes and Ladders | Pair         | Fixed            | Round robin + promotion/relegation between courts      |
+| Team Clash         | Team (pairs) | Fixed            | Two teams, pairs matched cross-team, team points total |
 
 ### Phase 2 Deliverables
+
 - [ ] Format engine interface (shared contract)
 - [ ] Americano engine
 - [ ] Mexicano engine

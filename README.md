@@ -5,6 +5,7 @@ A multitenant padel tournament management platform. Organisers create tournament
 ## Features
 
 **Tournament formats**
+
 - **Americano** — all rounds pre-generated, circle rotation pairing
 - **Round Robin** — fixed pairs, all rounds upfront
 - **Mexicano** — one round at a time, paired by current leaderboard ranking
@@ -13,17 +14,20 @@ A multitenant padel tournament management platform. Organisers create tournament
 - **Snakes & Ladders** — winners move up court, losers move down; only court 1 scores points
 
 **Organiser dashboard** (`/:slug`)
+
 - Tournament CRUD, round controls (start/end), score tracking
 - Player management — registered members and walk-ins
 - Venue and court management
 - Organisation settings with suspend/reactivate
 
 **QR code self-join** (`/join/:tournamentId`)
+
 - Players scan a QR code to join a tournament — no admin needed
 - Sign up or sign in via Clerk, then one tap to join
 - QR displayed on kiosk pre-match screen and organiser tournament page
 
 **Kiosk display** (`/kiosk/:tournamentId`)
+
 - Fullscreen dark UI for TVs/projectors
 - Live court scores and ranked standings with marquee auto-scroll
 - Configurable round timer with countdown in the header
@@ -32,19 +36,20 @@ A multitenant padel tournament management platform. Organisers create tournament
 - Realtime updates via Convex subscriptions
 
 **Super Admin** (`/admin`)
+
 - List all organisations with stats
 - Create and suspend organisations
 
 ## Tech stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | React 19, TanStack Start, TanStack Router (file-based) |
-| Styling | Tailwind CSS 4 |
-| Backend | [Convex](https://convex.dev) (realtime database, server functions) |
-| Auth | [Clerk](https://clerk.com) (organisations + users) |
-| Hosting | Netlify |
-| Icons | Lucide React |
+| Layer    | Technology                                                         |
+| -------- | ------------------------------------------------------------------ |
+| Frontend | React 19, TanStack Start, TanStack Router (file-based)             |
+| Styling  | Tailwind CSS 4                                                     |
+| Backend  | [Convex](https://convex.dev) (realtime database, server functions) |
+| Auth     | [Clerk](https://clerk.com) (organisations + users)                 |
+| Hosting  | Netlify                                                            |
+| Icons    | Lucide React                                                       |
 
 ## Getting started
 
@@ -162,14 +167,14 @@ convex/
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start Vite dev server on port 3000 |
-| `npx convex dev` | Start Convex dev server on port 3210 |
+| Command              | Description                           |
+| -------------------- | ------------------------------------- |
+| `npm run dev`        | Start Vite dev server on port 3000    |
+| `npx convex dev`     | Start Convex dev server on port 3210  |
 | `npm run dev:zellij` | Start both servers in a zellij layout |
-| `npm run build` | Production build |
-| `npm run test` | Run unit tests (Vitest) |
-| `npm run test:e2e` | Run end-to-end tests (Playwright) |
+| `npm run build`      | Production build                      |
+| `npm run test`       | Run unit tests (Vitest)               |
+| `npm run test:e2e`   | Run end-to-end tests (Playwright)     |
 
 ## Deployment
 
