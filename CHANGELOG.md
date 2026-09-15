@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Add oxlint/oxfmt and reformat codebase; add pre-commit hook; track .mise.toml (070176c)
+- Add Double Americano groups and crossover finals (9330b82)
+- Add configurable Americano ranking order and shared standings (#26) (896a3c2)
+- Add copy roster from another tournament (#21) (9cf6c06)
 - Add Schedule/Standings tabs to /manage, auto-switch on finish (0042c13)
 - Add a Finish tournament action to /manage (03b359d)
 - Add a mobile-first schedule view for /manage (85538e9)
@@ -17,8 +21,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Regenerate changelog to include multi-org sign-in picker (831ba7a)
-- Let users pick which organisation to sign in to when they belong to several (d8c6f71)
+- Regenerate Convex API types for new modules (361d552)
+- Alternate Double Americano group courts each round (f9ce47d)
+- Compute round schedules in an action and reject stale plans (4d714a9)
+- Bound Americano court search for larger tournaments (c140e5e)
+- Balance Americano court distribution without changing fixtures (7e42531)
+- Filter roster suggestions by typed name in tournament wizard (#18) (935ad01)
+- Let multi-org users pick which org to sign in to (#16) (a211a4f)
 - Mobile score grid: 2-row horizontal scroll (#12) (0552344)
 - Group team standings/podium and fix rating tiers per team (#11) (ccc4bfd)
 - Regenerate changelog to include manage-page tabs (13330a4)
@@ -37,7 +46,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- Fix import-members placeholder line break; add offline-manage design doc (b860b20)
+- Fix Double Americano archiving, reset lock and silent confirm failures (4b82883)
 - Fix /manage PIN gate title and stale round status (f5da404)
 - Fix Round Robin court double-booking and auto-suggest round duration (de9eeec)
 
