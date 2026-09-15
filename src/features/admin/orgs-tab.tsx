@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useState } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "#/../convex/_generated/api";
 import type { Id } from "#/../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -208,38 +208,21 @@ function OrgRow({ org }: { org: OrgWithStats }) {
 }
 
 function OrgAdminsInline({ organizationId }: { organizationId: Id<"organizations"> }) {
-  const listOrgAdmins = useAction(api.clerkActions.listOrgAdmins);
-  const [state, setState] = useState<
-    | { status: "loading" }
-    | { status: "error"; error: string }
-    | {
-        status: "loaded";
-        admins: { clerkUserId: string; name: string; email: string; role: string }[];
-      }
-  >({ status: "loading" });
+  const members = useQuery(api.memberships.listForOrg, { organizationId });
 
-  useEffect(() => {
-    setState({ status: "loading" });
-    listOrgAdmins({ organizationId })
-      .then((admins) => setState({ status: "loaded", admins }))
-      .catch((e) => setState({ status: "error", error: errorMessage(e, "Failed to load admins") }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organizationId]);
-
-  if (state.status === "loading")
+  if (members === undefined)
     return <p className="text-sm text-muted-foreground">Loading admins…</p>;
-  if (state.status === "error") return <p className="text-destructive text-sm">{state.error}</p>;
-  if (state.admins.length === 0)
+  if (members.length === 0)
     return <p className="text-sm text-muted-foreground">No admins assigned yet.</p>;
 
   return (
     <ul className="space-y-1.5">
-      {state.admins.map((a) => (
-        <li key={a.clerkUserId} className="flex items-center gap-2 text-sm">
-          <span className="font-medium">{a.name || "Unknown"}</span>
-          <span className="text-muted-foreground text-xs">{a.email}</span>
+      {members.map((m) => (
+        <li key={m.userId} className="flex items-center gap-2 text-sm">
+          <span className="font-medium">{m.name || "Unknown"}</span>
+          <span className="text-muted-foreground text-xs">{m.email}</span>
           <Badge variant="secondary" className="text-[10px]">
-            {a.role.replace("org:", "")}
+            {m.role}
           </Badge>
         </li>
       ))}
@@ -260,11 +243,14 @@ function AssignAdminInline({
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const users = useQuery(api.users.list);
-  const assignAdmin = useAction(api.clerkActions.assignOrgAdmin);
+  const assignAdmin = useMutation(api.memberships.assign);
 
   const q = search.toLowerCase();
   const filtered = (users ?? [])
-    .filter((u) => !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+    .filter(
+      (u) =>
+        !q || (u.name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q),
+    )
     .slice(0, 8);
 
   async function handleAssign() {
@@ -272,7 +258,7 @@ function AssignAdminInline({
     setSaving(true);
     setError("");
     try {
-      await assignAdmin({ organizationId, userId: selectedUserId });
+      await assignAdmin({ organizationId, userId: selectedUserId, role: "admin" });
       setDone(true);
       setTimeout(onClose, 1200);
     } catch (e) {
@@ -307,12 +293,12 @@ function AssignAdminInline({
                 key={u._id}
                 onClick={() => {
                   setSelectedUserId(u._id);
-                  setSearch(u.name);
+                  setSearch(u.name ?? u.email ?? "");
                 }}
                 className="w-full text-left px-3 py-2 hover:bg-muted text-sm flex items-center gap-2"
               >
-                <span className="font-medium">{u.name}</span>
-                <span className="text-muted-foreground text-xs">{u.email}</span>
+                <span className="font-medium">{u.name ?? "Unknown"}</span>
+                <span className="text-muted-foreground text-xs">{u.email ?? ""}</span>
               </button>
             ))}
           </div>

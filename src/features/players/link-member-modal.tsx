@@ -30,8 +30,8 @@ export function LinkMemberModal({
     .filter(
       (u) =>
         !search ||
-        u.name.toLowerCase().includes(search.toLowerCase()) ||
-        u.email.toLowerCase().includes(search.toLowerCase()),
+        (u.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        (u.email ?? "").toLowerCase().includes(search.toLowerCase()),
     );
 
   async function handleLink(userId: Id<"users">) {
@@ -70,9 +70,9 @@ export function LinkMemberModal({
                 disabled={working}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors hover:bg-zinc-50 text-left disabled:opacity-50"
               >
-                <Avatar name={u.name} size={32} />
+                <Avatar name={u.name ?? "Unknown"} size={32} />
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-sm">{u.name}</div>
+                  <div className="font-semibold text-sm">{u.name ?? "Unknown"}</div>
                   <div className="text-[12px] text-ink-mute">{u.email}</div>
                 </div>
               </button>

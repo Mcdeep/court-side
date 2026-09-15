@@ -20,7 +20,6 @@ export const devOrg = mutation({
     if (existing) return { status: "already seeded", orgId: existing._id };
 
     const orgId = await ctx.db.insert("organizations", {
-      clerkOrgId: "dev_org_riverside",
       name: "Riverside Padel Club",
       slug: "riverside-padel",
       status: "active",
@@ -65,7 +64,6 @@ export const devOrg = mutation({
 
     for (const name of PLAYERS) {
       const userId = await ctx.db.insert("users", {
-        clerkUserId: `dev_user_${name.toLowerCase().replace(/\s/g, "_")}`,
         name,
         email: `${name.toLowerCase().replace(/\s/g, ".")}@dev.test`,
       });

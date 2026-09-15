@@ -1,16 +1,8 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import {
-  ClerkProvider,
-  useAuth,
-  useOrganization,
-  useOrganizationList,
-} from "@clerk/tanstack-react-start";
-import { ConvexProviderWithClerk } from "convex/react-clerk";
-import { ConvexReactClient, useMutation } from "convex/react";
-import { useEffect } from "react";
-import { api } from "#/../convex/_generated/api";
+import { ConvexAuthProvider } from "@convex-dev/auth/react";
+import { ConvexReactClient } from "convex/react";
 
 import appCss from "../styles.css?url";
 
@@ -39,47 +31,10 @@ export const Route = createRootRoute({
 
 function RootProviders() {
   return (
-    <ClerkProvider>
-      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <UserSync />
-        <AutoActivateOrg />
-        <Outlet />
-      </ConvexProviderWithClerk>
-    </ClerkProvider>
+    <ConvexAuthProvider client={convex}>
+      <Outlet />
+    </ConvexAuthProvider>
   );
-}
-
-function UserSync() {
-  const { isSignedIn } = useAuth();
-  const upsert = useMutation(api.users.upsert);
-  useEffect(() => {
-    if (isSignedIn) upsert();
-  }, [isSignedIn]);
-  return null;
-}
-
-// Clerk doesn't auto-activate an org for members added via the backend API,
-// so if the user has no active org but belongs to exactly one, activate it.
-// Runs on every route (not just the homepage) so deep links work too.
-function AutoActivateOrg() {
-  const { organization, isLoaded: orgLoaded } = useOrganization();
-  const {
-    isLoaded: membershipsLoaded,
-    userMemberships,
-    setActive,
-  } = useOrganizationList({
-    userMemberships: true,
-  });
-
-  useEffect(() => {
-    if (!orgLoaded || !membershipsLoaded || organization || !setActive) return;
-    const memberships = userMemberships?.data ?? [];
-    if (memberships.length === 1) {
-      setActive({ organization: memberships[0].organization.id });
-    }
-  }, [orgLoaded, membershipsLoaded, organization, userMemberships, setActive]);
-
-  return null;
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {

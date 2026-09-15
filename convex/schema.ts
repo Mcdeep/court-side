@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { authTables } from "@convex-dev/auth/server";
 import {
   americanoVariantValidator,
   groupSplitModeValidator,
@@ -8,21 +9,39 @@ import {
 import { tiebreakValidator } from "./lib/tiebreaks";
 
 export default defineSchema({
+  ...authTables,
+
+  // Convex Auth's built-in users table, extended with isSuperAdmin. The
+  // index must stay named "email" — Convex Auth's Password provider looks
+  // users up by it internally.
+  users: defineTable({
+    name: v.optional(v.string()),
+    image: v.optional(v.string()),
+    email: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    phone: v.optional(v.string()),
+    phoneVerificationTime: v.optional(v.number()),
+    isAnonymous: v.optional(v.boolean()),
+    isSuperAdmin: v.optional(v.boolean()),
+  }).index("email", ["email"]),
+
   organizations: defineTable({
-    clerkOrgId: v.string(),
     name: v.string(),
     slug: v.string(),
     status: v.union(v.literal("active"), v.literal("suspended")),
-  })
-    .index("by_clerk_org_id", ["clerkOrgId"])
-    .index("by_slug", ["slug"]),
+  }).index("by_slug", ["slug"]),
 
-  users: defineTable({
-    clerkUserId: v.string(),
-    name: v.string(),
-    email: v.string(),
-    isSuperAdmin: v.optional(v.boolean()),
-  }).index("by_clerk_user_id", ["clerkUserId"]),
+  // Org-role source of truth, replacing Clerk JWT org claims. Distinct from
+  // `members` below, which is the org *roster* concept (players), not
+  // who can administer the org.
+  memberships: defineTable({
+    userId: v.id("users"),
+    organizationId: v.id("organizations"),
+    role: v.union(v.literal("admin"), v.literal("member")),
+  })
+    .index("by_user", ["userId"])
+    .index("by_organization", ["organizationId"])
+    .index("by_user_and_organization", ["userId", "organizationId"]),
 
   venues: defineTable({
     organizationId: v.id("organizations"),
@@ -70,8 +89,8 @@ export default defineSchema({
     startsAt: v.number(),
     endsAt: v.number(),
     // Generated when the tournament starts (first round generated). Lets
-    // courtside staff run the live tournament from /manage/:id without a
-    // Clerk login — see convex/lib/auth.ts requireOrgAdminOrPin.
+    // courtside staff run the live tournament from /manage/:id without
+    // signing in — see convex/lib/auth.ts requireOrgAdminOrPin.
     managePin: v.optional(v.string()),
   })
     .index("by_organization", ["organizationId"])

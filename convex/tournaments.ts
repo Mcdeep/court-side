@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireOrgAdmin, requireOrgAdminOrPin } from "./lib/auth";
+import { getUser, requireOrgAdmin, requireOrgAdminOrPin } from "./lib/auth";
 import { internal } from "./_generated/api";
 import {
   DEFAULT_TIEBREAK_ORDER,
@@ -105,12 +105,7 @@ export const list = query({
 export const listMyTournaments = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.tokenIdentifier))
-      .unique();
+    const user = await getUser(ctx);
     if (!user) return [];
 
     const participations = await ctx.db
@@ -218,7 +213,7 @@ export const getPublic = query({
   },
 });
 
-// Public — deliberately no Clerk auth. Doubles as the PIN check for the
+// Public — deliberately no session auth. Doubles as the PIN check for the
 // /manage/:id page: returns the tournament only if the pin matches.
 export const getForManage = query({
   args: { tournamentId: v.id("tournaments"), pin: v.string() },
@@ -393,7 +388,7 @@ export const deleteTournament = mutation({
 
 // Scoped in_progress -> completed transition, callable by an org admin or
 // by the tournament's manage PIN (courtside staff running /manage have no
-// Clerk session) -- unlike updateState, which only allows an org admin and
+// session) -- unlike updateState, which only allows an org admin and
 // can move a tournament through any state.
 export const finish = mutation({
   args: {

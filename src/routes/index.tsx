@@ -1,11 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Show, SignInButton, UserButton, useOrganizationList } from "@clerk/tanstack-react-start";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "#/../convex/_generated/api";
-import { useEffect, useMemo, useRef } from "react";
+import { AccountMenu } from "#/components/account-menu";
+import { useEffect, useRef } from "react";
 import type { FunctionReturnType } from "convex/server";
 
-type Org = FunctionReturnType<typeof api.organizations.list>[number];
+type Org = FunctionReturnType<typeof api.memberships.myOrgs>[number];
 
 export const Route = createFileRoute("/")({ component: Home });
 
@@ -22,16 +22,15 @@ function Home() {
           <span className="font-display font-bold text-[19px] tracking-tight">CourtOS</span>
         </div>
         <div>
-          <Show when="signed-out">
-            <SignInButton mode="modal">
-              <button className="px-4 py-2 bg-ink text-paper rounded-xl text-sm font-semibold hover:bg-ink/90 transition-colors">
-                Sign in
-              </button>
-            </SignInButton>
-          </Show>
-          <Show when="signed-in">
-            <UserButton />
-          </Show>
+          {!isLoading && !isAuthenticated && (
+            <Link
+              to="/sign-in"
+              className="px-4 py-2 bg-ink text-paper rounded-xl text-sm font-semibold hover:bg-ink/90 transition-colors"
+            >
+              Sign in
+            </Link>
+          )}
+          {!isLoading && isAuthenticated && <AccountMenu />}
         </div>
       </header>
 
@@ -51,11 +50,12 @@ function Home() {
             <p className="text-ink-mute text-lg mb-8 max-w-md mx-auto">
               Run tournaments across 6 formats, manage players, and display live scores.
             </p>
-            <SignInButton mode="modal">
-              <button className="px-6 py-3 bg-ink text-paper rounded-xl text-sm font-semibold hover:bg-ink/90 transition-colors">
-                Sign in to get started
-              </button>
-            </SignInButton>
+            <Link
+              to="/sign-in"
+              className="inline-block px-6 py-3 bg-ink text-paper rounded-xl text-sm font-semibold hover:bg-ink/90 transition-colors"
+            >
+              Sign in to get started
+            </Link>
           </div>
         )}
 
@@ -68,44 +68,22 @@ function Home() {
 function SmartRedirect() {
   const navigate = useNavigate();
   const me = useQuery(api.users.me);
-  const allOrgs = useQuery(api.organizations.list);
-  const {
-    setActive,
-    userMemberships,
-    isLoaded: listLoaded,
-  } = useOrganizationList({ userMemberships: true });
-  // Guards against a race where Clerk's org-membership data reshapes while
-  // setActive() is resolving (e.g. after a picker click), which could
-  // otherwise re-fire the auto-redirect effect below and navigate to a
-  // stale/wrong org out from under the user's actual selection.
+  const myOrgs = useQuery(api.memberships.myOrgs);
+  const allOrgs = useQuery(api.organizations.list, me?.isSuperAdmin ? {} : "skip");
   const navigatedRef = useRef(false);
-
-  const myOrgs = useMemo(() => {
-    if (!allOrgs || !userMemberships.data) return undefined;
-    const clerkOrgIds = new Set(userMemberships.data.map((m) => m.organization.id));
-    return allOrgs.filter((o) => clerkOrgIds.has(o.clerkOrgId));
-  }, [allOrgs, userMemberships.data]);
 
   function enterOrg(org: Org) {
     if (navigatedRef.current) return;
     navigatedRef.current = true;
-    void setActive?.({ organization: org.clerkOrgId }).then(() => {
-      navigate({ to: `/${org.slug}/tournaments` as any });
-    });
+    navigate({ to: `/${org.slug}/tournaments` as any });
   }
 
   useEffect(() => {
     if (navigatedRef.current) return;
-    if (
-      me === undefined ||
-      allOrgs === undefined ||
-      !listLoaded ||
-      myOrgs === undefined ||
-      userMemberships.isLoading
-    )
-      return;
+    if (me === undefined || myOrgs === undefined) return;
 
     if (me?.isSuperAdmin) {
+      if (allOrgs === undefined) return;
       navigatedRef.current = true;
       const firstOrg = allOrgs[0];
       navigate({ to: firstOrg ? (`/${firstOrg.slug}/tournaments` as any) : "/admin" });
@@ -125,7 +103,7 @@ function SmartRedirect() {
 
     // Belongs to multiple orgs — fall through and let the picker below render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [me, allOrgs, listLoaded, myOrgs, navigate]);
+  }, [me, myOrgs, allOrgs, navigate]);
 
   if (myOrgs && myOrgs.length > 1) {
     return <OrgPicker orgs={myOrgs} onSelect={enterOrg} />;

@@ -45,7 +45,8 @@ function PlayersPage() {
   const { members, walkIns } = data;
   const q = search.toLowerCase();
   const filteredMembers = members.filter(
-    (m) => !q || m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q),
+    (m) =>
+      !q || (m.name ?? "").toLowerCase().includes(q) || (m.email ?? "").toLowerCase().includes(q),
   );
   const filteredWalkIns = walkIns.filter((w) => !q || w.name.toLowerCase().includes(q));
   const filteredRoster = roster.filter((m) => !q || m.name.toLowerCase().includes(q));
@@ -232,11 +233,11 @@ function PlayersPage() {
                 key={m._id}
                 className="grid grid-cols-[auto_1fr_1fr_90px_80px] gap-4 px-5 py-3 items-center border-b border-zinc-100 last:border-0 hover:bg-zinc-50/60 transition-colors"
               >
-                <Avatar name={m.name} size={32} />
+                <Avatar name={m.name ?? "Unknown"} size={32} />
                 <div className="min-w-0">
-                  <div className="font-semibold text-sm truncate">{m.name}</div>
+                  <div className="font-semibold text-sm truncate">{m.name ?? "Unknown"}</div>
                 </div>
-                <div className="text-sm text-ink-mute truncate">{m.email}</div>
+                <div className="text-sm text-ink-mute truncate">{m.email ?? "Unknown"}</div>
                 <div className="flex justify-end">
                   <RatingEditor
                     organizationId={org._id}

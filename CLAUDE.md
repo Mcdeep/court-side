@@ -19,11 +19,11 @@ Two processes, run together (or via `npm run dev:zellij`):
 - `npx convex dev` — pushes Convex functions and watches for changes.
 - `npm run dev` — Vite dev server on port 3000.
 
-The dev Convex deployment needs its own `CLERK_SECRET_KEY` set (separate
-from prod) for any Clerk-backed action (org creation, assign admin, list
-admins) to work locally: `npx convex env set CLERK_SECRET_KEY <sk_test_...>`.
-Check with `npx convex env list` if those actions fail with
-"CLERK_SECRET_KEY not configured".
+The dev Convex deployment needs its own auth env vars set (separate from
+prod) for sign-in to work locally: `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`,
+`AUTH_RESEND_KEY` via `npx convex env set <NAME> <value>`. Check with
+`npx convex env list`. `SITE_URL`/`JWT_PRIVATE_KEY`/`JWKS` are set
+automatically by `npx @convex-dev/auth`.
 
 Known gotchas on this machine:
 

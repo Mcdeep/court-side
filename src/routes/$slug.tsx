@@ -6,9 +6,9 @@ import {
   useParams,
   useRouterState,
 } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
-import { useAuth, UserButton } from "@clerk/tanstack-react-start";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "#/../convex/_generated/api";
+import { AccountMenu } from "#/components/account-menu";
 import { Icon } from "#/components/ui/icon";
 import { useEffect } from "react";
 import {
@@ -44,24 +44,24 @@ const NAV = [
 function OrgShell() {
   const { slug } = useParams({ from: "/$slug" });
   const navigate = useNavigate();
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const active = NAV.find((n) => pathname.includes(`/${n.id}`))?.id ?? "tournaments";
   const isWizard = pathname.endsWith("/tournaments/new");
 
   useEffect(() => {
-    if (isLoaded && !isSignedIn) {
+    if (!isLoading && !isAuthenticated) {
       navigate({ to: "/" });
     }
-  }, [isLoaded, isSignedIn, navigate]);
+  }, [isLoading, isAuthenticated, navigate]);
 
   const org = useQuery(api.organizations.getBySlug, { slug });
   const me = useQuery(api.users.me);
   const tournaments = useQuery(api.tournaments.list, org ? { organizationId: org._id } : "skip");
   const tournamentCount = tournaments?.length ?? 0;
 
-  if (!isLoaded) return <ShellSkeleton />;
-  if (!isSignedIn) return null;
+  if (isLoading) return <ShellSkeleton />;
+  if (!isAuthenticated) return null;
 
   if (org === undefined || me === undefined) return <ShellSkeleton />;
   if (org === null)
@@ -178,13 +178,7 @@ function Sidebar({
           </SidebarMenu>
         )}
         <div className="flex items-center gap-3 p-2 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center">
-          <UserButton
-            appearance={{
-              elements: {
-                avatarBox: "w-9 h-9",
-              },
-            }}
-          />
+          <AccountMenu />
           <div className="text-left min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
             <div className="text-[13px] font-semibold truncate capitalize">
               {slug.replace(/-/g, " ")}

@@ -21,7 +21,9 @@
     "changelog:release": "node scripts/generate-changelog.mjs --release"
   },
   "dependencies": {
-    "@clerk/tanstack-react-start": "^1.5.7",
+    "@auth/core": "^0.41.1",
+    "@convex-dev/auth": "^0.0.95",
+    "@oslojs/crypto": "^1.0.1",
     "@tailwindcss/vite": "^4.3.1",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-router": "latest",
@@ -40,6 +42,7 @@
     "radix-ui": "^1.6.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "resend": "^6.28.1",
     "tailwind-merge": "^3.7.0",
     "tailwindcss": "^4.3.1"
   },

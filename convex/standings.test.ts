@@ -11,7 +11,6 @@ async function setup() {
   const t = convexTest(schema, modules);
   const data = await t.run(async (ctx) => {
     const organizationId = await ctx.db.insert("organizations", {
-      clerkOrgId: "club",
       name: "Club",
       slug: "club",
       status: "active",
@@ -21,25 +20,25 @@ async function setup() {
       name: "Courts",
       courtCount: 2,
     });
-    await ctx.db.insert("users", {
-      clerkUserId: "organizer",
+    const organizerId = await ctx.db.insert("users", {
       name: "Organizer",
       email: "organizer@example.test",
     });
-    await ctx.db.insert("users", {
-      clerkUserId: "outsider",
+    await ctx.db.insert("memberships", {
+      userId: organizerId,
+      organizationId,
+      role: "admin",
+    });
+    const outsiderId = await ctx.db.insert("users", {
       name: "Outsider",
       email: "outsider@example.test",
     });
-    return { organizationId, venueId };
+    return { organizationId, venueId, organizerId, outsiderId };
   });
-  const organizer = t.withIdentity({
-    tokenIdentifier: "organizer",
-    org_id: "club",
-    org_role: "org:admin",
-  });
+  const organizer = t.withIdentity({ subject: data.organizerId });
   const tournamentId = await organizer.mutation(api.tournaments.create, {
-    ...data,
+    organizationId: data.organizationId,
+    venueId: data.venueId,
     name: "Americano",
     format: "americano",
     startsAt: 0,
@@ -144,7 +143,7 @@ describe("tournament tiebreak settings", () => {
   });
 
   test("requires membership in the tournament organisation", async () => {
-    const { t, tournamentId } = await setup();
+    const { t, tournamentId, outsiderId } = await setup();
     const args = {
       tournamentId,
       tiebreakOrder: ["points", "point_diff", "wins", "head_to_head"] as (
@@ -155,11 +154,7 @@ describe("tournament tiebreak settings", () => {
       )[],
     };
     await expect(t.mutation(api.tournaments.update, args)).rejects.toThrow("Not authenticated");
-    const outsider = t.withIdentity({
-      tokenIdentifier: "outsider",
-      org_id: "another-club",
-      org_role: "org:admin",
-    });
+    const outsider = t.withIdentity({ subject: outsiderId });
     await expect(outsider.mutation(api.tournaments.update, args)).rejects.toThrow("Not a member");
   });
 
@@ -398,7 +393,6 @@ describe("Americano standings and ratings", () => {
     const { memberId, userId } = await t.run(async (ctx) => ({
       memberId: (await ctx.db.get(participants[1]))!.memberId!,
       userId: await ctx.db.insert("users", {
-        clerkUserId: "linked",
         name: "B",
         email: "b@example.test",
       }),

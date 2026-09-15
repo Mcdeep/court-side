@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
-import { useAuth, UserButton } from "@clerk/tanstack-react-start";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "#/../convex/_generated/api";
+import { AccountMenu } from "#/components/account-menu";
 import { Icon } from "#/components/ui/icon";
 import { useEffect, useState } from "react";
 
@@ -11,16 +11,16 @@ export const Route = createFileRoute("/dashboard")({
 
 function DashboardPage() {
   const navigate = useNavigate();
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const [tab, setTab] = useState<"tournaments" | "rankings">("tournaments");
   const me = useQuery(api.users.me);
 
   useEffect(() => {
-    if (isLoaded && !isSignedIn) navigate({ to: "/" });
-  }, [isLoaded, isSignedIn, navigate]);
+    if (!isLoading && !isAuthenticated) navigate({ to: "/" });
+  }, [isLoading, isAuthenticated, navigate]);
 
-  if (!isLoaded) return <DashSkeleton />;
-  if (!isSignedIn) return null;
+  if (isLoading) return <DashSkeleton />;
+  if (!isAuthenticated) return null;
 
   return (
     <div className="min-h-screen bg-paper font-sans text-ink">
@@ -74,7 +74,7 @@ function TopNav({
               Admin
             </Link>
           )}
-          <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+          <AccountMenu />
         </div>
       </div>
     </header>

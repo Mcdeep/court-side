@@ -3,7 +3,7 @@ export function lastName(name: string) {
 }
 
 export function participantName(
-  p: { user?: { name: string } | null; walkInName?: string | null } | null | undefined,
+  p: { user?: { name?: string | null } | null; walkInName?: string | null } | null | undefined,
 ) {
   return p?.user?.name ?? p?.walkInName ?? "?";
 }
@@ -11,8 +11,14 @@ export function participantName(
 export function pairNames(
   pair:
     | {
-        participantA?: { user?: { name: string } | null; walkInName?: string | null } | null;
-        participantB?: { user?: { name: string } | null; walkInName?: string | null } | null;
+        participantA?: {
+          user?: { name?: string | null } | null;
+          walkInName?: string | null;
+        } | null;
+        participantB?: {
+          user?: { name?: string | null } | null;
+          walkInName?: string | null;
+        } | null;
       }
     | null
     | undefined,

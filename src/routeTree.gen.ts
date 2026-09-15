@@ -8,315 +8,334 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as SlugRouteImport } from './routes/$slug'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as SlugCourtsRouteImport } from './routes/$slug/courts'
-import { Route as SlugPlayersRouteImport } from './routes/$slug/players'
-import { Route as SlugRankingsRouteImport } from './routes/$slug/rankings'
-import { Route as SlugSettingsRouteImport } from './routes/$slug/settings'
-import { Route as JoinTournamentIdRouteImport } from './routes/join/$tournamentId'
-import { Route as KioskTournamentIdRouteImport } from './routes/kiosk/$tournamentId'
-import { Route as ManageTournamentIdRouteImport } from './routes/manage/$tournamentId'
-import { Route as SlugTournamentsIndexRouteImport } from './routes/$slug/tournaments/index'
-import { Route as SlugTournamentsTournamentIdRouteImport } from './routes/$slug/tournaments/$tournamentId'
-import { Route as SlugTournamentsNewRouteImport } from './routes/$slug/tournaments/new'
+import { Route as rootRouteImport } from "./routes/__root";
+import { Route as IndexRouteImport } from "./routes/index";
+import { Route as SlugRouteImport } from "./routes/$slug";
+import { Route as AdminRouteImport } from "./routes/admin";
+import { Route as DashboardRouteImport } from "./routes/dashboard";
+import { Route as SignInRouteImport } from "./routes/sign-in";
+import { Route as SlugCourtsRouteImport } from "./routes/$slug/courts";
+import { Route as SlugPlayersRouteImport } from "./routes/$slug/players";
+import { Route as SlugRankingsRouteImport } from "./routes/$slug/rankings";
+import { Route as SlugSettingsRouteImport } from "./routes/$slug/settings";
+import { Route as JoinTournamentIdRouteImport } from "./routes/join/$tournamentId";
+import { Route as KioskTournamentIdRouteImport } from "./routes/kiosk/$tournamentId";
+import { Route as ManageTournamentIdRouteImport } from "./routes/manage/$tournamentId";
+import { Route as SlugTournamentsIndexRouteImport } from "./routes/$slug/tournaments/index";
+import { Route as SlugTournamentsTournamentIdRouteImport } from "./routes/$slug/tournaments/$tournamentId";
+import { Route as SlugTournamentsNewRouteImport } from "./routes/$slug/tournaments/new";
 
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SlugRoute = SlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
+  id: "/$slug",
+  path: "/$slug",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+  id: "/admin",
+  path: "/admin",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+  id: "/dashboard",
+  path: "/dashboard",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
+const SignInRoute = SignInRouteImport.update({
+  id: "/sign-in",
+  path: "/sign-in",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const SlugCourtsRoute = SlugCourtsRouteImport.update({
-  id: '/courts',
-  path: '/courts',
+  id: "/courts",
+  path: "/courts",
   getParentRoute: () => SlugRoute,
-} as any)
+} as any);
 const SlugPlayersRoute = SlugPlayersRouteImport.update({
-  id: '/players',
-  path: '/players',
+  id: "/players",
+  path: "/players",
   getParentRoute: () => SlugRoute,
-} as any)
+} as any);
 const SlugRankingsRoute = SlugRankingsRouteImport.update({
-  id: '/rankings',
-  path: '/rankings',
+  id: "/rankings",
+  path: "/rankings",
   getParentRoute: () => SlugRoute,
-} as any)
+} as any);
 const SlugSettingsRoute = SlugSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+  id: "/settings",
+  path: "/settings",
   getParentRoute: () => SlugRoute,
-} as any)
+} as any);
 const JoinTournamentIdRoute = JoinTournamentIdRouteImport.update({
-  id: '/join/$tournamentId',
-  path: '/join/$tournamentId',
+  id: "/join/$tournamentId",
+  path: "/join/$tournamentId",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const KioskTournamentIdRoute = KioskTournamentIdRouteImport.update({
-  id: '/kiosk/$tournamentId',
-  path: '/kiosk/$tournamentId',
+  id: "/kiosk/$tournamentId",
+  path: "/kiosk/$tournamentId",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ManageTournamentIdRoute = ManageTournamentIdRouteImport.update({
-  id: '/manage/$tournamentId',
-  path: '/manage/$tournamentId',
+  id: "/manage/$tournamentId",
+  path: "/manage/$tournamentId",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SlugTournamentsIndexRoute = SlugTournamentsIndexRouteImport.update({
-  id: '/tournaments/',
-  path: '/tournaments/',
+  id: "/tournaments/",
+  path: "/tournaments/",
   getParentRoute: () => SlugRoute,
-} as any)
-const SlugTournamentsTournamentIdRoute =
-  SlugTournamentsTournamentIdRouteImport.update({
-    id: '/tournaments/$tournamentId',
-    path: '/tournaments/$tournamentId',
-    getParentRoute: () => SlugRoute,
-  } as any)
+} as any);
+const SlugTournamentsTournamentIdRoute = SlugTournamentsTournamentIdRouteImport.update({
+  id: "/tournaments/$tournamentId",
+  path: "/tournaments/$tournamentId",
+  getParentRoute: () => SlugRoute,
+} as any);
 const SlugTournamentsNewRoute = SlugTournamentsNewRouteImport.update({
-  id: '/tournaments/new',
-  path: '/tournaments/new',
+  id: "/tournaments/new",
+  path: "/tournaments/new",
   getParentRoute: () => SlugRoute,
-} as any)
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/$slug': typeof SlugRouteWithChildren
-  '/admin': typeof AdminRoute
-  '/dashboard': typeof DashboardRoute
-  '/$slug/courts': typeof SlugCourtsRoute
-  '/$slug/players': typeof SlugPlayersRoute
-  '/$slug/rankings': typeof SlugRankingsRoute
-  '/$slug/settings': typeof SlugSettingsRoute
-  '/join/$tournamentId': typeof JoinTournamentIdRoute
-  '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
-  '/manage/$tournamentId': typeof ManageTournamentIdRoute
-  '/$slug/tournaments/$tournamentId': typeof SlugTournamentsTournamentIdRoute
-  '/$slug/tournaments/new': typeof SlugTournamentsNewRoute
-  '/$slug/tournaments/': typeof SlugTournamentsIndexRoute
+  "/": typeof IndexRoute;
+  "/$slug": typeof SlugRouteWithChildren;
+  "/admin": typeof AdminRoute;
+  "/dashboard": typeof DashboardRoute;
+  "/sign-in": typeof SignInRoute;
+  "/$slug/courts": typeof SlugCourtsRoute;
+  "/$slug/players": typeof SlugPlayersRoute;
+  "/$slug/rankings": typeof SlugRankingsRoute;
+  "/$slug/settings": typeof SlugSettingsRoute;
+  "/join/$tournamentId": typeof JoinTournamentIdRoute;
+  "/kiosk/$tournamentId": typeof KioskTournamentIdRoute;
+  "/manage/$tournamentId": typeof ManageTournamentIdRoute;
+  "/$slug/tournaments/$tournamentId": typeof SlugTournamentsTournamentIdRoute;
+  "/$slug/tournaments/new": typeof SlugTournamentsNewRoute;
+  "/$slug/tournaments/": typeof SlugTournamentsIndexRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/$slug': typeof SlugRouteWithChildren
-  '/admin': typeof AdminRoute
-  '/dashboard': typeof DashboardRoute
-  '/$slug/courts': typeof SlugCourtsRoute
-  '/$slug/players': typeof SlugPlayersRoute
-  '/$slug/rankings': typeof SlugRankingsRoute
-  '/$slug/settings': typeof SlugSettingsRoute
-  '/join/$tournamentId': typeof JoinTournamentIdRoute
-  '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
-  '/manage/$tournamentId': typeof ManageTournamentIdRoute
-  '/$slug/tournaments/$tournamentId': typeof SlugTournamentsTournamentIdRoute
-  '/$slug/tournaments/new': typeof SlugTournamentsNewRoute
-  '/$slug/tournaments': typeof SlugTournamentsIndexRoute
+  "/": typeof IndexRoute;
+  "/$slug": typeof SlugRouteWithChildren;
+  "/admin": typeof AdminRoute;
+  "/dashboard": typeof DashboardRoute;
+  "/sign-in": typeof SignInRoute;
+  "/$slug/courts": typeof SlugCourtsRoute;
+  "/$slug/players": typeof SlugPlayersRoute;
+  "/$slug/rankings": typeof SlugRankingsRoute;
+  "/$slug/settings": typeof SlugSettingsRoute;
+  "/join/$tournamentId": typeof JoinTournamentIdRoute;
+  "/kiosk/$tournamentId": typeof KioskTournamentIdRoute;
+  "/manage/$tournamentId": typeof ManageTournamentIdRoute;
+  "/$slug/tournaments/$tournamentId": typeof SlugTournamentsTournamentIdRoute;
+  "/$slug/tournaments/new": typeof SlugTournamentsNewRoute;
+  "/$slug/tournaments": typeof SlugTournamentsIndexRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/$slug': typeof SlugRouteWithChildren
-  '/admin': typeof AdminRoute
-  '/dashboard': typeof DashboardRoute
-  '/$slug/courts': typeof SlugCourtsRoute
-  '/$slug/players': typeof SlugPlayersRoute
-  '/$slug/rankings': typeof SlugRankingsRoute
-  '/$slug/settings': typeof SlugSettingsRoute
-  '/join/$tournamentId': typeof JoinTournamentIdRoute
-  '/kiosk/$tournamentId': typeof KioskTournamentIdRoute
-  '/manage/$tournamentId': typeof ManageTournamentIdRoute
-  '/$slug/tournaments/$tournamentId': typeof SlugTournamentsTournamentIdRoute
-  '/$slug/tournaments/new': typeof SlugTournamentsNewRoute
-  '/$slug/tournaments/': typeof SlugTournamentsIndexRoute
+  __root__: typeof rootRouteImport;
+  "/": typeof IndexRoute;
+  "/$slug": typeof SlugRouteWithChildren;
+  "/admin": typeof AdminRoute;
+  "/dashboard": typeof DashboardRoute;
+  "/sign-in": typeof SignInRoute;
+  "/$slug/courts": typeof SlugCourtsRoute;
+  "/$slug/players": typeof SlugPlayersRoute;
+  "/$slug/rankings": typeof SlugRankingsRoute;
+  "/$slug/settings": typeof SlugSettingsRoute;
+  "/join/$tournamentId": typeof JoinTournamentIdRoute;
+  "/kiosk/$tournamentId": typeof KioskTournamentIdRoute;
+  "/manage/$tournamentId": typeof ManageTournamentIdRoute;
+  "/$slug/tournaments/$tournamentId": typeof SlugTournamentsTournamentIdRoute;
+  "/$slug/tournaments/new": typeof SlugTournamentsNewRoute;
+  "/$slug/tournaments/": typeof SlugTournamentsIndexRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/'
-    | '/$slug'
-    | '/admin'
-    | '/dashboard'
-    | '/$slug/courts'
-    | '/$slug/players'
-    | '/$slug/rankings'
-    | '/$slug/settings'
-    | '/join/$tournamentId'
-    | '/kiosk/$tournamentId'
-    | '/manage/$tournamentId'
-    | '/$slug/tournaments/$tournamentId'
-    | '/$slug/tournaments/new'
-    | '/$slug/tournaments/'
-  fileRoutesByTo: FileRoutesByTo
+    | "/"
+    | "/$slug"
+    | "/admin"
+    | "/dashboard"
+    | "/sign-in"
+    | "/$slug/courts"
+    | "/$slug/players"
+    | "/$slug/rankings"
+    | "/$slug/settings"
+    | "/join/$tournamentId"
+    | "/kiosk/$tournamentId"
+    | "/manage/$tournamentId"
+    | "/$slug/tournaments/$tournamentId"
+    | "/$slug/tournaments/new"
+    | "/$slug/tournaments/";
+  fileRoutesByTo: FileRoutesByTo;
   to:
-    | '/'
-    | '/$slug'
-    | '/admin'
-    | '/dashboard'
-    | '/$slug/courts'
-    | '/$slug/players'
-    | '/$slug/rankings'
-    | '/$slug/settings'
-    | '/join/$tournamentId'
-    | '/kiosk/$tournamentId'
-    | '/manage/$tournamentId'
-    | '/$slug/tournaments/$tournamentId'
-    | '/$slug/tournaments/new'
-    | '/$slug/tournaments'
+    | "/"
+    | "/$slug"
+    | "/admin"
+    | "/dashboard"
+    | "/sign-in"
+    | "/$slug/courts"
+    | "/$slug/players"
+    | "/$slug/rankings"
+    | "/$slug/settings"
+    | "/join/$tournamentId"
+    | "/kiosk/$tournamentId"
+    | "/manage/$tournamentId"
+    | "/$slug/tournaments/$tournamentId"
+    | "/$slug/tournaments/new"
+    | "/$slug/tournaments";
   id:
-    | '__root__'
-    | '/'
-    | '/$slug'
-    | '/admin'
-    | '/dashboard'
-    | '/$slug/courts'
-    | '/$slug/players'
-    | '/$slug/rankings'
-    | '/$slug/settings'
-    | '/join/$tournamentId'
-    | '/kiosk/$tournamentId'
-    | '/manage/$tournamentId'
-    | '/$slug/tournaments/$tournamentId'
-    | '/$slug/tournaments/new'
-    | '/$slug/tournaments/'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/"
+    | "/$slug"
+    | "/admin"
+    | "/dashboard"
+    | "/sign-in"
+    | "/$slug/courts"
+    | "/$slug/players"
+    | "/$slug/rankings"
+    | "/$slug/settings"
+    | "/join/$tournamentId"
+    | "/kiosk/$tournamentId"
+    | "/manage/$tournamentId"
+    | "/$slug/tournaments/$tournamentId"
+    | "/$slug/tournaments/new"
+    | "/$slug/tournaments/";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  SlugRoute: typeof SlugRouteWithChildren
-  AdminRoute: typeof AdminRoute
-  DashboardRoute: typeof DashboardRoute
-  JoinTournamentIdRoute: typeof JoinTournamentIdRoute
-  KioskTournamentIdRoute: typeof KioskTournamentIdRoute
-  ManageTournamentIdRoute: typeof ManageTournamentIdRoute
+  IndexRoute: typeof IndexRoute;
+  SlugRoute: typeof SlugRouteWithChildren;
+  AdminRoute: typeof AdminRoute;
+  DashboardRoute: typeof DashboardRoute;
+  SignInRoute: typeof SignInRoute;
+  JoinTournamentIdRoute: typeof JoinTournamentIdRoute;
+  KioskTournamentIdRoute: typeof KioskTournamentIdRoute;
+  ManageTournamentIdRoute: typeof ManageTournamentIdRoute;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$slug': {
-      id: '/$slug'
-      path: '/$slug'
-      fullPath: '/$slug'
-      preLoaderRoute: typeof SlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$slug/courts': {
-      id: '/$slug/courts'
-      path: '/courts'
-      fullPath: '/$slug/courts'
-      preLoaderRoute: typeof SlugCourtsRouteImport
-      parentRoute: typeof SlugRoute
-    }
-    '/$slug/players': {
-      id: '/$slug/players'
-      path: '/players'
-      fullPath: '/$slug/players'
-      preLoaderRoute: typeof SlugPlayersRouteImport
-      parentRoute: typeof SlugRoute
-    }
-    '/$slug/rankings': {
-      id: '/$slug/rankings'
-      path: '/rankings'
-      fullPath: '/$slug/rankings'
-      preLoaderRoute: typeof SlugRankingsRouteImport
-      parentRoute: typeof SlugRoute
-    }
-    '/$slug/settings': {
-      id: '/$slug/settings'
-      path: '/settings'
-      fullPath: '/$slug/settings'
-      preLoaderRoute: typeof SlugSettingsRouteImport
-      parentRoute: typeof SlugRoute
-    }
-    '/join/$tournamentId': {
-      id: '/join/$tournamentId'
-      path: '/join/$tournamentId'
-      fullPath: '/join/$tournamentId'
-      preLoaderRoute: typeof JoinTournamentIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kiosk/$tournamentId': {
-      id: '/kiosk/$tournamentId'
-      path: '/kiosk/$tournamentId'
-      fullPath: '/kiosk/$tournamentId'
-      preLoaderRoute: typeof KioskTournamentIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/manage/$tournamentId': {
-      id: '/manage/$tournamentId'
-      path: '/manage/$tournamentId'
-      fullPath: '/manage/$tournamentId'
-      preLoaderRoute: typeof ManageTournamentIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$slug/tournaments/': {
-      id: '/$slug/tournaments/'
-      path: '/tournaments'
-      fullPath: '/$slug/tournaments/'
-      preLoaderRoute: typeof SlugTournamentsIndexRouteImport
-      parentRoute: typeof SlugRoute
-    }
-    '/$slug/tournaments/$tournamentId': {
-      id: '/$slug/tournaments/$tournamentId'
-      path: '/tournaments/$tournamentId'
-      fullPath: '/$slug/tournaments/$tournamentId'
-      preLoaderRoute: typeof SlugTournamentsTournamentIdRouteImport
-      parentRoute: typeof SlugRoute
-    }
-    '/$slug/tournaments/new': {
-      id: '/$slug/tournaments/new'
-      path: '/tournaments/new'
-      fullPath: '/$slug/tournaments/new'
-      preLoaderRoute: typeof SlugTournamentsNewRouteImport
-      parentRoute: typeof SlugRoute
-    }
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/$slug": {
+      id: "/$slug";
+      path: "/$slug";
+      fullPath: "/$slug";
+      preLoaderRoute: typeof SlugRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/admin": {
+      id: "/admin";
+      path: "/admin";
+      fullPath: "/admin";
+      preLoaderRoute: typeof AdminRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/dashboard": {
+      id: "/dashboard";
+      path: "/dashboard";
+      fullPath: "/dashboard";
+      preLoaderRoute: typeof DashboardRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/sign-in": {
+      id: "/sign-in";
+      path: "/sign-in";
+      fullPath: "/sign-in";
+      preLoaderRoute: typeof SignInRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/$slug/courts": {
+      id: "/$slug/courts";
+      path: "/courts";
+      fullPath: "/$slug/courts";
+      preLoaderRoute: typeof SlugCourtsRouteImport;
+      parentRoute: typeof SlugRoute;
+    };
+    "/$slug/players": {
+      id: "/$slug/players";
+      path: "/players";
+      fullPath: "/$slug/players";
+      preLoaderRoute: typeof SlugPlayersRouteImport;
+      parentRoute: typeof SlugRoute;
+    };
+    "/$slug/rankings": {
+      id: "/$slug/rankings";
+      path: "/rankings";
+      fullPath: "/$slug/rankings";
+      preLoaderRoute: typeof SlugRankingsRouteImport;
+      parentRoute: typeof SlugRoute;
+    };
+    "/$slug/settings": {
+      id: "/$slug/settings";
+      path: "/settings";
+      fullPath: "/$slug/settings";
+      preLoaderRoute: typeof SlugSettingsRouteImport;
+      parentRoute: typeof SlugRoute;
+    };
+    "/join/$tournamentId": {
+      id: "/join/$tournamentId";
+      path: "/join/$tournamentId";
+      fullPath: "/join/$tournamentId";
+      preLoaderRoute: typeof JoinTournamentIdRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/kiosk/$tournamentId": {
+      id: "/kiosk/$tournamentId";
+      path: "/kiosk/$tournamentId";
+      fullPath: "/kiosk/$tournamentId";
+      preLoaderRoute: typeof KioskTournamentIdRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/manage/$tournamentId": {
+      id: "/manage/$tournamentId";
+      path: "/manage/$tournamentId";
+      fullPath: "/manage/$tournamentId";
+      preLoaderRoute: typeof ManageTournamentIdRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/$slug/tournaments/": {
+      id: "/$slug/tournaments/";
+      path: "/tournaments";
+      fullPath: "/$slug/tournaments/";
+      preLoaderRoute: typeof SlugTournamentsIndexRouteImport;
+      parentRoute: typeof SlugRoute;
+    };
+    "/$slug/tournaments/$tournamentId": {
+      id: "/$slug/tournaments/$tournamentId";
+      path: "/tournaments/$tournamentId";
+      fullPath: "/$slug/tournaments/$tournamentId";
+      preLoaderRoute: typeof SlugTournamentsTournamentIdRouteImport;
+      parentRoute: typeof SlugRoute;
+    };
+    "/$slug/tournaments/new": {
+      id: "/$slug/tournaments/new";
+      path: "/tournaments/new";
+      fullPath: "/$slug/tournaments/new";
+      preLoaderRoute: typeof SlugTournamentsNewRouteImport;
+      parentRoute: typeof SlugRoute;
+    };
   }
 }
 
 interface SlugRouteChildren {
-  SlugCourtsRoute: typeof SlugCourtsRoute
-  SlugPlayersRoute: typeof SlugPlayersRoute
-  SlugRankingsRoute: typeof SlugRankingsRoute
-  SlugSettingsRoute: typeof SlugSettingsRoute
-  SlugTournamentsTournamentIdRoute: typeof SlugTournamentsTournamentIdRoute
-  SlugTournamentsNewRoute: typeof SlugTournamentsNewRoute
-  SlugTournamentsIndexRoute: typeof SlugTournamentsIndexRoute
+  SlugCourtsRoute: typeof SlugCourtsRoute;
+  SlugPlayersRoute: typeof SlugPlayersRoute;
+  SlugRankingsRoute: typeof SlugRankingsRoute;
+  SlugSettingsRoute: typeof SlugSettingsRoute;
+  SlugTournamentsTournamentIdRoute: typeof SlugTournamentsTournamentIdRoute;
+  SlugTournamentsNewRoute: typeof SlugTournamentsNewRoute;
+  SlugTournamentsIndexRoute: typeof SlugTournamentsIndexRoute;
 }
 
 const SlugRouteChildren: SlugRouteChildren = {
@@ -327,28 +346,29 @@ const SlugRouteChildren: SlugRouteChildren = {
   SlugTournamentsTournamentIdRoute: SlugTournamentsTournamentIdRoute,
   SlugTournamentsNewRoute: SlugTournamentsNewRoute,
   SlugTournamentsIndexRoute: SlugTournamentsIndexRoute,
-}
+};
 
-const SlugRouteWithChildren = SlugRoute._addFileChildren(SlugRouteChildren)
+const SlugRouteWithChildren = SlugRoute._addFileChildren(SlugRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SlugRoute: SlugRouteWithChildren,
   AdminRoute: AdminRoute,
   DashboardRoute: DashboardRoute,
+  SignInRoute: SignInRoute,
   JoinTournamentIdRoute: JoinTournamentIdRoute,
   KioskTournamentIdRoute: KioskTournamentIdRoute,
   ManageTournamentIdRoute: ManageTournamentIdRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();
 
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
+import type { getRouter } from "./router.tsx";
+import type { createStart } from "@tanstack/react-start";
+declare module "@tanstack/react-start" {
   interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
+    ssr: true;
+    router: Awaited<ReturnType<typeof getRouter>>;
   }
 }

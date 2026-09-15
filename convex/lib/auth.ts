@@ -1,19 +1,17 @@
+import { getAuthUserId } from "@convex-dev/auth/server";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 
 export async function getUser(ctx: QueryCtx | MutationCtx) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) return null;
-  return ctx.db
-    .query("users")
-    .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.tokenIdentifier))
-    .unique();
+  const userId = await getAuthUserId(ctx);
+  if (!userId) return null;
+  return ctx.db.get(userId);
 }
 
 export async function requireUser(ctx: QueryCtx | MutationCtx) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Not authenticated");
-  const user = await getUser(ctx);
+  const userId = await getAuthUserId(ctx);
+  if (!userId) throw new Error("Not authenticated");
+  const user = await ctx.db.get(userId);
   if (!user) throw new Error("User profile not found — please reload");
   return user;
 }
@@ -31,27 +29,19 @@ export async function requireOrgMember(
   const user = await requireUser(ctx);
   if (user.isSuperAdmin) return { user, role: "admin" as const };
 
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Not authenticated");
+  const membership = await ctx.db
+    .query("memberships")
+    .withIndex("by_user_and_organization", (q) =>
+      q.eq("userId", user._id).eq("organizationId", organizationId),
+    )
+    .unique();
+  if (!membership) throw new Error("Not a member of this organisation");
 
-  const org = await ctx.db.get(organizationId);
-  if (!org) throw new Error("Organisation not found");
-
-  // Clerk's default session token (used when its `aud` claim is "convex")
-  // encodes org membership as a compact `o: { id, slg, rol }` claim rather
-  // than flat `org_id`/`org_role` fields used by custom JWT templates.
-  const compactOrg = (identity as any).o as { id?: string; rol?: string } | undefined;
-  const clerkOrgId = ((identity as any).org_id as string | undefined) ?? compactOrg?.id;
-  if (!clerkOrgId || clerkOrgId !== org.clerkOrgId) {
-    throw new Error("Not a member of this organisation");
-  }
-
-  const role = ((identity as any).org_role as string | undefined) ?? compactOrg?.rol;
-  return { user, role: role === "org:admin" ? ("admin" as const) : ("member" as const) };
+  return { user, role: membership.role };
 }
 
-// Any Clerk org member (org:member or org:admin) can manage tournaments.
-// Clerk org:admin is reserved for Clerk-level management only.
+// Any org member (admin or member) can manage tournaments today — preserve
+// that behavior rather than introducing a stricter admin-only gate.
 export async function requireOrgAdmin(
   ctx: QueryCtx | MutationCtx,
   organizationId: Id<"organizations">,
@@ -61,7 +51,7 @@ export async function requireOrgAdmin(
 
 // Lets a small set of write mutations (round generation/start/complete,
 // score entry) be called either by a signed-in org member, or — for the
-// PIN-gated /manage/:id page, which has no Clerk session — by anyone who
+// PIN-gated /manage/:id page, which has no session — by anyone who
 // supplies the tournament's current managePin.
 export async function requireOrgAdminOrPin(
   ctx: QueryCtx | MutationCtx,

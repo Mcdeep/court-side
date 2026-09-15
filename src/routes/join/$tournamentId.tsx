@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation } from "convex/react";
-import { useAuth, SignInButton } from "@clerk/tanstack-react-start";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useConvexAuth, useQuery, useMutation } from "convex/react";
 import { api } from "#/../convex/_generated/api";
 import { useState } from "react";
 import type { Id } from "#/../convex/_generated/dataModel";
@@ -22,7 +21,7 @@ const FORMAT_LABELS: Record<string, string> = {
 
 function JoinPage() {
   const { tournamentId } = Route.useParams();
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const tournament = useQuery(api.tournaments.getPublic, {
     tournamentId: tournamentId as Id<"tournaments">,
   });
@@ -30,7 +29,7 @@ function JoinPage() {
   const [status, setStatus] = useState<"idle" | "joining" | "joined" | "error">("idle");
   const [error, setError] = useState("");
 
-  if (tournament === undefined || !isLoaded) {
+  if (tournament === undefined || isLoading) {
     return (
       <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
         <div className="w-10 h-10 rounded-full border-2 border-zinc-200 border-t-zinc-600 animate-spin" />
@@ -101,12 +100,14 @@ function JoinPage() {
           <InfoRow label="Players" value={`${tournament.playerCount} joined`} />
         </div>
 
-        {!isSignedIn ? (
-          <SignInButton mode="modal" forceRedirectUrl={`/join/${tournamentId}`}>
-            <button className="w-full py-3 rounded-xl bg-zinc-900 text-white font-semibold text-sm hover:bg-zinc-800 transition-colors">
-              Sign in to join
-            </button>
-          </SignInButton>
+        {!isAuthenticated ? (
+          <Link
+            to="/sign-in"
+            search={{ redirect: `/join/${tournamentId}` }}
+            className="block w-full py-3 rounded-xl bg-zinc-900 text-white font-semibold text-sm text-center hover:bg-zinc-800 transition-colors"
+          >
+            Sign in to join
+          </Link>
         ) : status === "joined" ? (
           <div className="text-center py-3 rounded-xl bg-emerald-50 ring-1 ring-emerald-200">
             <span className="text-emerald-700 font-semibold text-sm">

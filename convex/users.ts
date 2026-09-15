@@ -2,34 +2,6 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getUser, requireSuperAdmin } from "./lib/auth";
 
-export const upsert = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.tokenIdentifier))
-      .unique();
-
-    const name = identity.name?.trim() || identity.nickname?.trim() || identity.email || "Unknown";
-
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        name,
-        email: identity.email ?? existing.email,
-      });
-      return existing._id;
-    }
-
-    return ctx.db.insert("users", {
-      clerkUserId: identity.tokenIdentifier,
-      name,
-      email: identity.email ?? "",
-    });
-  },
-});
-
 export const me = query({
   args: {},
   handler: async (ctx) => {

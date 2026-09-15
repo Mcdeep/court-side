@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
-import { useAuth, UserButton } from "@clerk/tanstack-react-start";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "#/../convex/_generated/api";
 import { useEffect, useState } from "react";
+import { AccountMenu } from "#/components/account-menu";
 import { Icon } from "#/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,16 +18,16 @@ export const Route = createFileRoute("/admin")({
 function AdminPage() {
   const [tab, setTab] = useState("orgs");
   const navigate = useNavigate();
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const me = useQuery(api.users.me);
   const stats = useQuery(api.organizations.globalStats);
 
   useEffect(() => {
-    if (isLoaded && !isSignedIn) navigate({ to: "/" });
-  }, [isLoaded, isSignedIn, navigate]);
+    if (!isLoading && !isAuthenticated) navigate({ to: "/" });
+  }, [isLoading, isAuthenticated, navigate]);
 
-  if (!isLoaded || me === undefined || stats === undefined) return <PageSkeleton />;
-  if (!isSignedIn) return null;
+  if (isLoading || me === undefined || stats === undefined) return <PageSkeleton />;
+  if (!isAuthenticated) return null;
 
   if (!me?.isSuperAdmin)
     return (
@@ -52,7 +52,7 @@ function AdminPage() {
               Admin
             </Badge>
           </div>
-          <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+          <AccountMenu />
         </div>
       </header>
 

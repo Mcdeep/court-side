@@ -11,7 +11,6 @@ async function setup(format: Doc<"tournaments">["format"] = "americano", count =
   const t = convexTest(schema, modules);
   const data = await t.run(async (ctx) => {
     const organizationId = await ctx.db.insert("organizations", {
-      clerkOrgId: "club",
       name: "Club",
       slug: "club",
       status: "active",
@@ -22,10 +21,10 @@ async function setup(format: Doc<"tournaments">["format"] = "americano", count =
       courtCount: 2,
     });
     const userId = await ctx.db.insert("users", {
-      clerkUserId: "organizer",
       name: "Organizer",
       email: "organizer@example.test",
     });
+    await ctx.db.insert("memberships", { userId, organizationId, role: "admin" });
     const tournamentId = await ctx.db.insert("tournaments", {
       organizationId,
       venueId,
@@ -50,11 +49,7 @@ async function setup(format: Doc<"tournaments">["format"] = "americano", count =
       );
     return { organizationId, venueId, userId, tournamentId, participants };
   });
-  const organizer = t.withIdentity({
-    tokenIdentifier: "organizer",
-    org_id: "club",
-    org_role: "org:admin",
-  });
+  const organizer = t.withIdentity({ subject: data.userId });
   const roundPlans = [
     [
       {
@@ -297,11 +292,10 @@ test("enforces organization and PIN authorization before computing", async () =>
   await expect(t.action(api.rounds.generate, { tournamentId, pin: "9999" })).rejects.toThrow(
     "Invalid PIN",
   );
-  const outsider = t.withIdentity({
-    tokenIdentifier: "organizer",
-    org_id: "other",
-    org_role: "org:admin",
-  });
+  const outsiderId = await t.run((ctx) =>
+    ctx.db.insert("users", { name: "Outsider", email: "outsider@example.test" }),
+  );
+  const outsider = t.withIdentity({ subject: outsiderId });
   await expect(outsider.action(api.rounds.generate, { tournamentId })).rejects.toThrow(
     "Not a member",
   );

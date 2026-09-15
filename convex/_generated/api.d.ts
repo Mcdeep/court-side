@@ -8,8 +8,7 @@
  * @module
  */
 
-import type * as clerkActions from "../clerkActions.js";
-import type * as clerkAdmin from "../clerkAdmin.js";
+import type * as auth from "../auth.js";
 import type * as formats_americano from "../formats/americano.js";
 import type * as formats_double_americano from "../formats/double_americano.js";
 import type * as formats_king_of_the_court from "../formats/king_of_the_court.js";
@@ -17,6 +16,7 @@ import type * as formats_knockout from "../formats/knockout.js";
 import type * as formats_mexicano from "../formats/mexicano.js";
 import type * as formats_round_robin from "../formats/round_robin.js";
 import type * as formats_snakes_and_ladders from "../formats/snakes_and_ladders.js";
+import type * as http from "../http.js";
 import type * as leaderboard from "../leaderboard.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_doubleAmericano from "../lib/doubleAmericano.js";
@@ -27,6 +27,7 @@ import type * as lib_tiebreaks from "../lib/tiebreaks.js";
 import type * as lib_tournamentStandings from "../lib/tournamentStandings.js";
 import type * as matches from "../matches.js";
 import type * as members from "../members.js";
+import type * as memberships from "../memberships.js";
 import type * as organizations from "../organizations.js";
 import type * as participants from "../participants.js";
 import type * as ratings from "../ratings.js";
@@ -41,8 +42,7 @@ import type * as venues from "../venues.js";
 import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  clerkActions: typeof clerkActions;
-  clerkAdmin: typeof clerkAdmin;
+  auth: typeof auth;
   "formats/americano": typeof formats_americano;
   "formats/double_americano": typeof formats_double_americano;
   "formats/king_of_the_court": typeof formats_king_of_the_court;
@@ -50,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   "formats/mexicano": typeof formats_mexicano;
   "formats/round_robin": typeof formats_round_robin;
   "formats/snakes_and_ladders": typeof formats_snakes_and_ladders;
+  http: typeof http;
   leaderboard: typeof leaderboard;
   "lib/auth": typeof lib_auth;
   "lib/doubleAmericano": typeof lib_doubleAmericano;
@@ -60,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   "lib/tournamentStandings": typeof lib_tournamentStandings;
   matches: typeof matches;
   members: typeof members;
+  memberships: typeof memberships;
   organizations: typeof organizations;
   participants: typeof participants;
   ratings: typeof ratings;

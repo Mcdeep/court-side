@@ -1,6 +1,6 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireOrgAdmin } from "./lib/auth";
+import { getUser, requireOrgAdmin } from "./lib/auth";
 import { doubleFinalsComplete } from "./lib/doubleAmericano";
 import { getTournamentStandings } from "./lib/tournamentStandings";
 
@@ -146,12 +146,7 @@ export const getRankings = query({
 export const getMyRankings = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.tokenIdentifier))
-      .unique();
+    const user = await getUser(ctx);
     if (!user) return [];
 
     const ratings = await ctx.db

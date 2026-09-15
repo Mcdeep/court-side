@@ -9,17 +9,16 @@ async function setup(count = 16, courtCount = 4) {
   const t = convexTest(schema, modules);
   const data = await t.run(async (ctx) => {
     const organizationId = await ctx.db.insert("organizations", {
-      clerkOrgId: "club",
       name: "Club",
       slug: "club",
       status: "active",
     });
     const venueId = await ctx.db.insert("venues", { organizationId, name: "Courts", courtCount });
-    await ctx.db.insert("users", {
-      clerkUserId: "organizer",
+    const organizerId = await ctx.db.insert("users", {
       name: "Organizer",
       email: "org@example.test",
     });
+    await ctx.db.insert("memberships", { userId: organizerId, organizationId, role: "admin" });
     const tournamentId = await ctx.db.insert("tournaments", {
       organizationId,
       venueId,
@@ -50,13 +49,9 @@ async function setup(count = 16, courtCount = 4) {
         }),
       );
     }
-    return { organizationId, venueId, tournamentId, participants };
+    return { organizationId, venueId, tournamentId, participants, organizerId };
   });
-  const organizer = t.withIdentity({
-    tokenIdentifier: "organizer",
-    org_id: "club",
-    org_role: "org:admin",
-  });
+  const organizer = t.withIdentity({ subject: data.organizerId });
   return { t, organizer, ...data };
 }
 
@@ -559,7 +554,6 @@ test("roster ratings follow accounts linked after tournament registration", asyn
   const userId = await t.run(async (ctx) => {
     const p = await ctx.db.get(participants[0]);
     const id = await ctx.db.insert("users", {
-      clerkUserId: "newly-linked",
       name: "Linked player",
       email: "linked@example.test",
     });

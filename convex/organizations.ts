@@ -70,11 +70,8 @@ export const globalStats = query({
   },
 });
 
-// adminCreate replaced by clerkAdmin.adminCreateOrg action
-
 export const create = mutation({
   args: {
-    clerkOrgId: v.string(),
     name: v.string(),
     slug: v.string(),
   },

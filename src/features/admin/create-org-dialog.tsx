@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "#/../convex/_generated/api";
 import type { Id } from "#/../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -29,12 +29,16 @@ export function CreateOrgDialog({
   const [adminUserId, setAdminUserId] = useState<Id<"users"> | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const adminCreateOrg = useAction(api.clerkActions.adminCreateOrg);
+  const createOrg = useMutation(api.organizations.create);
+  const assignMembership = useMutation(api.memberships.assign);
   const users = useQuery(api.users.list);
 
   const q = adminSearch.toLowerCase();
   const filteredUsers = (users ?? [])
-    .filter((u) => !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+    .filter(
+      (u) =>
+        !q || (u.name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q),
+    )
     .slice(0, 8);
 
   function deriveSlug(n: string) {
@@ -66,11 +70,10 @@ export function CreateOrgDialog({
     setSaving(true);
     setError("");
     try {
-      await adminCreateOrg({
-        name: name.trim(),
-        slug: slug.trim(),
-        adminUserId: adminUserId ?? undefined,
-      });
+      const organizationId = await createOrg({ name: name.trim(), slug: slug.trim() });
+      if (adminUserId) {
+        await assignMembership({ organizationId, userId: adminUserId, role: "admin" });
+      }
       resetAndClose();
     } catch (err) {
       setError(errorMessage(err, "Failed to create"));
@@ -143,21 +146,19 @@ export function CreateOrgDialog({
                       key={u._id}
                       onClick={() => {
                         setAdminUserId(u._id as Id<"users">);
-                        setAdminSearch(u.name);
+                        setAdminSearch(u.name ?? u.email ?? "");
                       }}
                       className="w-full text-left px-3 py-2 hover:bg-muted text-sm flex items-center gap-2"
                     >
-                      <span className="font-medium">{u.name}</span>
-                      <span className="text-muted-foreground text-xs">{u.email}</span>
+                      <span className="font-medium">{u.name ?? "Unknown"}</span>
+                      <span className="text-muted-foreground text-xs">{u.email ?? ""}</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
             <p className="text-[11px] text-muted-foreground">
-              {adminUserId
-                ? "User will be added as org member in Clerk"
-                : "You can assign an admin later"}
+              {adminUserId ? "User will be added as an org admin" : "You can assign an admin later"}
             </p>
           </div>
           {error && <p className="text-destructive text-sm">{error}</p>}

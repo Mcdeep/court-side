@@ -72,7 +72,7 @@ function UserActions({ user }: { user: UserRecord }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(user.email)}>
+          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(user.email ?? "")}>
             Copy email
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -101,8 +101,8 @@ function UserActions({ user }: { user: UserRecord }) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirm === "demote"
-                ? `Remove super admin privileges from ${user.name}?`
-                : `Grant super admin privileges to ${user.name}?`}
+                ? `Remove super admin privileges from ${user.name ?? user.email ?? "this user"}?`
+                : `Grant super admin privileges to ${user.name ?? user.email ?? "this user"}?`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -192,7 +192,8 @@ export function UsersTab() {
     globalFilterFn: (row, _columnId, filterValue) => {
       const q = (filterValue as string).toLowerCase();
       return (
-        row.original.name.toLowerCase().includes(q) || row.original.email.toLowerCase().includes(q)
+        (row.original.name ?? "").toLowerCase().includes(q) ||
+        (row.original.email ?? "").toLowerCase().includes(q)
       );
     },
     state: { sorting, globalFilter },
