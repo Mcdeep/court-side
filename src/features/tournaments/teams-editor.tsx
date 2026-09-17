@@ -156,7 +156,12 @@ export function TeamsEditor({
         ))}
       </div>
       {seededScheduling && teams.length >= 2 && (
-        <TeamRankingEditor tournamentId={tournamentId} teams={teams} locked={locked} />
+        <TeamRankingEditor
+          tournamentId={tournamentId}
+          teams={teams}
+          participantsById={byId}
+          locked={locked}
+        />
       )}
     </div>
   );
@@ -165,10 +170,17 @@ export function TeamsEditor({
 function TeamRankingEditor({
   tournamentId,
   teams,
+  participantsById,
   locked,
 }: {
   tournamentId: Id<"tournaments">;
-  teams: { _id: Id<"teams">; name: string; rank?: number }[];
+  teams: {
+    _id: Id<"teams">;
+    name: string;
+    rank?: number;
+    members: { _id: Id<"participants"> }[];
+  }[];
+  participantsById: Map<Id<"participants">, Participant>;
   locked: boolean;
 }) {
   const setRanksMutation = useMutation(api.teams.setRanks);
@@ -232,7 +244,18 @@ function TeamRankingEditor({
               <span className="text-[12px] font-semibold text-zinc-400 w-5 text-right tnum">
                 {i + 1}
               </span>
-              <span className="text-[13px] font-medium truncate">{team.name}</span>
+              <span className="text-[13px] font-medium truncate">
+                {team.name}
+                <span className="text-ink-mute font-normal">
+                  {" · "}
+                  {team.members
+                    .map((m) => {
+                      const p = participantsById.get(m._id);
+                      return p?.user?.name ?? p?.walkInName ?? "Unknown";
+                    })
+                    .join(" & ")}
+                </span>
+              </span>
               {!locked && <Icon name="grip" className="w-4 h-4 text-zinc-300 ml-auto" />}
             </li>
           );
