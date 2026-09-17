@@ -33,7 +33,11 @@ const generationInputsValidator = v.union(
     courtCount: v.number(),
   }),
   v.object({ kind: v.literal("americano"), ...initialFields }),
-  v.object({ kind: v.literal("round_robin"), ...initialFields }),
+  v.object({
+    kind: v.literal("round_robin"),
+    ...initialFields,
+    seeds: v.optional(v.array(seedValidator)),
+  }),
   v.object({ kind: v.literal("mexicano"), ...initialFields }),
   v.object({ kind: v.literal("knockout_first"), ...initialFields }),
   v.object({ kind: v.literal("king_first"), ...initialFields }),
@@ -248,7 +252,20 @@ export async function prepareRoundGeneration(
       };
     }
   } else if (tournament.format === "round_robin") {
-    inputs = { kind: "round_robin", participantIds, courtCount };
+    let seeds: { id: Id<"participants">; rank: number }[] | undefined;
+    if (tournament.seededScheduling) {
+      const teams = await read(
+        ctx.db
+          .query("teams")
+          .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
+          .take(200),
+      );
+      const rankByTeam = new Map(teams.map((t) => [t._id as string, t.rank]));
+      seeds = participants
+        .filter((p) => p.teamId && rankByTeam.get(p.teamId as string) !== undefined)
+        .map((p) => ({ id: p._id, rank: rankByTeam.get(p.teamId as string)! }));
+    }
+    inputs = { kind: "round_robin", participantIds, courtCount, seeds };
   } else if (tournament.format === "mexicano") {
     const leaderboard = await read(
       ctx.db
@@ -480,8 +497,17 @@ export function generateRoundPlans(inputs: GenerationInputs): Infer<typeof round
         return generateDoubleAmericanoFinals(seeded(inputs.group1), seeded(inputs.group2), courts);
       case "americano":
         return generateAmericanoRounds(inputs.participantIds, courts);
-      case "round_robin":
-        return generateRoundRobinRounds(inputs.participantIds, courts);
+      case "round_robin": {
+        const rankByParticipant = inputs.seeds
+          ? new Map(inputs.seeds.map((s) => [s.id as string, s.rank]))
+          : undefined;
+        return generateRoundRobinRounds(
+          inputs.participantIds,
+          courts,
+          Math.random,
+          rankByParticipant,
+        );
+      }
       case "mexicano":
         return [generateMexicanoRound(inputs.participantIds, courts)];
       case "knockout_first":

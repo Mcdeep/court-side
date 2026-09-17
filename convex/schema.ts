@@ -65,6 +65,8 @@ export default defineSchema({
     tiebreakOrder: v.optional(v.array(tiebreakValidator)),
     awardedRatingTiers: v.optional(v.array(v.number())),
     tiebreakOrderLocked: v.optional(v.boolean()),
+    // Round Robin only: seed rounds by team rank, closest match last.
+    seededScheduling: v.optional(v.boolean()),
     startsAt: v.number(),
     endsAt: v.number(),
     // Generated when the tournament starts (first round generated). Lets
@@ -128,6 +130,8 @@ export default defineSchema({
   teams: defineTable({
     tournamentId: v.id("tournaments"),
     name: v.string(),
+    // 1 = strongest. Set via teams.setRanks.
+    rank: v.optional(v.number()),
   }).index("by_tournament", ["tournamentId"]),
 
   rounds: defineTable({

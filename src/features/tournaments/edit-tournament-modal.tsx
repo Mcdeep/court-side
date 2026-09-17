@@ -5,6 +5,7 @@ import { AppDialog } from "#/components/app-dialog";
 import { Button } from "#/components/ui/button";
 import { Field } from "#/components/ui/field";
 import { Input } from "#/components/ui/input";
+import { Switch } from "#/components/ui/switch";
 import { toDatetimeLocal } from "#/lib/format";
 import { useAsyncAction } from "#/hooks/use-async-action";
 import type { Id, Tournament } from "./types";
@@ -14,14 +15,17 @@ import { TiebreakOrderField } from "./tiebreak-order-field";
 export function EditTournamentModal({
   tournament,
   tournamentId,
+  hasRounds,
   onClose,
 }: {
   tournament: Tournament;
   tournamentId: Id<"tournaments">;
+  hasRounds: boolean;
   onClose: () => void;
 }) {
   const [name, setName] = useState(tournament.name);
   const [tiebreakOrder, setTiebreakOrder] = useState(getRankingOrder(tournament.tiebreakOrder));
+  const [seededScheduling, setSeededScheduling] = useState(!!tournament.seededScheduling);
   const tiebreaksLocked = tournament.tiebreakOrderLocked;
   const legacyStandings = tiebreaksLocked && !tournament.tiebreakOrder;
   const [roundMinutes, setRoundMinutes] = useState(
@@ -44,6 +48,10 @@ export function EditTournamentModal({
         name: name.trim(),
         tiebreakOrder:
           tournament.format === "americano" && !legacyStandings ? tiebreakOrder : undefined,
+        seededScheduling:
+          tournament.format === "round_robin" && seededScheduling !== !!tournament.seededScheduling
+            ? seededScheduling
+            : undefined,
         roundDurationMs: roundMinutes ? Number(roundMinutes) * 60_000 : undefined,
         startsAt: new Date(startsAt).getTime(),
         endsAt: new Date(endsAt).getTime(),
@@ -86,6 +94,21 @@ export function EditTournamentModal({
             />
           </Field>
         </div>
+        {tournament.format === "round_robin" && (
+          <label className="flex items-center justify-between gap-2">
+            <span className="text-sm">
+              Seeded scheduling
+              <span className="block text-[12.5px] text-ink-mute">
+                Rank teams, and the closest match plays in the final round.
+              </span>
+            </span>
+            <Switch
+              checked={seededScheduling}
+              onCheckedChange={setSeededScheduling}
+              disabled={working || hasRounds}
+            />
+          </label>
+        )}
         {tournament.format === "americano" &&
           (legacyStandings ? (
             <p className="text-sm text-ink-mute">

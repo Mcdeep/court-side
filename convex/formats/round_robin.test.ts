@@ -75,6 +75,46 @@ describe("generateRoundRobinRounds", () => {
   });
 });
 
+describe("generateRoundRobinRounds seeded ordering", () => {
+  function teamRanks(teamCount: number, participantsPerTeam = 2) {
+    const ranks = new Map<string, number>();
+    let player = 1;
+    for (let team = 0; team < teamCount; team++) {
+      for (let i = 0; i < participantsPerTeam; i++) {
+        ranks.set(`player-${player}`, team + 1);
+        player++;
+      }
+    }
+    return ranks;
+  }
+
+  test("orders rounds from biggest rank-gap to closest match", () => {
+    const participants = Array.from({ length: 16 }, (_, index) => `player-${index + 1}`);
+    const ranks = teamRanks(8);
+    const rounds = generateRoundRobinRounds(participants, 4, Math.random, ranks);
+
+    const gap = (roundIndex: number) =>
+      Math.min(
+        ...rounds[roundIndex].map((m) => Math.abs(ranks.get(m.pairA[0])! - ranks.get(m.pairB[0])!)),
+      );
+
+    const gaps = rounds.map((_, i) => gap(i));
+    for (let i = 1; i < gaps.length; i++) expect(gaps[i]).toBeLessThanOrEqual(gaps[i - 1]);
+    expect(gaps[gaps.length - 1]).toBe(1);
+  });
+
+  test("still plays every matchup exactly once when seeded", () => {
+    const participants = Array.from({ length: 16 }, (_, index) => `player-${index + 1}`);
+    const ranks = teamRanks(8);
+    const unseeded = generateRoundRobinRounds(participants, 4).flat();
+    const seeded = generateRoundRobinRounds(participants, 4, Math.random, ranks).flat();
+
+    const key = (m: { pairA: [string, string]; pairB: [string, string] }) =>
+      [m.pairA.join(","), m.pairB.join(",")].sort().join("|");
+    expect(new Set(seeded.map(key))).toEqual(new Set(unseeded.map(key)));
+  });
+});
+
 describe("countRoundRobinRounds", () => {
   test("matches the actual generator output across a range of sizes and court counts", () => {
     for (const teamCount of [2, 3, 4, 5, 6, 7, 8, 9, 10]) {

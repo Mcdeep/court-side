@@ -129,6 +129,7 @@ function TournamentDetailPage() {
         <EditTournamentModal
           tournament={tournament}
           tournamentId={tid}
+          hasRounds={rounds.length > 0}
           onClose={() => setShowEdit(false)}
         />
       )}
@@ -296,6 +297,7 @@ function TournamentDetailPage() {
               tournamentId={tid}
               locked={rounds.length > 0}
               canEdit={canAddPlayer}
+              seededScheduling={tournament.format === "round_robin" && tournament.seededScheduling}
             />
           )}
           <ParticipantsTab
