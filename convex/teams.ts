@@ -76,11 +76,50 @@ export const setPairs = mutation({
     for (const pair of args.pairs) {
       const teamId: Id<"teams"> = await ctx.db.insert("teams", {
         tournamentId: args.tournamentId,
-        name: `Team ${n++}`,
+        name: `Team ${n}`,
+        rank: n,
       });
+      n++;
       for (const participantId of pair) {
         await ctx.db.patch(participantId, { teamId });
       }
+    }
+  },
+});
+
+export const setRanks = mutation({
+  args: {
+    tournamentId: v.id("tournaments"),
+    orderedTeamIds: v.array(v.id("teams")),
+  },
+  handler: async (ctx, args) => {
+    const tournament = await ctx.db.get(args.tournamentId);
+    if (!tournament) throw new Error("Tournament not found");
+    await requireOrgAdmin(ctx, tournament.organizationId);
+
+    const existingRounds = await ctx.db
+      .query("rounds")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
+      .take(1);
+    if (existingRounds.length > 0) {
+      throw new Error("Reset the schedule before changing team ranking");
+    }
+
+    const teams = await ctx.db
+      .query("teams")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", args.tournamentId))
+      .take(200);
+    const teamIds = new Set(teams.map((t) => t._id as string));
+    if (
+      args.orderedTeamIds.length !== teams.length ||
+      new Set(args.orderedTeamIds.map((id) => id as string)).size !== teams.length ||
+      !args.orderedTeamIds.every((id) => teamIds.has(id as string))
+    ) {
+      throw new Error("Ranking must include every team exactly once");
+    }
+
+    for (let i = 0; i < args.orderedTeamIds.length; i++) {
+      await ctx.db.patch(args.orderedTeamIds[i], { rank: i + 1 });
     }
   },
 });

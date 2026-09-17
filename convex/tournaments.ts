@@ -240,6 +240,7 @@ export const update = mutation({
     americanoVariant: v.optional(americanoVariantValidator),
     groupSplitMode: v.optional(groupSplitModeValidator),
     tiebreakOrder: v.optional(v.array(tiebreakValidator)),
+    seededScheduling: v.optional(v.boolean()),
     startsAt: v.optional(v.number()),
     endsAt: v.optional(v.number()),
   },
@@ -247,6 +248,16 @@ export const update = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
+    if (args.seededScheduling !== undefined) {
+      if (tournament.format !== "round_robin")
+        throw new Error("Seeded scheduling is only available for Round Robin");
+      const rounds = await ctx.db
+        .query("rounds")
+        .withIndex("by_tournament", (q) => q.eq("tournamentId", tournament._id))
+        .take(1);
+      if (rounds.length)
+        throw new Error("Cannot change seeded scheduling after rounds are generated");
+    }
     if (args.americanoVariant !== undefined || args.groupSplitMode !== undefined) {
       if (tournament.format !== "americano")
         throw new Error("Variant settings are only available for Americano");

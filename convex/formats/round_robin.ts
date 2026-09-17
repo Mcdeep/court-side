@@ -25,6 +25,7 @@ export function generateRoundRobinRounds(
   participantIds: string[],
   courtCount: number,
   random: () => number = Math.random,
+  rankByParticipant?: Map<string, number>,
 ): RoundPlan[] {
   const n = participantIds.length;
   if (n < 4) throw new Error("Round Robin requires at least 4 participants");
@@ -79,7 +80,29 @@ export function generateRoundRobinRounds(
     }
   }
 
+  if (rankByParticipant) {
+    return seedRounds(rounds, rankByParticipant);
+  }
+
   return rounds;
+}
+
+// Sorts rounds by descending min rank-gap: mismatches first, closest match last.
+function seedRounds(rounds: RoundPlan[], rankByParticipant: Map<string, number>): RoundPlan[] {
+  const roundScore = (round: RoundPlan) =>
+    Math.min(
+      ...round.map((match) => {
+        const rankA = rankByParticipant.get(match.pairA[0]);
+        const rankB = rankByParticipant.get(match.pairB[0]);
+        if (rankA === undefined || rankB === undefined) return Infinity;
+        return Math.abs(rankA - rankB);
+      }),
+    );
+
+  return rounds
+    .map((round, index) => ({ round, index, score: roundScore(round) }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map((entry) => entry.round);
 }
 
 // Pure round-count estimate (no participant IDs needed) — used by the

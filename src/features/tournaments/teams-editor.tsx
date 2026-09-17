@@ -14,11 +14,13 @@ export function TeamsEditor({
   tournamentId,
   locked,
   canEdit,
+  seededScheduling,
 }: {
   participants: Participant[];
   tournamentId: Id<"tournaments">;
   locked: boolean;
   canEdit: boolean;
+  seededScheduling?: boolean;
 }) {
   const teams = useQuery(api.teams.listByTournament, { tournamentId });
   const setPairsMutation = useMutation(api.teams.setPairs);
@@ -153,6 +155,89 @@ export function TeamsEditor({
           </div>
         ))}
       </div>
+      {seededScheduling && teams.length >= 2 && (
+        <TeamRankingEditor tournamentId={tournamentId} teams={teams} locked={locked} />
+      )}
+    </div>
+  );
+}
+
+function TeamRankingEditor({
+  tournamentId,
+  teams,
+  locked,
+}: {
+  tournamentId: Id<"tournaments">;
+  teams: { _id: Id<"teams">; name: string; rank?: number }[];
+  locked: boolean;
+}) {
+  const setRanksMutation = useMutation(api.teams.setRanks);
+  const { error, run } = useAsyncAction();
+  const [order, setOrder] = useState<Id<"teams">[] | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    setOrder([...teams].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)).map((t) => t._id));
+  }, [teams]);
+
+  const byId = useMemo(() => new Map(teams.map((t) => [t._id, t])), [teams]);
+
+  if (!order) return null;
+
+  function drop(targetIndex: number) {
+    if (!order || dragIndex === null || dragIndex === targetIndex) {
+      setDragIndex(null);
+      return;
+    }
+    const next = [...order];
+    const [moved] = next.splice(dragIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    setOrder(next);
+    setDragIndex(null);
+    run(async () => {
+      await setRanksMutation({ tournamentId, orderedTeamIds: next });
+    });
+  }
+
+  return (
+    <div className="border-t border-zinc-100 p-5">
+      <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-2">
+        Ranking · strongest to weakest
+      </div>
+      {locked ? (
+        <p className="text-[12.5px] text-ink-mute mb-2">
+          Reset the schedule to change the ranking.
+        </p>
+      ) : (
+        <p className="text-[12.5px] text-ink-mute mb-2">
+          Drag to reorder. The closest-ranked teams meet in the final round.
+        </p>
+      )}
+      {error && <p className="pb-2 text-[12.5px] text-red-500">{error}</p>}
+      <ol className="space-y-1.5">
+        {order.map((teamId, i) => {
+          const team = byId.get(teamId);
+          if (!team) return null;
+          return (
+            <li
+              key={teamId}
+              draggable={!locked}
+              onDragStart={() => setDragIndex(i)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => drop(i)}
+              className={`flex items-center gap-2 h-9 px-2 rounded-lg bg-zinc-50 ${
+                locked ? "" : "cursor-grab active:cursor-grabbing"
+              } ${dragIndex === i ? "opacity-40" : ""}`}
+            >
+              <span className="text-[12px] font-semibold text-zinc-400 w-5 text-right tnum">
+                {i + 1}
+              </span>
+              <span className="text-[13px] font-medium truncate">{team.name}</span>
+              {!locked && <Icon name="grip" className="w-4 h-4 text-zinc-300 ml-auto" />}
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }
