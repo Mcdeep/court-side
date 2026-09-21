@@ -8,60 +8,62 @@
  * @module
  */
 
-import type * as auth from "../auth.js";
-import type * as formats_americano from "../formats/americano.js";
-import type * as formats_double_americano from "../formats/double_americano.js";
-import type * as formats_king_of_the_court from "../formats/king_of_the_court.js";
-import type * as formats_knockout from "../formats/knockout.js";
-import type * as formats_mexicano from "../formats/mexicano.js";
-import type * as formats_round_robin from "../formats/round_robin.js";
-import type * as formats_snakes_and_ladders from "../formats/snakes_and_ladders.js";
-import type * as http from "../http.js";
-import type * as leaderboard from "../leaderboard.js";
-import type * as lib_auth from "../lib/auth.js";
-import type * as lib_doubleAmericano from "../lib/doubleAmericano.js";
-import type * as lib_recordedScore from "../lib/recordedScore.js";
-import type * as lib_roundGeneration from "../lib/roundGeneration.js";
-import type * as lib_standings from "../lib/standings.js";
-import type * as lib_tiebreaks from "../lib/tiebreaks.js";
-import type * as lib_tournamentStandings from "../lib/tournamentStandings.js";
-import type * as matches from "../matches.js";
-import type * as members from "../members.js";
-import type * as memberships from "../memberships.js";
-import type * as organizations from "../organizations.js";
-import type * as participants from "../participants.js";
-import type * as ratings from "../ratings.js";
-import type * as rounds from "../rounds.js";
-import type * as scores from "../scores.js";
-import type * as seed from "../seed.js";
-import type * as teams from "../teams.js";
-import type * as tournaments from "../tournaments.js";
-import type * as users from "../users.js";
-import type * as venues from "../venues.js";
+import type * as auth from '../auth.js';
+import type * as formats_americano from '../formats/americano.js';
+import type * as formats_double_americano from '../formats/double_americano.js';
+import type * as formats_king_of_the_court from '../formats/king_of_the_court.js';
+import type * as formats_knockout from '../formats/knockout.js';
+import type * as formats_mexicano from '../formats/mexicano.js';
+import type * as formats_round_robin from '../formats/round_robin.js';
+import type * as formats_snakes_and_ladders from '../formats/snakes_and_ladders.js';
+import type * as http from '../http.js';
+import type * as leaderboard from '../leaderboard.js';
+import type * as lib_auth from '../lib/auth.js';
+import type * as lib_doubleAmericano from '../lib/doubleAmericano.js';
+import type * as lib_recordedScore from '../lib/recordedScore.js';
+import type * as lib_roundGeneration from '../lib/roundGeneration.js';
+import type * as lib_standings from '../lib/standings.js';
+import type * as lib_tiebreaks from '../lib/tiebreaks.js';
+import type * as lib_tournamentStandings from '../lib/tournamentStandings.js';
+import type * as matches from '../matches.js';
+import type * as members from '../members.js';
+import type * as memberships from '../memberships.js';
+import type * as migrations_clerkAuthBackfill from '../migrations/clerkAuthBackfill.js';
+import type * as organizations from '../organizations.js';
+import type * as participants from '../participants.js';
+import type * as ratings from '../ratings.js';
+import type * as rounds from '../rounds.js';
+import type * as scores from '../scores.js';
+import type * as seed from '../seed.js';
+import type * as teams from '../teams.js';
+import type * as tournaments from '../tournaments.js';
+import type * as users from '../users.js';
+import type * as venues from '../venues.js';
 
-import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server";
+import type { ApiFromModules, FilterApi, FunctionReference } from 'convex/server';
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
-  "formats/americano": typeof formats_americano;
-  "formats/double_americano": typeof formats_double_americano;
-  "formats/king_of_the_court": typeof formats_king_of_the_court;
-  "formats/knockout": typeof formats_knockout;
-  "formats/mexicano": typeof formats_mexicano;
-  "formats/round_robin": typeof formats_round_robin;
-  "formats/snakes_and_ladders": typeof formats_snakes_and_ladders;
+  'formats/americano': typeof formats_americano;
+  'formats/double_americano': typeof formats_double_americano;
+  'formats/king_of_the_court': typeof formats_king_of_the_court;
+  'formats/knockout': typeof formats_knockout;
+  'formats/mexicano': typeof formats_mexicano;
+  'formats/round_robin': typeof formats_round_robin;
+  'formats/snakes_and_ladders': typeof formats_snakes_and_ladders;
   http: typeof http;
   leaderboard: typeof leaderboard;
-  "lib/auth": typeof lib_auth;
-  "lib/doubleAmericano": typeof lib_doubleAmericano;
-  "lib/recordedScore": typeof lib_recordedScore;
-  "lib/roundGeneration": typeof lib_roundGeneration;
-  "lib/standings": typeof lib_standings;
-  "lib/tiebreaks": typeof lib_tiebreaks;
-  "lib/tournamentStandings": typeof lib_tournamentStandings;
+  'lib/auth': typeof lib_auth;
+  'lib/doubleAmericano': typeof lib_doubleAmericano;
+  'lib/recordedScore': typeof lib_recordedScore;
+  'lib/roundGeneration': typeof lib_roundGeneration;
+  'lib/standings': typeof lib_standings;
+  'lib/tiebreaks': typeof lib_tiebreaks;
+  'lib/tournamentStandings': typeof lib_tournamentStandings;
   matches: typeof matches;
   members: typeof members;
   memberships: typeof memberships;
+  'migrations/clerkAuthBackfill': typeof migrations_clerkAuthBackfill;
   organizations: typeof organizations;
   participants: typeof participants;
   ratings: typeof ratings;
@@ -82,7 +84,7 @@ declare const fullApi: ApiFromModules<{
  * const myFunctionReference = api.myModule.myFunction;
  * ```
  */
-export declare const api: FilterApi<typeof fullApi, FunctionReference<any, "public">>;
+export declare const api: FilterApi<typeof fullApi, FunctionReference<any, 'public'>>;
 
 /**
  * A utility for referencing Convex functions in your app's internal API.
@@ -92,6 +94,6 @@ export declare const api: FilterApi<typeof fullApi, FunctionReference<any, "publ
  * const myFunctionReference = internal.myModule.myFunction;
  * ```
  */
-export declare const internal: FilterApi<typeof fullApi, FunctionReference<any, "internal">>;
+export declare const internal: FilterApi<typeof fullApi, FunctionReference<any, 'internal'>>;
 
 export declare const components: {};
