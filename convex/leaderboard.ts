@@ -56,37 +56,49 @@ export const recalculate = internalMutation({
     const pairB = await ctx.db.get(match.pairBId);
     if (!pairA || !pairB) return;
 
+    const differential = tournament?.leaderboardScoringMode === "differential";
     const hadPrev = args.prevScoreA !== undefined && args.prevScoreB !== undefined;
     const winnersA = args.scoreA > args.scoreB;
     const prevWinnersA = hadPrev && args.prevScoreA! > args.prevScoreB!;
+    // "accumulate": each player's own score counts, win or lose.
+    // "differential": the winning margin counts, positive for the winners
+    // and negative for the losers (e.g. 6-3 -> +3 / -3).
+    const pointsA = differential ? args.scoreA - args.scoreB : args.scoreA;
+    const pointsB = differential ? args.scoreB - args.scoreA : args.scoreB;
+    const prevPointsA = differential
+      ? (args.prevScoreA ?? 0) - (args.prevScoreB ?? 0)
+      : (args.prevScoreA ?? 0);
+    const prevPointsB = differential
+      ? (args.prevScoreB ?? 0) - (args.prevScoreA ?? 0)
+      : (args.prevScoreB ?? 0);
     const participants = [
       {
         id: pairA.participantAId,
         won: winnersA,
-        score: args.scoreA,
+        points: pointsA,
         prevWon: prevWinnersA,
-        prevScore: args.prevScoreA ?? 0,
+        prevPoints: prevPointsA,
       },
       {
         id: pairA.participantBId,
         won: winnersA,
-        score: args.scoreA,
+        points: pointsA,
         prevWon: prevWinnersA,
-        prevScore: args.prevScoreA ?? 0,
+        prevPoints: prevPointsA,
       },
       {
         id: pairB.participantAId,
         won: !winnersA,
-        score: args.scoreB,
+        points: pointsB,
         prevWon: hadPrev && !prevWinnersA,
-        prevScore: args.prevScoreB ?? 0,
+        prevPoints: prevPointsB,
       },
       {
         id: pairB.participantBId,
         won: !winnersA,
-        score: args.scoreB,
+        points: pointsB,
         prevWon: hadPrev && !prevWinnersA,
-        prevScore: args.prevScoreB ?? 0,
+        prevPoints: prevPointsB,
       },
     ];
 
@@ -100,7 +112,7 @@ export const recalculate = internalMutation({
 
       if (existing) {
         await ctx.db.patch(existing._id, {
-          points: existing.points + p.score - (hadPrev ? p.prevScore : 0),
+          points: existing.points + p.points - (hadPrev ? p.prevPoints : 0),
           wins: existing.wins + (p.won ? 1 : 0) - (p.prevWon ? 1 : 0),
           losses: existing.losses + (p.won ? 0 : 1) - (hadPrev && !p.prevWon ? 1 : 0),
         });
@@ -108,7 +120,7 @@ export const recalculate = internalMutation({
         await ctx.db.insert("leaderboard", {
           tournamentId: round.tournamentId,
           participantId: p.id as Id<"participants">,
-          points: p.score,
+          points: p.points,
           wins: p.won ? 1 : 0,
           losses: p.won ? 0 : 1,
         });

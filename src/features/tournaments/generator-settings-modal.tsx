@@ -20,6 +20,9 @@ export function GeneratorSettingsModal({
   const [scoringMode, setScoringMode] = useState<"first_to" | "shared_total" | "time_based">(
     tournament.scoringMode ?? "first_to",
   );
+  const [leaderboardScoringMode, setLeaderboardScoringMode] = useState<
+    "accumulate" | "differential"
+  >(tournament.leaderboardScoringMode ?? "accumulate");
   const timeBased = scoringMode === "time_based";
   const { working, error, setError, run } = useAsyncAction();
   const updateTournament = useMutation(api.tournaments.update);
@@ -36,6 +39,7 @@ export function GeneratorSettingsModal({
         tournamentId: tournament._id,
         pointsToWin: timeBased ? undefined : parsed,
         scoringMode,
+        leaderboardScoringMode,
       });
       onClose();
     });
@@ -90,6 +94,31 @@ export function GeneratorSettingsModal({
             : scoringMode === "time_based"
               ? "Match ends when the round timer runs out — whichever team has the most points wins. Set the round duration in the tournament settings."
               : "First team to reach this score wins the match. Applies to new and edited scores."}
+        </p>
+        <Field label="Leaderboard points">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setLeaderboardScoringMode("accumulate")}
+              className={`flex-1 h-9 rounded-lg text-sm font-semibold ring-1 transition-colors
+                ${leaderboardScoringMode === "accumulate" ? "bg-accent text-ink ring-accent-dark/30" : "bg-white text-ink-mute ring-zinc-200 hover:bg-zinc-50"}`}
+            >
+              Accumulate
+            </button>
+            <button
+              type="button"
+              onClick={() => setLeaderboardScoringMode("differential")}
+              className={`flex-1 h-9 rounded-lg text-sm font-semibold ring-1 transition-colors
+                ${leaderboardScoringMode === "differential" ? "bg-accent text-ink ring-accent-dark/30" : "bg-white text-ink-mute ring-zinc-200 hover:bg-zinc-50"}`}
+            >
+              Differential
+            </button>
+          </div>
+        </Field>
+        <p className="text-[12.5px] text-ink-mute">
+          {leaderboardScoringMode === "differential"
+            ? "Winning margin only — a 6-3 win adds +3 to the winners and -3 to the losers."
+            : "Own score always counts — a 6-3 win adds +6 to the winners and +3 to the losers."}
         </p>
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <div className="flex gap-2 pt-1">

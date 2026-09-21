@@ -45,6 +45,7 @@ type WizardData = {
   courts: number;
   points: number;
   scoringMode: "first_to" | "shared_total" | "time_based";
+  leaderboardScoringMode: "accumulate" | "differential";
   tiebreakOrder: Tiebreak[];
   americanoVariant: "single" | "double";
   groupSplitMode: "random" | "top_bottom" | "balanced";
@@ -460,6 +461,36 @@ function StepFormat({
             Set a round duration above so matches know when time's up.
           </p>
         )}
+
+        <div className="mt-5 pt-5 border-t border-zinc-100 flex items-center justify-between">
+          <div>
+            <div className="text-[13px] font-semibold text-ink-mute">Leaderboard points</div>
+            <div className="text-[12px] text-ink-mute/70">
+              {data.leaderboardScoringMode === "differential"
+                ? "Winning margin only — a 6-3 win adds +3 to the winners and -3 to the losers"
+                : "Own score always counts — a 6-3 win adds +6 to the winners and +3 to the losers"}
+            </div>
+          </div>
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100">
+            <button
+              type="button"
+              onClick={() => set({ leaderboardScoringMode: "accumulate" })}
+              className={`h-9 px-4 rounded-lg text-[14px] font-bold transition-all
+                ${data.leaderboardScoringMode === "accumulate" ? "bg-white text-ink shadow-sm" : "text-ink-mute hover:text-ink"}`}
+            >
+              Accumulate
+            </button>
+            <button
+              type="button"
+              onClick={() => set({ leaderboardScoringMode: "differential" })}
+              className={`h-9 px-4 rounded-lg text-[14px] font-bold transition-all
+                ${data.leaderboardScoringMode === "differential" ? "bg-white text-ink shadow-sm" : "text-ink-mute hover:text-ink"}`}
+            >
+              Differential
+            </button>
+          </div>
+        </div>
+
         {data.format === "americano" && (
           <div className="mt-5 pt-5 border-t border-zinc-100">
             <TiebreakOrderField
@@ -1058,6 +1089,12 @@ function StepReview({
                     : `First to ${data.points}`}
               </dd>
             </div>
+            {data.leaderboardScoringMode === "differential" && (
+              <div className="flex justify-between">
+                <dt className="text-ink-mute">Leaderboard points</dt>
+                <dd className="font-semibold">Winning margin (differential)</dd>
+              </div>
+            )}
             {data.format === "americano" && (
               <div>
                 <dt className="text-ink-mute">Ranking order</dt>
@@ -1174,6 +1211,7 @@ function NewTournamentPage() {
     courts: 4,
     points: 24,
     scoringMode: "first_to",
+    leaderboardScoringMode: "accumulate",
     tiebreakOrder: DEFAULT_TIEBREAK_ORDER,
     americanoVariant: "single",
     groupSplitMode: "random",
@@ -1241,6 +1279,7 @@ function NewTournamentPage() {
         roundDurationMs: data.roundMinutes ? Number(data.roundMinutes) * 60_000 : undefined,
         pointsToWin: data.points,
         scoringMode: data.scoringMode,
+        leaderboardScoringMode: data.leaderboardScoringMode,
         tiebreakOrder: data.format === "americano" ? data.tiebreakOrder : undefined,
         americanoVariant: data.format === "americano" ? data.americanoVariant : undefined,
         groupSplitMode:

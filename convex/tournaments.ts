@@ -32,6 +32,8 @@ const scoringModeValidator = v.union(
   v.literal("time_based"),
 );
 
+const leaderboardScoringModeValidator = v.union(v.literal("accumulate"), v.literal("differential"));
+
 const stateValidator = v.union(
   v.literal("draft"),
   v.literal("published"),
@@ -51,6 +53,7 @@ export const create = mutation({
     roundDurationMs: v.optional(v.number()),
     pointsToWin: v.optional(v.number()),
     scoringMode: v.optional(scoringModeValidator),
+    leaderboardScoringMode: v.optional(leaderboardScoringModeValidator),
     americanoVariant: v.optional(americanoVariantValidator),
     groupSplitMode: v.optional(groupSplitModeValidator),
     tiebreakOrder: v.optional(v.array(tiebreakValidator)),
@@ -82,6 +85,7 @@ export const create = mutation({
       roundDurationMs: args.roundDurationMs,
       pointsToWin: args.pointsToWin,
       scoringMode: args.scoringMode,
+      leaderboardScoringMode: args.leaderboardScoringMode,
       tiebreakOrder:
         args.format === "americano" ? (args.tiebreakOrder ?? DEFAULT_TIEBREAK_ORDER) : undefined,
       startsAt: args.startsAt,
@@ -237,6 +241,7 @@ export const update = mutation({
     roundDurationMs: v.optional(v.number()),
     pointsToWin: v.optional(v.number()),
     scoringMode: v.optional(scoringModeValidator),
+    leaderboardScoringMode: v.optional(leaderboardScoringModeValidator),
     americanoVariant: v.optional(americanoVariantValidator),
     groupSplitMode: v.optional(groupSplitModeValidator),
     tiebreakOrder: v.optional(v.array(tiebreakValidator)),
@@ -248,6 +253,17 @@ export const update = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
+    if (
+      args.leaderboardScoringMode !== undefined &&
+      args.leaderboardScoringMode !== tournament.leaderboardScoringMode
+    ) {
+      const scoredMatches = await ctx.db
+        .query("leaderboard")
+        .withIndex("by_tournament", (q) => q.eq("tournamentId", tournament._id))
+        .take(1);
+      if (scoredMatches.length)
+        throw new Error("Cannot change leaderboard scoring after matches are scored");
+    }
     if (args.seededScheduling !== undefined) {
       if (tournament.format !== "round_robin")
         throw new Error("Seeded scheduling is only available for Round Robin");
@@ -361,6 +377,7 @@ export const duplicate = mutation({
       roundDurationMs: source.roundDurationMs,
       pointsToWin: source.pointsToWin,
       scoringMode: source.scoringMode,
+      leaderboardScoringMode: source.leaderboardScoringMode,
       tiebreakOrder:
         source.format === "americano" ? getRankingOrder(source.tiebreakOrder) : undefined,
       startsAt,
