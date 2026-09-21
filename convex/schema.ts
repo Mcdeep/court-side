@@ -60,6 +60,12 @@ export default defineSchema({
     scoringMode: v.optional(
       v.union(v.literal("first_to"), v.literal("shared_total"), v.literal("time_based")),
     ),
+    // How match scores accumulate into the leaderboard/standings "points" total.
+    // "accumulate" (default): each player's own score is added, win or lose
+    // (e.g. 6-3 adds 6 to the winners and 3 to the losers).
+    // "differential": the winning margin is added to the winners and
+    // subtracted from the losers (6-3 adds +3 to the winners, -3 to the losers).
+    leaderboardScoringMode: v.optional(v.union(v.literal("accumulate"), v.literal("differential"))),
     americanoVariant: v.optional(americanoVariantValidator),
     groupSplitMode: v.optional(groupSplitModeValidator),
     tiebreakOrder: v.optional(v.array(tiebreakValidator)),

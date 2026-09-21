@@ -7,7 +7,7 @@ import schema from "./schema";
 const modules = import.meta.glob(["./**/*.ts", "./_generated/*.js", "!./**/*.test.ts"]);
 afterEach(() => vi.useRealTimers());
 
-async function setup() {
+async function setup(options: { leaderboardScoringMode?: "accumulate" | "differential" } = {}) {
   const t = convexTest(schema, modules);
   const data = await t.run(async (ctx) => {
     const organizationId = await ctx.db.insert("organizations", {
@@ -44,6 +44,7 @@ async function setup() {
     format: "americano",
     startsAt: 0,
     endsAt: 1000,
+    leaderboardScoringMode: options.leaderboardScoringMode,
   });
   const participants = await t.run(async (ctx) => {
     const ids = [];
@@ -214,6 +215,31 @@ describe("Americano standings and ratings", () => {
     expect(
       awards.find((award) => award.participantId === standings[2].participantId),
     ).toMatchObject({ placement: 3, pointsEarned: 5 });
+  });
+
+  test("differential scoring credits the winning margin instead of the raw score", async () => {
+    vi.useFakeTimers();
+    const { t, scoreFixtures, tournamentId } = await setup({
+      leaderboardScoringMode: "differential",
+    });
+    await scoreFixtures();
+    const standings = await t.query(api.leaderboard.get, { tournamentId });
+    const byName = Object.fromEntries(
+      standings.map((row) => [row.players[0].displayName, row.points]),
+    );
+    expect(byName).toEqual({ A: 2, B: 9, C: 0, D: 11, E: -11, F: -11 });
+  });
+
+  test("cannot change leaderboard scoring mode after a match has been scored", async () => {
+    vi.useFakeTimers();
+    const { organizer, scoreFixtures, tournamentId } = await setup();
+    await scoreFixtures();
+    await expect(
+      organizer.mutation(api.tournaments.update, {
+        tournamentId,
+        leaderboardScoringMode: "differential",
+      }),
+    ).rejects.toThrow("after matches are scored");
   });
 
   test("existing three-criterion settings retain their effective order and completion lock", async () => {

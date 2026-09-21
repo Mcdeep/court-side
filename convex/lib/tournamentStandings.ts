@@ -98,13 +98,14 @@ export async function getTournamentStandings(
         const pairA = [a.participantAId, a.participantBId];
         const pairB = [b.participantAId, b.participantBId];
         matches.push({ pairA, pairB, ...score });
+        const differential = tournament.leaderboardScoringMode === "differential";
         for (const [ids, scoreFor, against] of [
           [pairA, score.scoreA, score.scoreB],
           [pairB, score.scoreB, score.scoreA],
         ] as const) {
           for (const id of ids) {
             const stats = totals.get(id) ?? { points: 0, wins: 0, losses: 0 };
-            stats.points += scoreFor;
+            stats.points += differential ? scoreFor - against : scoreFor;
             stats.wins += Number(scoreFor > against);
             stats.losses += Number(scoreFor < against);
             totals.set(id, stats);
