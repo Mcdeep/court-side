@@ -36,7 +36,8 @@ function TournamentsPage() {
   const { slug } = useParams({ from: "/$slug/tournaments/" });
   const navigate = useNavigate();
   const [filter, setFilter] = useState("live");
-  const [seriesFilter, setSeriesFilter] = useState<Id<"series"> | "">("");
+  // "" = all, "none" = tournaments without a series.
+  const [seriesFilter, setSeriesFilter] = useState<Id<"series"> | "" | "none">("");
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<Id<"tournaments">>>(new Set());
   const [assignTo, setAssignTo] = useState<Id<"series"> | "">("");
@@ -49,7 +50,11 @@ function TournamentsPage() {
   // Fetch tournaments with venue + round progress
   const tournaments = useQuery(
     api.tournaments.listWithDetails,
-    org ? { organizationId: org._id, seriesId: seriesFilter || undefined } : "skip",
+    org
+      ? seriesFilter === "none"
+        ? { organizationId: org._id, unassigned: true }
+        : { organizationId: org._id, seriesId: seriesFilter || undefined }
+      : "skip",
   );
   const seriesList = useQuery(api.series.list, org ? { organizationId: org._id } : "skip");
 
@@ -139,7 +144,11 @@ function TournamentsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
         <SegTabs
           value={filter}
-          onChange={setFilter}
+          onChange={(id) => {
+            // A selection only ever covers what's on screen.
+            setSelected(new Set());
+            setFilter(id);
+          }}
           tabs={[
             { id: "live", label: "Live", count: counts.live },
             { id: "draft", label: "Draft", count: counts.draft },
@@ -151,11 +160,15 @@ function TournamentsPage() {
             <>
               <select
                 value={seriesFilter}
-                onChange={(e) => setSeriesFilter(e.target.value as Id<"series"> | "")}
+                onChange={(e) => {
+                  setSelected(new Set());
+                  setSeriesFilter(e.target.value as Id<"series"> | "" | "none");
+                }}
                 className={SELECT_CLS}
                 aria-label="Filter by series"
               >
                 <option value="">All series</option>
+                <option value="none">No series</option>
                 {seriesList?.map((s) => (
                   <option key={s._id} value={s._id}>
                     {s.name}

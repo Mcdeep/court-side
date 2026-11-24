@@ -255,6 +255,17 @@ describe("tournaments in a series", () => {
     ).rejects.toThrow(/tournament not found/i);
   });
 
+  test("listWithDetails lists unassigned tournaments beyond the newest 50", async () => {
+    const { t, organizationId, seriesId, insertTournament } = await seriesSetup();
+    const oldest = await insertTournament(undefined, "Oldest");
+    for (let i = 0; i < 50; i++) await insertTournament(seriesId);
+    const unassigned = await t.query(api.tournaments.listWithDetails, {
+      organizationId,
+      unassigned: true,
+    });
+    expect(unassigned.map((x) => x._id)).toEqual([oldest]);
+  });
+
   test("listWithDetails filters by series", async () => {
     const { t, organizationId, seriesId, insertTournament } = await seriesSetup();
     const a = await insertTournament(seriesId);

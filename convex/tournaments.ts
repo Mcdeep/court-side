@@ -167,11 +167,17 @@ export const listByOrgIds = query({
 });
 
 export const listWithDetails = query({
-  args: { organizationId: v.id("organizations"), seriesId: v.optional(v.id("series")) },
+  args: {
+    organizationId: v.id("organizations"),
+    seriesId: v.optional(v.id("series")),
+    // Only tournaments with no series — lets admins reach older untagged
+    // tournaments (beyond the newest 50) to bulk-assign them.
+    unassigned: v.optional(v.boolean()),
+  },
   handler: async (ctx, args) => {
     const seriesId = args.seriesId;
     const tournaments = await (
-      seriesId
+      seriesId || args.unassigned
         ? ctx.db
             .query("tournaments")
             .withIndex("by_organization_and_seriesId", (q) =>
