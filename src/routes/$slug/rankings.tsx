@@ -1,4 +1,4 @@
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "#/../convex/_generated/api";
 import { useState } from "react";
@@ -8,15 +8,31 @@ import { errorMessage } from "#/lib/utils";
 import type { Id } from "#/../convex/_generated/dataModel";
 
 export const Route = createFileRoute("/$slug/rankings")({
+  // ?series=<id> keeps the chosen series in the URL so a series ranking
+  // link can be shared.
+  validateSearch: (search: Record<string, unknown>): { series?: string } => ({
+    series: typeof search.series === "string" ? search.series : undefined,
+  }),
   component: RankingsPage,
 });
 
 function RankingsPage() {
   const { slug } = useParams({ from: "/$slug/rankings" });
   const [editingTiers, setEditingTiers] = useState(false);
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/$slug/rankings" });
 
   const org = useQuery(api.organizations.getBySlug, { slug });
-  const rankings = useQuery(api.ratings.getRankings, org ? { organizationId: org._id } : "skip");
+  const seriesList = useQuery(api.series.list, org ? { organizationId: org._id } : "skip");
+  // An unknown or deleted series id in the URL falls back to All.
+  const series = seriesList?.find((s) => s._id === search.series);
+  const rankings = useQuery(
+    api.ratings.getRankings,
+    // Wait for the series list when the URL names one, so All doesn't flash first.
+    org && !(search.series && seriesList === undefined)
+      ? { organizationId: org._id, seriesId: series?._id }
+      : "skip",
+  );
   const tiers = useQuery(api.ratings.getTiers, org ? { organizationId: org._id } : "skip");
 
   if (org === undefined || rankings === undefined || tiers === undefined) return <PageSkeleton />;
@@ -37,12 +53,31 @@ function RankingsPage() {
             Rankings
           </h1>
         </div>
-        <button
-          onClick={() => setEditingTiers(!editingTiers)}
-          className="h-9 px-4 rounded-xl text-sm font-semibold bg-white ring-1 ring-zinc-200 hover:bg-zinc-50 transition-colors"
-        >
-          {editingTiers ? "Close" : "Point Tiers"}
-        </button>
+        <div className="flex items-center gap-2">
+          {seriesList && seriesList.length > 0 && (
+            <select
+              value={series?._id ?? ""}
+              onChange={(e) =>
+                navigate({ search: { series: e.target.value || undefined }, replace: true })
+              }
+              aria-label="Series"
+              className="h-9 px-3 rounded-xl text-sm font-semibold bg-white ring-1 ring-zinc-200 focus:outline-none focus:ring-2 focus:ring-accent-dark/40"
+            >
+              <option value="">All tournaments</option>
+              {seriesList.map((s) => (
+                <option key={s._id} value={s._id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <button
+            onClick={() => setEditingTiers(!editingTiers)}
+            className="h-9 px-4 rounded-xl text-sm font-semibold bg-white ring-1 ring-zinc-200 hover:bg-zinc-50 transition-colors"
+          >
+            {editingTiers ? "Close" : "Point Tiers"}
+          </button>
+        </div>
       </div>
 
       {/* Stat strip */}
@@ -65,13 +100,16 @@ function RankingsPage() {
       <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-100">
           <div className="font-semibold text-[15px]">
-            All-time Rankings <span className="text-ink-mute font-normal">· {rankings.length}</span>
+            {series ? `${series.name} Rankings` : "All-time Rankings"}{" "}
+            <span className="text-ink-mute font-normal">· {rankings.length}</span>
           </div>
         </div>
 
         {rankings.length === 0 ? (
           <div className="px-5 py-12 text-center text-ink-mute text-sm">
-            No rankings yet. Complete a tournament to see player ratings.
+            {series
+              ? "No completed tournaments in this series yet."
+              : "No rankings yet. Complete a tournament to see player ratings."}
           </div>
         ) : (
           <>
