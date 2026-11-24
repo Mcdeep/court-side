@@ -137,3 +137,132 @@ describe("series CRUD", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("tournaments in a series", () => {
+  async function seriesSetup() {
+    const ctx = await setup();
+    const seriesId = await ctx.organizer.mutation(api.series.create, {
+      organizationId: ctx.organizationId,
+      name: "Tuesday",
+    });
+    const foreignSeriesId = await ctx.t.run((db) =>
+      db.db.insert("series", { organizationId: ctx.otherOrgId, name: "Elsewhere" }),
+    );
+    const getTournament = (id: Id<"tournaments">) => ctx.t.run((db) => db.db.get(id));
+    return { ...ctx, seriesId, foreignSeriesId, getTournament };
+  }
+
+  test("create with seriesId stores it", async () => {
+    const { organizer, organizationId, venueId, seriesId, getTournament } = await seriesSetup();
+    const id = await organizer.mutation(api.tournaments.create, {
+      organizationId,
+      venueId,
+      name: "Tuesday #1",
+      format: "americano",
+      startsAt: 0,
+      endsAt: 1000,
+      seriesId,
+    });
+    expect((await getTournament(id))?.seriesId).toBe(seriesId);
+  });
+
+  test("rejects series from another org", async () => {
+    const { organizer, organizationId, venueId, foreignSeriesId, insertTournament } =
+      await seriesSetup();
+    await expect(
+      organizer.mutation(api.tournaments.create, {
+        organizationId,
+        venueId,
+        name: "X",
+        format: "americano",
+        startsAt: 0,
+        endsAt: 1000,
+        seriesId: foreignSeriesId,
+      }),
+    ).rejects.toThrow(/series not found/i);
+    const tournamentId = await insertTournament();
+    await expect(
+      organizer.mutation(api.tournaments.update, { tournamentId, seriesId: foreignSeriesId }),
+    ).rejects.toThrow(/series not found/i);
+    await expect(
+      organizer.mutation(api.tournaments.setSeries, {
+        organizationId,
+        tournamentIds: [tournamentId],
+        seriesId: foreignSeriesId,
+      }),
+    ).rejects.toThrow(/series not found/i);
+  });
+
+  test("update clears seriesId with null", async () => {
+    const { organizer, seriesId, insertTournament, getTournament } = await seriesSetup();
+    const tournamentId = await insertTournament(seriesId);
+    await organizer.mutation(api.tournaments.update, { tournamentId, name: "Renamed" });
+    expect((await getTournament(tournamentId))?.seriesId).toBe(seriesId);
+    await organizer.mutation(api.tournaments.update, { tournamentId, seriesId: null });
+    expect((await getTournament(tournamentId))?.seriesId).toBeUndefined();
+  });
+
+  test("duplicate copies seriesId", async () => {
+    const { organizer, seriesId, insertTournament, getTournament } = await seriesSetup();
+    const tournamentId = await insertTournament(seriesId);
+    const copyId = await organizer.mutation(api.tournaments.duplicate, { tournamentId });
+    expect((await getTournament(copyId))?.seriesId).toBe(seriesId);
+  });
+
+  test("setSeries assigns and clears in bulk", async () => {
+    const { organizer, organizationId, seriesId, insertTournament, getTournament } =
+      await seriesSetup();
+    const [a, b, c] = [
+      await insertTournament(),
+      await insertTournament(),
+      await insertTournament(),
+    ];
+    await organizer.mutation(api.tournaments.setSeries, {
+      organizationId,
+      tournamentIds: [a, b],
+      seriesId,
+    });
+    expect((await getTournament(a))?.seriesId).toBe(seriesId);
+    expect((await getTournament(b))?.seriesId).toBe(seriesId);
+    expect((await getTournament(c))?.seriesId).toBeUndefined();
+    await organizer.mutation(api.tournaments.setSeries, {
+      organizationId,
+      tournamentIds: [a],
+      seriesId: null,
+    });
+    expect((await getTournament(a))?.seriesId).toBeUndefined();
+  });
+
+  test("setSeries rejects tournaments from another org", async () => {
+    const { t, organizer, organizationId, otherOrgId, venueId, seriesId } = await seriesSetup();
+    const foreign = await t.run((ctx) =>
+      ctx.db.insert("tournaments", {
+        organizationId: otherOrgId,
+        venueId,
+        name: "Foreign",
+        format: "americano",
+        state: "draft",
+        startsAt: 0,
+        endsAt: 1000,
+      }),
+    );
+    await expect(
+      organizer.mutation(api.tournaments.setSeries, {
+        organizationId,
+        tournamentIds: [foreign],
+        seriesId,
+      }),
+    ).rejects.toThrow(/tournament not found/i);
+  });
+
+  test("listWithDetails filters by series", async () => {
+    const { t, organizationId, seriesId, insertTournament } = await seriesSetup();
+    const a = await insertTournament(seriesId);
+    const b = await insertTournament(seriesId);
+    await insertTournament();
+    const inSeries = await t.query(api.tournaments.listWithDetails, { organizationId, seriesId });
+    expect(inSeries.map((x) => x._id).sort()).toEqual([a, b].sort());
+    const all = await t.query(api.tournaments.listWithDetails, { organizationId });
+    expect(all).toHaveLength(3);
+  });
+});
