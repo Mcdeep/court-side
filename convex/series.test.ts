@@ -202,6 +202,16 @@ describe("tournaments in a series", () => {
     expect((await getTournament(tournamentId))?.seriesId).toBeUndefined();
   });
 
+  test("update changes series on a completed tournament", async () => {
+    const { organizer, seriesId, insertTournament, getTournament } = await seriesSetup();
+    // insertTournament creates tournaments in the "completed" state.
+    const tournamentId = await insertTournament();
+    await organizer.mutation(api.tournaments.update, { tournamentId, seriesId });
+    expect((await getTournament(tournamentId))?.seriesId).toBe(seriesId);
+    await organizer.mutation(api.tournaments.update, { tournamentId, seriesId: null });
+    expect((await getTournament(tournamentId))?.seriesId).toBeUndefined();
+  });
+
   test("duplicate copies seriesId", async () => {
     const { organizer, seriesId, insertTournament, getTournament } = await seriesSetup();
     const tournamentId = await insertTournament(seriesId);

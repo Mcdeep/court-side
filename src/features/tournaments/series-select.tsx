@@ -98,3 +98,33 @@ export function SeriesSelect({
     </select>
   );
 }
+
+// Compact picker that saves immediately — for in-progress/completed
+// tournaments, whose Edit modal is hidden. Changing the series never touches
+// results or points, only which series ranking the tournament counts toward.
+export function TournamentSeriesPicker({
+  organizationId,
+  tournamentId,
+  seriesId,
+}: {
+  organizationId: Id<"organizations">;
+  tournamentId: Id<"tournaments">;
+  seriesId: Id<"series"> | undefined;
+}) {
+  const updateTournament = useMutation(api.tournaments.update);
+  const { working, error, run } = useAsyncAction();
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span>Series:</span>
+      <SeriesSelect
+        organizationId={organizationId}
+        value={seriesId ?? ""}
+        onChange={(next) =>
+          void run(() => updateTournament({ tournamentId, seriesId: next || null }))
+        }
+        className={`h-7 px-2 rounded-lg bg-white ring-1 ring-zinc-200 text-[13px] font-medium text-ink focus:outline-none focus:ring-2 focus:ring-accent-dark/40 ${working ? "opacity-60" : ""}`}
+      />
+      {error && <span className="text-red-500">{error}</span>}
+    </span>
+  );
+}

@@ -14,6 +14,7 @@ import { AddPlayerModal } from "#/features/tournaments/add-player-modal";
 import { ConfirmDialog } from "#/features/tournaments/confirm-dialog";
 import { CopyRosterModal } from "#/features/tournaments/copy-roster-modal";
 import { EditTournamentModal } from "#/features/tournaments/edit-tournament-modal";
+import { TournamentSeriesPicker } from "#/features/tournaments/series-select";
 import { OverflowMenu } from "#/features/tournaments/overflow-menu";
 import { ParticipantsTab } from "#/features/tournaments/participants-tab";
 import { ScheduleTab } from "#/features/tournaments/schedule-tab";
@@ -176,6 +177,13 @@ function TournamentDetailPage() {
               <Icon name="cal" className="w-4 h-4" />
               {formatDate(tournament.startsAt)}
             </span>
+            {!canEdit && (
+              <TournamentSeriesPicker
+                organizationId={tournament.organizationId}
+                tournamentId={tournament._id}
+                seriesId={tournament.seriesId}
+              />
+            )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
