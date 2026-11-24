@@ -266,3 +266,102 @@ describe("tournaments in a series", () => {
     expect(all).toHaveLength(3);
   });
 });
+
+describe("series rankings", () => {
+  async function rankingSetup() {
+    const ctx = await setup();
+    const seriesId = await ctx.organizer.mutation(api.series.create, {
+      organizationId: ctx.organizationId,
+      name: "Tuesday",
+    });
+    const t1 = await ctx.insertTournament(seriesId, "T1");
+    const t2 = await ctx.insertTournament(seriesId, "T2");
+    const t3 = await ctx.insertTournament(undefined, "T3");
+    const award = (
+      tournamentId: Id<"tournaments">,
+      who: { userId?: Id<"users">; memberId?: Id<"members"> },
+      pointsEarned: number,
+    ) =>
+      ctx.t.run((db) =>
+        db.db.insert("ratingHistory", {
+          organizationId: ctx.organizationId,
+          tournamentId,
+          placement: 1,
+          pointsEarned,
+          ...who,
+        }),
+      );
+    return { ...ctx, seriesId, t1, t2, t3, award };
+  }
+
+  test("series ranking sums only that series", async () => {
+    const { t, organizationId, seriesId, t1, t2, t3, award } = await rankingSetup();
+    const memberId = await t.run((ctx) => ctx.db.insert("members", { organizationId, name: "P" }));
+    await award(t1, { memberId }, 10);
+    await award(t2, { memberId }, 6);
+    await award(t3, { memberId }, 8);
+    const rows = await t.query(api.ratings.getRankings, { organizationId, seriesId });
+    expect(rows).toEqual([
+      { _id: memberId, name: "P", email: "", totalPoints: 16, tournamentsPlayed: 2 },
+    ]);
+  });
+
+  test("series ranking ignores startingPoints", async () => {
+    const { t, organizationId, seriesId, t1, award } = await rankingSetup();
+    const [played, idle] = await t.run(async (ctx) => [
+      await ctx.db.insert("members", { organizationId, name: "Played", startingPoints: 50 }),
+      await ctx.db.insert("members", { organizationId, name: "Idle", startingPoints: 30 }),
+    ]);
+    await award(t1, { memberId: played }, 4);
+    const rows = await t.query(api.ratings.getRankings, { organizationId, seriesId });
+    expect(rows.map((r) => [r.name, r.totalPoints])).toEqual([["Played", 4]]);
+    expect(rows.some((r) => r._id === idle)).toBe(false);
+  });
+
+  test("merges member and linked-user rows", async () => {
+    const { t, organizationId, seriesId, t1, t2, award } = await rankingSetup();
+    const { userId, memberId } = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        clerkUserId: "linked",
+        name: "Linked Player",
+        email: "linked@example.test",
+      });
+      const memberId = await ctx.db.insert("members", { organizationId, name: "M", userId });
+      return { userId, memberId };
+    });
+    await award(t1, { memberId }, 4);
+    await award(t2, { userId }, 6);
+    const rows = await t.query(api.ratings.getRankings, { organizationId, seriesId });
+    expect(rows).toEqual([
+      {
+        _id: userId,
+        name: "Linked Player",
+        email: "linked@example.test",
+        totalPoints: 10,
+        tournamentsPlayed: 2,
+      },
+    ]);
+  });
+
+  test("sorted by points descending", async () => {
+    const { t, organizationId, seriesId, t1, award } = await rankingSetup();
+    const [a, b] = await t.run(async (ctx) => [
+      await ctx.db.insert("members", { organizationId, name: "A" }),
+      await ctx.db.insert("members", { organizationId, name: "B" }),
+    ]);
+    await award(t1, { memberId: a }, 3);
+    await award(t1, { memberId: b }, 8);
+    const rows = await t.query(api.ratings.getRankings, { organizationId, seriesId });
+    expect(rows.map((r) => r.name)).toEqual(["B", "A"]);
+  });
+
+  test("no seriesId keeps existing behaviour", async () => {
+    const { t, organizationId, t1, award } = await rankingSetup();
+    const memberId = await t.run((ctx) =>
+      ctx.db.insert("members", { organizationId, name: "Imported", startingPoints: 50 }),
+    );
+    await award(t1, { memberId }, 4);
+    const rows = await t.query(api.ratings.getRankings, { organizationId });
+    expect(rows.find((r) => r._id === memberId)?.totalPoints).toBe(50);
+  });
+});

@@ -1,4 +1,6 @@
 import { internalMutation, mutation, query } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { requireOrgAdmin } from "./lib/auth";
 import { doubleFinalsComplete } from "./lib/doubleAmericano";
@@ -86,8 +88,9 @@ export const setSkillRating = mutation({
 // tournament history in this org (added before the roster feature existed)
 // are preserved too, so nobody with genuine history disappears.
 export const getRankings = query({
-  args: { organizationId: v.id("organizations") },
+  args: { organizationId: v.id("organizations"), seriesId: v.optional(v.id("series")) },
   handler: async (ctx, args) => {
+    if (args.seriesId) return getSeriesRankings(ctx, args.organizationId, args.seriesId);
     const members = await ctx.db
       .query("members")
       .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
@@ -142,6 +145,65 @@ export const getRankings = query({
     return [...rosterRows, ...legacyRows].sort((a, b) => b.totalPoints - a.totalPoints);
   },
 });
+
+// Rankings for one series, summed from the per-tournament ratingHistory
+// awards of the series' tournaments (not the org-wide running totals, so
+// imported members.startingPoints never count). An unlinked member's early
+// awards (memberId) merge with their later ones once linked (userId).
+async function getSeriesRankings(
+  ctx: QueryCtx,
+  organizationId: Id<"organizations">,
+  seriesId: Id<"series">,
+) {
+  const tournaments = await ctx.db
+    .query("tournaments")
+    .withIndex("by_organization_and_seriesId", (q) =>
+      q.eq("organizationId", organizationId).eq("seriesId", seriesId),
+    )
+    .take(500);
+
+  const members = new Map<string, Doc<"members"> | null>();
+  const getMember = async (memberId: Id<"members">) => {
+    if (!members.has(memberId)) members.set(memberId, await ctx.db.get(memberId));
+    return members.get(memberId) ?? null;
+  };
+
+  const totals = new Map<
+    string,
+    { userId?: Id<"users">; member?: Doc<"members">; points: number; tournaments: Set<string> }
+  >();
+  for (const tournament of tournaments) {
+    const awards = await ctx.db
+      .query("ratingHistory")
+      .withIndex("by_tournament", (q) => q.eq("tournamentId", tournament._id))
+      .take(200);
+    for (const award of awards) {
+      const member = award.memberId ? await getMember(award.memberId) : null;
+      const userId = award.userId ?? member?.userId;
+      const key = userId ?? award.memberId;
+      if (!key) continue;
+      const entry = totals.get(key) ?? { userId, points: 0, tournaments: new Set<string>() };
+      if (member && !entry.member) entry.member = member;
+      entry.points += award.pointsEarned;
+      entry.tournaments.add(tournament._id);
+      totals.set(key, entry);
+    }
+  }
+
+  const rows = await Promise.all(
+    [...totals].map(async ([key, entry]) => {
+      const user = entry.userId ? await ctx.db.get(entry.userId) : null;
+      return {
+        _id: key as string,
+        name: user?.name ?? entry.member?.name ?? "Unknown",
+        email: user?.email ?? "",
+        totalPoints: entry.points,
+        tournamentsPlayed: entry.tournaments.size,
+      };
+    }),
+  );
+  return rows.sort((a, b) => b.totalPoints - a.totalPoints);
+}
 
 export const getMyRankings = query({
   args: {},
