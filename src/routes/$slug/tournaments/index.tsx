@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "#/../convex/_generated/api";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
@@ -7,6 +7,11 @@ import { Icon } from "#/components/ui/icon";
 import { SegTabs } from "#/components/ui/seg-tabs";
 import { StatusChip } from "#/components/ui/status-chip";
 import { formatDate } from "#/lib/format";
+import type { Id } from "#/../convex/_generated/dataModel";
+import { useAsyncAction } from "#/hooks/use-async-action";
+
+const SELECT_CLS =
+  "h-9 px-3 rounded-xl bg-white ring-1 ring-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent-dark/40";
 
 export const Route = createFileRoute("/$slug/tournaments/")({
   component: TournamentsPage,
@@ -31,6 +36,12 @@ function TournamentsPage() {
   const { slug } = useParams({ from: "/$slug/tournaments/" });
   const navigate = useNavigate();
   const [filter, setFilter] = useState("live");
+  const [seriesFilter, setSeriesFilter] = useState<Id<"series"> | "">("");
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<Id<"tournaments">>>(new Set());
+  const [assignTo, setAssignTo] = useState<Id<"series"> | "">("");
+  const assign = useAsyncAction();
+  const setSeries = useMutation(api.tournaments.setSeries);
 
   // Look up org by slug
   const org = useQuery(api.organizations.getBySlug, { slug });
@@ -38,8 +49,9 @@ function TournamentsPage() {
   // Fetch tournaments with venue + round progress
   const tournaments = useQuery(
     api.tournaments.listWithDetails,
-    org ? { organizationId: org._id } : "skip",
+    org ? { organizationId: org._id, seriesId: seriesFilter || undefined } : "skip",
   );
+  const seriesList = useQuery(api.series.list, org ? { organizationId: org._id } : "skip");
 
   if (org === undefined || tournaments === undefined) {
     return <PageSkeleton />;
@@ -54,6 +66,30 @@ function TournamentsPage() {
   }
 
   const goNew = () => navigate({ to: `/${slug}/tournaments/new` });
+  const hasSeries = (seriesList?.length ?? 0) > 0;
+  const seriesName = new Map(seriesList?.map((s) => [s._id as string, s.name]));
+
+  const toggleSelected = (id: Id<"tournaments">) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const stopSelecting = () => {
+    setSelecting(false);
+    setSelected(new Set());
+  };
+  const assignSelected = async () => {
+    const ok = await assign.run(() =>
+      setSeries({
+        organizationId: org._id,
+        tournamentIds: [...selected],
+        seriesId: assignTo || null,
+      }),
+    );
+    if (ok) stopSelecting();
+  };
 
   const counts = {
     all: tournaments.length,
@@ -110,17 +146,71 @@ function TournamentsPage() {
             { id: "completed", label: "Completed", count: counts.completed },
           ]}
         />
-        <div className="relative">
-          <Icon
-            name="search"
-            className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
-          />
-          <input
-            placeholder="Search tournaments"
-            className="h-9 w-full sm:w-60 pl-9 pr-3 rounded-xl bg-white ring-1 ring-zinc-200 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent-dark/40"
-          />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          {hasSeries && (
+            <>
+              <select
+                value={seriesFilter}
+                onChange={(e) => setSeriesFilter(e.target.value as Id<"series"> | "")}
+                className={SELECT_CLS}
+                aria-label="Filter by series"
+              >
+                <option value="">All series</option>
+                {seriesList?.map((s) => (
+                  <option key={s._id} value={s._id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => (selecting ? stopSelecting() : setSelecting(true))}
+              >
+                {selecting ? "Cancel" : "Select"}
+              </Button>
+            </>
+          )}
+          <div className="relative">
+            <Icon
+              name="search"
+              className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
+            />
+            <input
+              placeholder="Search tournaments"
+              className="h-9 w-full sm:w-60 pl-9 pr-3 rounded-xl bg-white ring-1 ring-zinc-200 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-accent-dark/40"
+            />
+          </div>
         </div>
       </div>
+
+      {selecting && (
+        <div className="flex flex-wrap items-center gap-3 mb-3 px-4 py-3 rounded-2xl bg-white ring-1 ring-zinc-200/80 shadow-card">
+          <span className="text-sm font-semibold">{selected.size} selected</span>
+          <select
+            value={assignTo}
+            onChange={(e) => setAssignTo(e.target.value as Id<"series"> | "")}
+            className={SELECT_CLS}
+            aria-label="Assign to series"
+          >
+            <option value="">No series</option>
+            {seriesList?.map((s) => (
+              <option key={s._id} value={s._id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={assignSelected}
+            disabled={selected.size === 0 || assign.working}
+          >
+            {assign.working ? "Assigning…" : "Assign"}
+          </Button>
+          {assign.error && <p className="text-red-500 text-sm">{assign.error}</p>}
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white rounded-2xl ring-1 ring-zinc-200/80 shadow-card overflow-x-auto">
@@ -151,11 +241,25 @@ function TournamentsPage() {
             return (
               <button
                 key={t._id}
-                onClick={() => navigate({ to: `/${slug}/tournaments/${t._id}` })}
+                onClick={() =>
+                  selecting
+                    ? toggleSelected(t._id)
+                    : navigate({ to: `/${slug}/tournaments/${t._id}` })
+                }
+                aria-pressed={selecting ? selected.has(t._id) : undefined}
                 className="rowin w-full text-left grid grid-cols-[1.6fr_1fr_0.8fr_1fr_auto] gap-4 px-5 py-4 items-center border-b border-zinc-100 last:border-0 hover:bg-zinc-50/80 transition-colors group"
               >
                 {/* Name + venue */}
                 <div className="flex items-center gap-3 min-w-0">
+                  {selecting && (
+                    <input
+                      type="checkbox"
+                      readOnly
+                      tabIndex={-1}
+                      checked={selected.has(t._id)}
+                      className="w-4 h-4 accent-ink shrink-0 pointer-events-none"
+                    />
+                  )}
                   <span
                     className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0
                     ${chipStatus === "live" ? "bg-accent text-ink" : chipStatus === "completed" ? "bg-ink text-paper" : "bg-zinc-100 text-zinc-400"}`}
@@ -171,6 +275,11 @@ function TournamentsPage() {
                     <div className="text-[12.5px] text-ink-mute flex items-center gap-1.5">
                       <Icon name="cal" className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{formatDate(t.startsAt)}</span>
+                      {t.seriesId && seriesName.has(t.seriesId) && (
+                        <span className="ml-1 px-1.5 rounded-md bg-zinc-100 text-[11.5px] font-medium truncate">
+                          {seriesName.get(t.seriesId)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
