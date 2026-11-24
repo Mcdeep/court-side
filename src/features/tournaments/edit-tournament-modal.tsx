@@ -11,6 +11,7 @@ import { useAsyncAction } from "#/hooks/use-async-action";
 import type { Id, Tournament } from "./types";
 import { getRankingOrder } from "#/../convex/lib/tiebreaks";
 import { TiebreakOrderField } from "./tiebreak-order-field";
+import { SeriesSelect } from "./series-select";
 
 export function EditTournamentModal({
   tournament,
@@ -24,6 +25,7 @@ export function EditTournamentModal({
   onClose: () => void;
 }) {
   const [name, setName] = useState(tournament.name);
+  const [seriesId, setSeriesId] = useState<Id<"series"> | "">(tournament.seriesId ?? "");
   const [tiebreakOrder, setTiebreakOrder] = useState(getRankingOrder(tournament.tiebreakOrder));
   const [seededScheduling, setSeededScheduling] = useState(!!tournament.seededScheduling);
   const tiebreaksLocked = tournament.tiebreakOrderLocked;
@@ -46,6 +48,8 @@ export function EditTournamentModal({
       await updateTournament({
         tournamentId,
         name: name.trim(),
+        // Only send a change; "" (None) clears it with null.
+        seriesId: seriesId !== (tournament.seriesId ?? "") ? seriesId || null : undefined,
         tiebreakOrder:
           tournament.format === "americano" && !legacyStandings ? tiebreakOrder : undefined,
         seededScheduling:
@@ -65,6 +69,13 @@ export function EditTournamentModal({
       <form onSubmit={submit} className="space-y-4">
         <Field label="Name">
           <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} required />
+        </Field>
+        <Field label="Series">
+          <SeriesSelect
+            organizationId={tournament.organizationId}
+            value={seriesId}
+            onChange={setSeriesId}
+          />
         </Field>
         <Field label="Round duration (minutes)">
           <Input
