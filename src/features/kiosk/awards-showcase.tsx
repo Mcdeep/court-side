@@ -9,20 +9,24 @@ const CARD = "rounded-[28px] bg-white/[0.04] ring-1 ring-white/10";
 
 function AwardCard({ award, large }: { award: Award; large?: boolean }) {
   return (
-    <div className={`${CARD} ${large ? "p-10" : "p-6"} flex flex-col gap-2`}>
-      <div className={large ? "text-[56px] leading-none" : "text-[32px] leading-none"}>
+    <div
+      className={`${CARD} ${large ? "h-full p-14 justify-center gap-4" : "p-6 gap-2"} flex flex-col`}
+    >
+      <div className={large ? "text-[96px] leading-none" : "text-[32px] leading-none"}>
         {award.emoji}
       </div>
-      <div className="text-paper/50 text-[12.5px] font-bold uppercase tracking-wider">
+      <div
+        className={`text-paper/50 font-bold uppercase tracking-wider ${large ? "text-[18px]" : "text-[12.5px]"}`}
+      >
         {award.title}
       </div>
       <div
-        className={`font-display font-bold leading-tight ${large ? "text-[44px]" : "text-[24px]"}`}
+        className={`font-display font-bold leading-tight ${large ? "text-[64px]" : "text-[24px]"}`}
       >
         {award.winners.join(" & ")}
       </div>
       <div
-        className={`font-mono tnum text-accent font-bold ${large ? "text-[20px]" : "text-[15px]"}`}
+        className={`font-mono tnum text-accent font-bold ${large ? "text-[28px]" : "text-[15px]"}`}
       >
         {award.detail}
       </div>
@@ -61,13 +65,14 @@ export function AwardsShowcase({ awards }: { awards: Award[] }) {
 
   const featured = awards[index % awards.length];
   return (
-    <div className="flex flex-col gap-5 min-h-0">
+    <div className="flex flex-col gap-5 min-h-0 h-full">
       <div data-testid="featured-award" data-award={featured.id} className="flex-1 min-h-0">
         <AwardCard award={featured} large />
       </div>
       <ul
         className="grid gap-3"
-        style={{ gridTemplateColumns: `repeat(${awards.length}, minmax(0, 1fr))` }}
+        // Up to 4 per row so names have room on a TV.
+        style={{ gridTemplateColumns: `repeat(${Math.min(awards.length, 4)}, minmax(0, 1fr))` }}
       >
         {awards.map((award, i) => {
           const current = i === index % awards.length;
@@ -80,10 +85,12 @@ export function AwardsShowcase({ awards }: { awards: Award[] }) {
                 current ? "bg-accent/15 ring-2 ring-accent" : "bg-white/[0.04] ring-1 ring-white/10"
               }`}
             >
-              <div className="text-[12px] font-bold uppercase tracking-wider text-paper/50 truncate">
+              <div className="text-[13px] font-bold uppercase tracking-wider text-paper/50 truncate">
                 {award.emoji} {award.short}
               </div>
-              <div className="font-semibold text-[14px] truncate">{award.winners.join(" & ")}</div>
+              <div className="font-semibold text-[16px] leading-snug line-clamp-2">
+                {award.winners.join(" & ")}
+              </div>
             </li>
           );
         })}
