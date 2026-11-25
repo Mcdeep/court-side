@@ -1,7 +1,14 @@
 import { describe, expect, test } from "vitest";
 import { buildModel } from "./model";
 import { americano, doubleAmericano, EIGHT, eightPlayerRounds, type Game } from "./fixtures";
-import { comebackKing, consistent, giantSlayer, strongFinisher } from "./americano";
+import {
+  comebackKing,
+  consistent,
+  giantSlayer,
+  groupRounds,
+  standingsAfter,
+  strongFinisher,
+} from "./americano";
 
 // `ids[7]` loses badly for the first three rounds, then wins big; every other
 // match is a 10–10 draw.
@@ -138,5 +145,36 @@ describe("americano-family awards", () => {
     // Every group match was 10–10, so everyone ties on 30 — the 20-point
     // final for a/j doesn't count.
     expect(award?.detail).toBe("30 points in the last 3 rounds");
+  });
+});
+
+describe("review fixes: rounds with sit-outs and units", () => {
+  test("mexicano replay uses real rounds when players sit out", () => {
+    // 5 players, 1 court: one sits out each round. Going into round 4, e has
+    // played only twice, so their own match count (3rd match) must not be
+    // mistaken for round 3.
+    const rounds: Game[][] = [
+      [["a", "b", "c", "d", 18, 2]],
+      [["a", "c", "b", "e", 18, 2]],
+      [["a", "d", "c", "e", 18, 2]],
+      [["e", "b", "a", "c", 20, 0]],
+    ];
+    const m = buildModel({ ...americano(rounds), format: "mexicano", rankingOrder: ["points"] });
+    const before4 = standingsAfter(m, 3);
+    // After 3 real rounds e has 4 points (last). Leaking their round-4 20–0
+    // win would give them 24 and lift them above d (20).
+    expect(before4.get("a")).toBe(1);
+    expect(before4.get("e")).toBe(5);
+    expect(groupRounds(m)).toBe(4);
+  });
+
+  test("strong finisher says games for games-based scoring", () => {
+    const m = buildModel(
+      americano(
+        [5, 5, 5, 6, 6, 6].map((s, i) => [["a", `p${i}`, `x${i}`, `y${i}`, s, 2] as Game]),
+        { scoringMode: "first_to", pointsToWin: 6 },
+      ),
+    );
+    expect(strongFinisher(m)?.detail).toBe("18 games in the last 3 rounds");
   });
 });

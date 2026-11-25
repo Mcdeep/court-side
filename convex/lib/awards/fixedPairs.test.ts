@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { buildModel } from "./model";
 import { fixedPairs, type Game } from "./fixtures";
 import { biggestClimb, dreamTeam, longestReign, roadToGlory, summit } from "./fixedPairs";
+import { demolitionJob, invincible } from "./general";
 
 // Each round lists games court 1 first.
 const model = (format: Parameters<typeof fixedPairs>[0], rounds: Game[][]) =>
@@ -103,5 +104,44 @@ describe("fixed-pair format awards", () => {
     );
     expect(award?.winners).toEqual(["A / B"]);
     expect(award?.detail).toBe("Won 2 matches by 17 points in total");
+  });
+});
+
+describe("review fixes: fixed-pair formats", () => {
+  test("round labels use the real round when a pair sits out", () => {
+    // 3 pairs, 1 court: e/f sit out round 1, a/b sit out round 2 ... round 4's 20–2 is Round 4.
+    const m = model("king_of_the_court", [
+      [["a", "b", "c", "d", 24, 20]],
+      [["c", "d", "e", "f", 24, 20]],
+      [["e", "f", "a", "b", 24, 20]],
+      [["a", "b", "c", "d", 20, 2]],
+    ]);
+    expect(demolitionJob(m)?.detail).toBe("20–2 · Round 4");
+  });
+
+  test("road to glory needs a single final match", () => {
+    // Tournament completed after the semis: last round still has two matches.
+    const m = model("knockout", [
+      [
+        ["a", "b", "c", "d", 24, 10],
+        ["e", "f", "g", "h", 24, 20],
+      ],
+    ]);
+    expect(roadToGlory(m)).toBeNull();
+  });
+
+  test("invincible doesn't overstate matches for co-winners", () => {
+    const m = model("king_of_the_court", [
+      [["a", "b", "c", "d", 24, 20]],
+      [["a", "b", "e", "f", 24, 20]],
+      [["a", "b", "c", "d", 24, 20]],
+      [["a", "b", "e", "f", 24, 20]],
+      [["g", "h", "c", "d", 24, 20]],
+      [["g", "h", "e", "f", 24, 20]],
+      [["g", "h", "c", "d", 24, 20]],
+    ]);
+    const award = invincible(m);
+    expect(award?.winners).toEqual(["A / B", "G / H"]);
+    expect(award?.detail).toBe("Unbeaten all tournament");
   });
 });

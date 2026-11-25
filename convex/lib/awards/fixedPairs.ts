@@ -99,8 +99,10 @@ export function dreamTeam(m: Model): AwardCandidate | null {
 }
 
 export function roadToGlory(m: Model): AwardCandidate | null {
+  // Only once the final has been played: the last round is a single match.
   const final = m.input.matches.at(-1);
   if (!final || final.scoreA === final.scoreB) return null;
+  if (m.input.matches.filter((x) => x.roundNumber === final.roundNumber).length !== 1) return null;
   const [key] = m.competitorKeysOf(final.scoreA > final.scoreB ? final.pairA : final.pairB);
   const champion = m.competitors.get(key);
   if (!champion) return null;

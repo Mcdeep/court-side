@@ -9,9 +9,10 @@ export type Appearance = {
   match: EngineMatch;
   // Position of the match in overall match order.
   matchIndex: number;
-  // 1-based position in this competitor's own matches for the match's stage
-  // (group / final). Counts partnership rounds even when a round is played
-  // in several waves.
+  // 1-based round for the match's stage (group / final). Americano: the
+  // position in this competitor's own matches, which counts partnership
+  // rounds even when a round is played in several waves. Other formats: the
+  // real round (players/pairs can sit out, so own-match counts would drift).
   roundIndex: number;
   scoreFor: number;
   scoreAgainst: number;
@@ -65,6 +66,12 @@ export function buildModel(input: EngineInput): Model {
   );
   const competitors = new Map<string, Competitor>();
   const counters = new Map<string, number>();
+  const partnershipRounds = input.format === "americano";
+  const realRound = new Map<string, number>();
+  for (const stage of ["group", "final"] as const)
+    [...new Set(matches.filter((x) => x.stage === stage).map((x) => x.roundNumber))]
+      .sort((a, b) => a - b)
+      .forEach((roundNumber, i) => realRound.set(`${stage}:${roundNumber}`, i + 1));
 
   matches.forEach((match, matchIndex) => {
     for (const [pair, scoreFor, scoreAgainst] of [
@@ -86,8 +93,11 @@ export function buildModel(input: EngineInput): Model {
           appearances: [],
         };
         const counterKey = `${key}:${match.stage}`;
-        const roundIndex = (counters.get(counterKey) ?? 0) + 1;
-        counters.set(counterKey, roundIndex);
+        const ownIndex = (counters.get(counterKey) ?? 0) + 1;
+        counters.set(counterKey, ownIndex);
+        const roundIndex = partnershipRounds
+          ? ownIndex
+          : realRound.get(`${match.stage}:${match.roundNumber}`)!;
         competitor.appearances.push({
           match,
           matchIndex,

@@ -23,7 +23,7 @@ export function invincible(m: Model): AwardCandidate | null {
     .map((c) => ({ item: c, value: c.appearances.length, at: c.appearances[0].matchIndex }));
   if (unbeaten.length === 0) return null;
   const winners = unbeaten.sort((a, b) => b.value - a.value || a.at - b.at).slice(0, 4);
-  const most = winners[0].value;
+  const sameCount = winners.every((w) => w.value === winners[0].value);
   return makeAward(
     {
       id: "invincible",
@@ -34,7 +34,9 @@ export function invincible(m: Model): AwardCandidate | null {
       listStyle: true,
     },
     winners.map((w) => competitorWinner(w.item)),
-    `Unbeaten in ${plural(most, "match", "matches")}`,
+    sameCount
+      ? `Unbeaten in ${plural(winners[0].value, "match", "matches")}`
+      : "Unbeaten all tournament",
   );
 }
 

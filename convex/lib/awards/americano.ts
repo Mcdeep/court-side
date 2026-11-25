@@ -1,7 +1,7 @@
 import { rankStandings, type StandingsMatch } from "../standings";
 import type { Model } from "./model";
 import type { AwardCandidate, EngineMatch } from "./types";
-import { best, competitorWinner, makeAward, pairWinner, type Scored } from "./pick";
+import { best, competitorWinner, makeAward, pairWinner, unitOf, type Scored } from "./pick";
 
 // Awards for rotating-partner formats (Americano, Mexicano, Double Americano).
 // All of them use group-stage matches only.
@@ -192,6 +192,6 @@ export function strongFinisher(m: Model): AwardCandidate | null {
       short: "Strong Finisher",
     },
     winners.map((w) => competitorWinner(w.item)),
-    `${winners[0].value} points in the last 3 rounds`,
+    `${winners[0].value} ${unitOf(m)}s in the last 3 rounds`,
   );
 }
