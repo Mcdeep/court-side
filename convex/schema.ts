@@ -79,9 +79,18 @@ export default defineSchema({
     // courtside staff run the live tournament from /manage/:id without a
     // Clerk login — see convex/lib/auth.ts requireOrgAdminOrPin.
     managePin: v.optional(v.string()),
+    // Optional named series (e.g. a weekly "Tuesday Americano") used to
+    // view rankings for just that recurring event — see convex/series.ts.
+    seriesId: v.optional(v.id("series")),
   })
     .index("by_organization", ["organizationId"])
+    .index("by_organization_and_seriesId", ["organizationId", "seriesId"])
     .index("by_venue", ["venueId"]),
+
+  series: defineTable({
+    organizationId: v.id("organizations"),
+    name: v.string(),
+  }).index("by_organization", ["organizationId"]),
 
   participants: defineTable({
     tournamentId: v.id("tournaments"),

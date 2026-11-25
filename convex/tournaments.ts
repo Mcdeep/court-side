@@ -15,6 +15,7 @@ import {
   assertDoubleFinalsComplete,
 } from "./lib/doubleAmericano";
 import { hasRatingAwards, usesLegacyStandings, withTiebreakLock } from "./lib/tournamentStandings";
+import { requireSeriesInOrg } from "./series";
 
 const formatValidator = v.union(
   v.literal("americano"),
@@ -57,11 +58,13 @@ export const create = mutation({
     americanoVariant: v.optional(americanoVariantValidator),
     groupSplitMode: v.optional(groupSplitModeValidator),
     tiebreakOrder: v.optional(v.array(tiebreakValidator)),
+    seriesId: v.optional(v.id("series")),
     startsAt: v.number(),
     endsAt: v.number(),
   },
   handler: async (ctx, args) => {
     await requireOrgAdmin(ctx, args.organizationId);
+    if (args.seriesId) await requireSeriesInOrg(ctx, args.seriesId, args.organizationId);
     if (args.tiebreakOrder) validateTiebreakOrder(args.tiebreakOrder);
     const venue = await ctx.db.get(args.venueId);
     if (!venue) throw new Error("Venue not found");
@@ -88,6 +91,7 @@ export const create = mutation({
       leaderboardScoringMode: args.leaderboardScoringMode,
       tiebreakOrder:
         args.format === "americano" ? (args.tiebreakOrder ?? DEFAULT_TIEBREAK_ORDER) : undefined,
+      seriesId: args.seriesId,
       startsAt: args.startsAt,
       endsAt: args.endsAt,
       state: "draft",
@@ -163,11 +167,26 @@ export const listByOrgIds = query({
 });
 
 export const listWithDetails = query({
-  args: { organizationId: v.id("organizations") },
+  args: {
+    organizationId: v.id("organizations"),
+    seriesId: v.optional(v.id("series")),
+    // Only tournaments with no series — lets admins reach older untagged
+    // tournaments (beyond the newest 50) to bulk-assign them.
+    unassigned: v.optional(v.boolean()),
+  },
   handler: async (ctx, args) => {
-    const tournaments = await ctx.db
-      .query("tournaments")
-      .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+    const seriesId = args.seriesId;
+    const tournaments = await (
+      seriesId || args.unassigned
+        ? ctx.db
+            .query("tournaments")
+            .withIndex("by_organization_and_seriesId", (q) =>
+              q.eq("organizationId", args.organizationId).eq("seriesId", seriesId),
+            )
+        : ctx.db
+            .query("tournaments")
+            .withIndex("by_organization", (q) => q.eq("organizationId", args.organizationId))
+    )
       .order("desc")
       .take(50);
 
@@ -246,6 +265,8 @@ export const update = mutation({
     groupSplitMode: v.optional(groupSplitModeValidator),
     tiebreakOrder: v.optional(v.array(tiebreakValidator)),
     seededScheduling: v.optional(v.boolean()),
+    // null removes the tournament from its series.
+    seriesId: v.optional(v.union(v.id("series"), v.null())),
     startsAt: v.optional(v.number()),
     endsAt: v.optional(v.number()),
   },
@@ -253,6 +274,7 @@ export const update = mutation({
     const tournament = await ctx.db.get(args.tournamentId);
     if (!tournament) throw new Error("Tournament not found");
     await requireOrgAdmin(ctx, tournament.organizationId);
+    if (args.seriesId) await requireSeriesInOrg(ctx, args.seriesId, tournament.organizationId);
     if (
       args.leaderboardScoringMode !== undefined &&
       args.leaderboardScoringMode !== tournament.leaderboardScoringMode
@@ -336,11 +358,14 @@ export const update = mutation({
         throw new Error(`Venue only has ${venue.courtCount} courts`);
       }
     }
-    const { tournamentId: _tournamentId, ...patch } = args;
+    const { tournamentId: _tournamentId, seriesId, ...patch } = args;
     const filteredPatch = Object.fromEntries(
       Object.entries(patch).filter(([, v]) => v !== undefined),
     );
-    await ctx.db.patch(args.tournamentId, filteredPatch);
+    await ctx.db.patch(args.tournamentId, {
+      ...filteredPatch,
+      ...(seriesId !== undefined && { seriesId: seriesId ?? undefined }),
+    });
     if (
       (args.americanoVariant !== undefined &&
         args.americanoVariant !== tournament.americanoVariant) ||
@@ -380,10 +405,34 @@ export const duplicate = mutation({
       leaderboardScoringMode: source.leaderboardScoringMode,
       tiebreakOrder:
         source.format === "americano" ? getRankingOrder(source.tiebreakOrder) : undefined,
+      seriesId: source.seriesId,
       startsAt,
       endsAt: startsAt + durationMs,
       state: "draft",
     });
+  },
+});
+
+// Bulk-assigns tournaments to a series (or removes them from one with null),
+// e.g. to tag months of past Tuesday tournaments at once.
+export const setSeries = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    tournamentIds: v.array(v.id("tournaments")),
+    seriesId: v.union(v.id("series"), v.null()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireOrgAdmin(ctx, args.organizationId);
+    if (args.tournamentIds.length > 100) throw new Error("Too many tournaments at once");
+    if (args.seriesId) await requireSeriesInOrg(ctx, args.seriesId, args.organizationId);
+    for (const tournamentId of args.tournamentIds) {
+      const tournament = await ctx.db.get(tournamentId);
+      if (!tournament || tournament.organizationId !== args.organizationId)
+        throw new Error("Tournament not found");
+      await ctx.db.patch(tournamentId, { seriesId: args.seriesId ?? undefined });
+    }
+    return null;
   },
 });
 

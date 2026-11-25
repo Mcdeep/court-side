@@ -7,6 +7,7 @@ import { Input } from "#/components/ui/input";
 import { StatusChip } from "#/components/ui/status-chip";
 import { useAsyncAction } from "#/hooks/use-async-action";
 import type { FunctionReturnType } from "convex/server";
+import type { Id } from "#/../convex/_generated/dataModel";
 
 type Organization = NonNullable<FunctionReturnType<typeof api.organizations.getBySlug>>;
 
@@ -36,6 +37,7 @@ function SettingsPage() {
       </div>
 
       <GeneralSection org={org} slug={slug} />
+      <SeriesSection org={org} />
       <DangerSection org={org} />
     </div>
   );
@@ -103,6 +105,141 @@ function GeneralSection({ org, slug }: { org: Organization; slug: string }) {
         </div>
       </form>
     </Section>
+  );
+}
+
+function SeriesSection({ org }: { org: Organization }) {
+  const series = useQuery(api.series.list, { organizationId: org._id });
+  const createSeries = useMutation(api.series.create);
+  const [name, setName] = useState("");
+  const { working, error, run } = useAsyncAction();
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    const ok = await run(() => createSeries({ organizationId: org._id, name }));
+    if (ok) setName("");
+  }
+
+  return (
+    <Section
+      title="Series"
+      description="Group recurring tournaments, like a weekly Tuesday Americano, to rank them on their own."
+    >
+      {series === undefined ? (
+        <div className="h-10 bg-zinc-100 rounded-xl animate-pulse" />
+      ) : (
+        <div className="space-y-4">
+          {series.length > 0 && (
+            <ul className="divide-y divide-zinc-100 ring-1 ring-zinc-200/80 rounded-xl">
+              {series.map((s) => (
+                <SeriesRow key={s._id} seriesId={s._id} name={s.name} />
+              ))}
+            </ul>
+          )}
+          <form onSubmit={add} className="flex gap-2">
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Tuesday Americano"
+              aria-label="New series name"
+            />
+            <Button type="submit" variant="primary" size="md" disabled={!name.trim() || working}>
+              {working ? "Adding…" : "Add series"}
+            </Button>
+          </form>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function SeriesRow({ seriesId, name }: { seriesId: Id<"series">; name: string }) {
+  const [mode, setMode] = useState<"view" | "rename" | "confirmDelete">("view");
+  const [draft, setDraft] = useState(name);
+  const { working, error, run } = useAsyncAction();
+  const renameSeries = useMutation(api.series.rename);
+  const removeSeries = useMutation(api.series.remove);
+
+  async function rename(e: React.FormEvent) {
+    e.preventDefault();
+    const ok = await run(() => renameSeries({ seriesId, name: draft }));
+    if (ok) setMode("view");
+  }
+
+  return (
+    <li className="px-4 py-3">
+      {mode === "rename" ? (
+        <form onSubmit={rename} className="flex gap-2 items-center">
+          <Input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            aria-label="Series name"
+          />
+          <Button type="submit" variant="primary" size="sm" disabled={!draft.trim() || working}>
+            Save
+          </Button>
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(name);
+              setMode("view");
+            }}
+            className="text-[13px] font-medium text-ink-mute hover:text-ink transition-colors"
+          >
+            Cancel
+          </button>
+        </form>
+      ) : mode === "confirmDelete" ? (
+        <div className="flex items-center justify-between gap-4">
+          <div className="text-[13px] text-ink-mute">
+            Delete <span className="font-semibold text-ink">{name}</span>? Tournaments in this
+            series keep their results but won't belong to a series.
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setMode("view")}
+              className="text-[13px] font-medium text-ink-mute hover:text-ink transition-colors"
+            >
+              Cancel
+            </button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="!text-red-500 !ring-red-200 hover:!bg-red-50"
+              onClick={() => run(() => removeSeries({ seriesId }))}
+              disabled={working}
+            >
+              {working ? "Deleting…" : "Delete"}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-4">
+          <span className="font-semibold text-[14px] truncate">{name}</span>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={() => {
+                setDraft(name);
+                setMode("rename");
+              }}
+              className="text-[13px] font-medium text-ink-mute hover:text-ink transition-colors"
+            >
+              Rename
+            </button>
+            <button
+              onClick={() => setMode("confirmDelete")}
+              className="text-[13px] font-medium text-red-500 hover:text-red-600 transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+    </li>
   );
 }
 

@@ -19,6 +19,7 @@ import { countRoundRobinRounds } from "#/../convex/formats/round_robin";
 import { DEFAULT_TIEBREAK_ORDER, TIEBREAK_LABELS } from "#/../convex/lib/tiebreaks";
 import type { Tiebreak } from "#/../convex/lib/tiebreaks";
 import { TiebreakOrderField } from "#/features/tournaments/tiebreak-order-field";
+import { SeriesSelect } from "#/features/tournaments/series-select";
 
 export const Route = createFileRoute("/$slug/tournaments/new")({
   component: NewTournamentPage,
@@ -42,6 +43,7 @@ type WizardData = {
   format: TournamentFormat;
   name: string;
   venueId: string;
+  seriesId: Id<"series"> | "";
   courts: number;
   points: number;
   scoringMode: "first_to" | "shared_total" | "time_based";
@@ -289,6 +291,16 @@ function StepFormat({
               </select>
             )}
           </label>
+
+          <div className="block">
+            <span className="text-[13px] font-semibold text-ink-mute mb-1.5 block">Series</span>
+            <SeriesSelect
+              organizationId={orgId}
+              value={data.seriesId}
+              onChange={(seriesId) => set({ seriesId })}
+              className={SELECT_CLS}
+            />
+          </div>
 
           <label className="block">
             <span className="text-[13px] font-semibold text-ink-mute mb-1.5 block">Starts</span>
@@ -1208,6 +1220,7 @@ function NewTournamentPage() {
     format: "americano",
     name: "",
     venueId: "",
+    seriesId: "",
     courts: 4,
     points: 24,
     scoringMode: "first_to",
@@ -1275,6 +1288,7 @@ function NewTournamentPage() {
         venueId: resolvedVenueId,
         name: data.name.trim(),
         format: data.format,
+        seriesId: data.seriesId || undefined,
         courtCount: data.courts,
         roundDurationMs: data.roundMinutes ? Number(data.roundMinutes) * 60_000 : undefined,
         pointsToWin: data.points,
