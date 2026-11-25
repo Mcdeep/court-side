@@ -17,3 +17,4 @@ dist
 
 # Superpowers design docs and plans (local only)
 docs/superpowers/
+.superpowers/
