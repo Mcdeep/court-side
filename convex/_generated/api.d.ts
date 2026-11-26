@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as awards from "../awards.js";
 import type * as clerkActions from "../clerkActions.js";
 import type * as clerkAdmin from "../clerkAdmin.js";
 import type * as formats_americano from "../formats/americano.js";
@@ -19,6 +20,15 @@ import type * as formats_round_robin from "../formats/round_robin.js";
 import type * as formats_snakes_and_ladders from "../formats/snakes_and_ladders.js";
 import type * as leaderboard from "../leaderboard.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_awards_americano from "../lib/awards/americano.js";
+import type * as lib_awards_double from "../lib/awards/double.js";
+import type * as lib_awards_fixedPairs from "../lib/awards/fixedPairs.js";
+import type * as lib_awards_fixtures from "../lib/awards/fixtures.js";
+import type * as lib_awards_general from "../lib/awards/general.js";
+import type * as lib_awards_index from "../lib/awards/index.js";
+import type * as lib_awards_model from "../lib/awards/model.js";
+import type * as lib_awards_pick from "../lib/awards/pick.js";
+import type * as lib_awards_types from "../lib/awards/types.js";
 import type * as lib_doubleAmericano from "../lib/doubleAmericano.js";
 import type * as lib_recordedScore from "../lib/recordedScore.js";
 import type * as lib_roundGeneration from "../lib/roundGeneration.js";
@@ -42,6 +52,7 @@ import type * as venues from "../venues.js";
 import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  awards: typeof awards;
   clerkActions: typeof clerkActions;
   clerkAdmin: typeof clerkAdmin;
   "formats/americano": typeof formats_americano;
@@ -53,6 +64,15 @@ declare const fullApi: ApiFromModules<{
   "formats/snakes_and_ladders": typeof formats_snakes_and_ladders;
   leaderboard: typeof leaderboard;
   "lib/auth": typeof lib_auth;
+  "lib/awards/americano": typeof lib_awards_americano;
+  "lib/awards/double": typeof lib_awards_double;
+  "lib/awards/fixedPairs": typeof lib_awards_fixedPairs;
+  "lib/awards/fixtures": typeof lib_awards_fixtures;
+  "lib/awards/general": typeof lib_awards_general;
+  "lib/awards/index": typeof lib_awards_index;
+  "lib/awards/model": typeof lib_awards_model;
+  "lib/awards/pick": typeof lib_awards_pick;
+  "lib/awards/types": typeof lib_awards_types;
   "lib/doubleAmericano": typeof lib_doubleAmericano;
   "lib/recordedScore": typeof lib_recordedScore;
   "lib/roundGeneration": typeof lib_roundGeneration;

@@ -11,7 +11,6 @@ import { TickerMarquee } from "#/features/kiosk/ticker";
 import { RoundTimer } from "#/features/kiosk/round-timer";
 import { PodiumOverlay } from "#/features/kiosk/podium-overlay";
 import { FinishedView } from "#/features/kiosk/finished-view";
-import { computeKioskStats } from "#/features/kiosk/stats";
 import { DoubleStandings } from "#/features/kiosk/double-standings";
 
 export const Route = createFileRoute("/kiosk/$tournamentId")({
@@ -51,8 +50,8 @@ function KioskPage() {
   );
 
   const isCompleted = tournament?.state === "completed";
-  const history = useQuery(
-    api.matches.historyByTournament,
+  const awards = useQuery(
+    api.awards.forTournament,
     isCompleted ? { tournamentId: tournamentId as Id<"tournaments"> } : "skip",
   );
 
@@ -160,12 +159,12 @@ function KioskPage() {
 
       {/* Body */}
       {isCompleted ? (
-        history === undefined ? (
+        awards === undefined ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="w-10 h-10 rounded-full border-2 border-white/10 border-t-white/60 animate-spin" />
           </div>
         ) : (
-          <FinishedView leaderboard={leaderboard} stats={computeKioskStats(history)} />
+          <FinishedView leaderboard={leaderboard} awards={awards} />
         )
       ) : wide ? (
         <main className="flex-1 grid grid-cols-[1fr_460px] gap-7 p-8 min-h-0">

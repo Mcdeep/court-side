@@ -220,13 +220,16 @@ function TournamentDetailPage() {
               Close registration
             </Button>
           )}
+          {/* Completed tournaments keep the kiosk link: it shows the end-of-tournament awards. */}
+          {(tournament.state === "in_progress" || tournament.state === "completed") && (
+            <Button variant="outline" size="md" icon="screen" asChild>
+              <a href={`/kiosk/${tournamentId}`} target="_blank" rel="noreferrer">
+                Kiosk
+              </a>
+            </Button>
+          )}
           {tournament.state === "in_progress" && (
             <>
-              <Button variant="outline" size="md" icon="screen" asChild>
-                <a href={`/kiosk/${tournamentId}`} target="_blank" rel="noreferrer">
-                  Kiosk
-                </a>
-              </Button>
               {tournament.managePin && (
                 <ManagePinButton tournamentId={tournamentId} pin={tournament.managePin} />
               )}
